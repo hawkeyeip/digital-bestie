@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Bestie</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/index.css" />
+    <link rel="stylesheet" href="/src/styles/onboarding.css" />
+  </head>
+  <body>
+    <!-- Animated Background -->
+    <div class="bg-mesh"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Custom Titlebar -->
+    <div id="titlebar" class="titlebar">
+      <div class="titlebar-drag">
+        <div class="titlebar-brand">
+          <svg class="titlebar-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <defs>
+              <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00f0ff"/>
+                <stop offset="100%" style="stop-color:#b347ff"/>
+              </linearGradient>
+            </defs>
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+          <span class="titlebar-title">Digital Bestie</span>
+        </div>
+        <div id="connection-status" class="connection-status">
+          <span class="status-dot disconnected"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+      </div>
+      <div class="titlebar-controls">
+        <button id="btn-minimize" class="titlebar-btn" aria-label="Minimize">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" rx="1" fill="currentColor"/></svg>
+        </button>
+        <button id="btn-maximize" class="titlebar-btn" aria-label="Maximize">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+        <button id="btn-close" class="titlebar-btn titlebar-btn-close" aria-label="Close">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div id="app" class="app-layout">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <!-- Module Navigation -->
+        <nav class="sidebar-nav">
+          <button class="nav-btn active" data-view="chat" title="Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
+            </svg>
+          </button>
+          <button class="nav-btn" data-view="modules" title="Modules">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+          <button class="nav-btn" data-view="memory" title="Memory Bank">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
+            </svg>
+          </button>
+          <div class="nav-spacer"></div>
+          <button class="nav-btn" data-view="settings" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </nav>
+
+        <!-- Active Module Indicator -->
+        <div id="active-module-indicator" class="active-module-indicator hidden">
+          <span id="active-module-name" class="module-name-badge"></span>
+          <button id="btn-clear-module" class="clear-module-btn" title="Deactivate module">✕</button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main id="main-content" class="main-content">
+        <!-- Chat View (default) -->
+        <div id="view-chat" class="view active">
+          <div id="chat-messages" class="chat-messages">
+            <!-- Welcome message -->
+            <div class="message assistant welcome-message">
+              <div class="message-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <defs>
+                    <linearGradient id="neonGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#00f0ff"/>
+                      <stop offset="100%" style="stop-color:#b347ff"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                </svg>
+              </div>
+              <div class="message-content">
+                <p>Hey! I'm your Digital Bestie — your personal confidante, operational strategist, and second brain. 💜</p>
+                <p>No judgment, no corporate fluff, just real talk and real help. What's on your mind?</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing Indicator -->
+          <div id="typing-indicator" class="typing-indicator hidden">
+            <div class="message-avatar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </div>
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="chat-input-area">
+            <div class="chat-input-container">
+              <textarea
+                id="chat-input"
+                class="chat-input"
+                placeholder="Talk to your Bestie..."
+                rows="1"
+                maxlength="16000"
+              ></textarea>
+              <button id="btn-send" class="btn-send" title="Send message" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
+                </svg>
+              </button>
+              <button id="btn-abort" class="btn-abort hidden" title="Stop generating">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+              </button>
+            </div>
+            <div class="chat-input-hint">
+              <span>Enter to send · Shift+Enter for new line</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modules View -->
+        <div id="view-modules" class="view">
+          <div class="panel-header">
+            <h2 class="panel-title">Operational Modules</h2>
+            <p class="panel-subtitle">Activate a module to focus the conversation</p>
+          </div>
+          <div class="modules-grid">
+            <button class="module-card" data-module="sanity-scout">
+              <div class="module-icon" style="--module-color: #00f0ff">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <h3>Sanity Scout</h3>
+              <p>Find free & low-cost sanctuaries near you</p>
+            </button>
+            <button class="module-card" data-module="venture-incubator">
+              <div class="module-icon" style="--module-color: #b347ff">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <h3>Venture Incubator</h3>
+              <p>Build your independent business in micro-sprints</p>
+            </button>
+            <button class="module-card" data-module="ghostwriter">
+              <div class="module-icon" style="--module-color: #ff2d9b">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              </div>
+              <h3>Ghostwriter</h3>
+              <p>Zero-effort responses & boundary defense</p>
+            </button>
+            <button class="module-card" data-module="capital-guardian">
+              <div class="module-icon" style="--module-color: #00ff88">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <h3>Capital Guardian</h3>
+              <p>Protect your cash & intercept impulse buys</p>
+            </button>
+            <button class="module-card" data-module="priority-sorter">
+              <div class="module-icon" style="--module-color: #ff9500">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M21 3v6h-6"/></svg>
+              </div>
+              <h3>Priority Sorter</h3>
+              <p>Ruthlessly rank & cut your to-do list</p>
+            </button>
+            <button class="module-card" data-module="pre-mortem">
+              <div class="module-icon" style="--module-color: #ff4444">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </div>
+              <h3>Pre-Mortem</h3>
+              <p>Find failure points before they find you</p>
+            </button>
+            <button class="module-card" data-module="mess-converter">
+              <div class="module-icon" style="--module-color: #00ccff">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>
+              </div>
+              <h3>Mess → Execution</h3>
+              <p>Turn chaos into structured action plans</p>
+            </button>
+            <button class="module-card" data-module="assumptions-breaker">
+              <div class="module-icon" style="--module-color: #ffd700">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+              </div>
+              <h3>Assumptions Breaker</h3>
+              <p>Red-team your hidden assumptions</p>
+            </button>
+            <button class="module-card" data-module="learning-engine">
+              <div class="module-icon" style="--module-color: #9b59b6">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              </div>
+              <h3>80/20 Learning</h3>
+              <p>Learn any skill with the vital 20%</p>
+            </button>
+            <button class="module-card" data-module="troubleshooter">
+              <div class="module-icon" style="--module-color: #e74c3c">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <h3>Troubleshooter</h3>
+              <p>Systematic debugging & root cause analysis</p>
+            </button>
+            <button class="module-card" data-module="ship-it">
+              <div class="module-icon" style="--module-color: #2ecc71">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg>
+              </div>
+              <h3>Ship It</h3>
+              <p>Beat perfectionism — get to "shippable"</p>
+            </button>
+            <button class="module-card" data-module="ceo-review">
+              <div class="module-icon" style="--module-color: #3498db">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              </div>
+              <h3>Weekly CEO Review</h3>
+              <p>Retrospective + next-week priorities</p>
+            </button>
+            <button class="module-card" data-module="compressor">
+              <div class="module-icon" style="--module-color: #1abc9c">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 6h16M4 18h10"/></svg>
+              </div>
+              <h3>Communication Compressor</h3>
+              <p>Rewrite messages for maximum impact</p>
+            </button>
+            <button class="module-card" data-module="automation-scanner">
+              <div class="module-icon" style="--module-color: #e67e22">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
+              </div>
+              <h3>Automation Scanner</h3>
+              <p>Find workflows to automate</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Memory View -->
+        <div id="view-memory" class="view">
+          <div class="panel-header">
+            <h2 class="panel-title">Memory Bank</h2>
+            <p class="panel-subtitle">Your Living Dossier — everything I remember about you</p>
+          </div>
+          <div id="memory-content" class="memory-content">
+            <div class="memory-loading">Loading your profile...</div>
+          </div>
+          <div class="memory-actions">
+            <button id="btn-export" class="btn-glass">Export Data</button>
+            <button id="btn-import" class="btn-glass">Import Data</button>
+            <button id="btn-clear-conversation" class="btn-glass btn-danger">Clear Chat History</button>
+            <button id="btn-rerun-onboarding" class="btn-glass">Re-run Onboarding</button>
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="view">
+          <div class="panel-header">
+            <h2 class="panel-title">Settings</h2>
+            <p class="panel-subtitle">Configure your Digital Bestie</p>
+          </div>
+          <div class="settings-form">
+            <div class="setting-group">
+              <h3>Ollama Connection</h3>
+              <label class="setting-item">
+                <span>Base URL</span>
+                <input type="text" id="setting-ollama-url" class="setting-input" value="http://localhost:11434" />
+              </label>
+              <label class="setting-item">
+                <span>Model Name</span>
+                <input type="text" id="setting-model-name" class="setting-input" value="bestie" />
+              </label>
+              <label class="setting-item">
+                <span>Context Window (tokens)</span>
+                <input type="number" id="setting-num-ctx" class="setting-input" value="16384" min="2048" max="131072" step="1024" />
+              </label>
+            </div>
+            <div class="setting-group">
+              <h3>Conversation</h3>
+              <label class="setting-item">
+                <span>Message History Window</span>
+                <input type="number" id="setting-context-window" class="setting-input" value="50" min="10" max="200" />
+              </label>
+            </div>
+            <button id="btn-save-settings" class="btn-neon">Save Settings</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding-overlay" class="onboarding-overlay hidden">
+      <div class="onboarding-card">
+        <div class="onboarding-header">
+          <h2>Welcome to Digital Bestie</h2>
+          <p>Let's set up your personal profile so I can be genuinely useful to you.</p>
+        </div>
+        <div class="onboarding-progress">
+          <div class="progress-dot active" data-phase="1"></div>
+          <div class="progress-dot" data-phase="2"></div>
+          <div class="progress-dot" data-phase="3"></div>
+          <div class="progress-dot" data-phase="4"></div>
+          <div class="progress-dot" data-phase="5"></div>
+        </div>
+        <div id="onboarding-question" class="onboarding-question">
+          <p>Loading...</p>
+        </div>
+        <div class="onboarding-input-area">
+          <textarea
+            id="onboarding-input"
+            class="onboarding-input"
+            placeholder="Share your thoughts..."
+            rows="4"
+          ></textarea>
+          <div class="onboarding-actions">
+            <button id="btn-onboarding-skip" class="btn-glass">Skip This</button>
+            <button id="btn-onboarding-next" class="btn-neon">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/renderer.js"></script>
+  </body>
+</html>

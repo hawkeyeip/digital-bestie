@@ -1,0 +1,274 @@
+/**
+ * Digital Bestie — Main Process
+ * Electron main process with IPC handlers for Ollama, memory, and window management
+ */
+
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
+import started from 'electron-squirrel-startup';
+
+// Services (ESM imports — bundled by Vite)
+import { checkOllamaStatus, streamChat } from './services/ollama.js';
+import {
+  loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
+  loadConversation, saveConversation, appendMessage, getMessageWindow, clearConversation,
+  loadSettings, saveSettings, updateSetting,
+  exportProfile, importProfile
+} from './services/memory.js';
+import { buildSystemPrompt, getOnboardingPrompt, getExtractionPrompt } from './services/system-prompt.js';
+
+// Handle creating/removing shortcuts on Windows when installing/uninstalling
+if (started) {
+  app.quit();
+}
+
+let mainWindow = null;
+let tray = null;
+let activeAbortController = null;
+
+const createWindow = () => {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    frame: false,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: -100, y: -100 },
+    transparent: false,
+    backgroundColor: '#0a0a12',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    },
+  });
+
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  }
+
+  // Minimize to tray instead of closing
+  mainWindow.on('close', (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
+};
+
+function createTray() {
+  // Create a simple 16x16 tray icon
+  const icon = nativeImage.createEmpty();
+  tray = new Tray(icon);
+  
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Show Digital Bestie', click: () => mainWindow?.show() },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } }
+  ]);
+  
+  tray.setToolTip('Digital Bestie');
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => mainWindow?.show());
+}
+
+// ============================================================
+// IPC HANDLERS
+// ============================================================
+
+function registerIPC() {
+  // --- Window Controls ---
+  ipcMain.on('window:minimize', () => mainWindow?.minimize());
+  ipcMain.on('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow?.maximize();
+    }
+  });
+  ipcMain.on('window:close', () => mainWindow?.close());
+
+  // --- Ollama ---
+  ipcMain.handle('ollama:status', async () => {
+    return checkOllamaStatus();
+  });
+
+  ipcMain.handle('ollama:chat', async (event, { message, activeModule }) => {
+    // Cancel any in-progress generation
+    if (activeAbortController) {
+      activeAbortController.abort();
+    }
+    activeAbortController = new AbortController();
+
+    // Save user message
+    appendMessage('user', message);
+
+    // Build system prompt with current profile state
+    const systemPrompt = buildSystemPrompt(activeModule);
+
+    // Get windowed message history
+    const settings = loadSettings();
+    const messages = getMessageWindow(settings.context_window || 50);
+
+    return new Promise((resolve, reject) => {
+      streamChat(
+        systemPrompt,
+        messages,
+        // onToken
+        (token) => {
+          mainWindow?.webContents.send('ollama:token', token);
+        },
+        // onDone
+        (result) => {
+          activeAbortController = null;
+          if (!result.aborted && result.fullResponse) {
+            appendMessage('assistant', result.fullResponse);
+          }
+          mainWindow?.webContents.send('ollama:done', result);
+          resolve(result);
+        },
+        // onError
+        (error) => {
+          activeAbortController = null;
+          mainWindow?.webContents.send('ollama:error', error.message);
+          reject(error);
+        },
+        activeAbortController.signal
+      );
+    });
+  });
+
+  ipcMain.on('ollama:abort', () => {
+    if (activeAbortController) {
+      activeAbortController.abort();
+      activeAbortController = null;
+    }
+  });
+
+  // --- Onboarding Extraction ---
+  ipcMain.handle('ollama:extract', async (event, { phase, userResponse }) => {
+    const extractionPrompt = getExtractionPrompt(phase, userResponse);
+    
+    return new Promise((resolve) => {
+      streamChat(
+        'You are a JSON extraction assistant. Return ONLY valid JSON with no markdown formatting or commentary.',
+        [{ role: 'user', content: extractionPrompt }],
+        () => {}, // ignore tokens
+        (result) => {
+          try {
+            const cleaned = (result.fullResponse || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const data = JSON.parse(cleaned);
+            resolve(data);
+          } catch (e) {
+            resolve({ raw: result.fullResponse, parseError: true });
+          }
+        },
+        (error) => {
+          console.warn('Extraction fallback:', error?.message || error);
+          resolve({ error: error?.message, parseError: true });
+        },
+        null,
+        { num_ctx: 4096, temperature: 0.1 }
+      );
+    });
+  });
+
+  // --- Memory ---
+  ipcMain.handle('memory:getProfile', () => loadProfile());
+  ipcMain.handle('memory:saveProfile', (event, profile) => {
+    saveProfile(profile);
+    return true;
+  });
+  ipcMain.handle('memory:updateField', (event, { path: dotPath, value }) => {
+    return updateProfileField(dotPath, value);
+  });
+  ipcMain.handle('memory:deleteField', (event, { path: dotPath }) => {
+    return deleteProfileField(dotPath);
+  });
+  ipcMain.handle('memory:getProfileSummary', () => getProfileSummary());
+
+  // --- Conversation ---
+  ipcMain.handle('conversation:load', () => loadConversation());
+  ipcMain.handle('conversation:clear', () => {
+    clearConversation();
+    return true;
+  });
+
+  // --- Settings ---
+  ipcMain.handle('settings:load', () => loadSettings());
+  ipcMain.handle('settings:save', (event, settings) => {
+    saveSettings(settings);
+    return true;
+  });
+  ipcMain.handle('settings:update', (event, { key, value }) => {
+    return updateSetting(key, value);
+  });
+
+  // --- Export / Import ---
+  ipcMain.handle('data:export', async () => {
+    const data = exportProfile();
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Digital Bestie Data',
+      defaultPath: `digital-bestie-backup-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (!result.canceled && result.filePath) {
+      fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2));
+      return { success: true, path: result.filePath };
+    }
+    return { success: false };
+  });
+
+  ipcMain.handle('data:import', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Digital Bestie Data',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile']
+    });
+    if (!result.canceled && result.filePaths.length) {
+      const raw = fs.readFileSync(result.filePaths[0], 'utf-8');
+      const data = JSON.parse(raw);
+      importProfile(data);
+      return { success: true };
+    }
+    return { success: false };
+  });
+
+  // --- Onboarding Prompts ---
+  ipcMain.handle('onboarding:getPrompt', (event, phase) => {
+    return getOnboardingPrompt(phase);
+  });
+}
+
+// ============================================================
+// APP LIFECYCLE
+// ============================================================
+
+app.whenReady().then(() => {
+  registerIPC();
+  createWindow();
+  createTray();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    } else {
+      mainWindow?.show();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
+});
