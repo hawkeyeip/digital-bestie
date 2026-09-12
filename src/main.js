@@ -104,7 +104,8 @@ function registerIPC() {
 
   // --- Ollama ---
   ipcMain.handle('ollama:status', async () => {
-    return checkOllamaStatus();
+    const settings = loadSettings();
+    return checkOllamaStatus(settings.model_name || 'bestie-light');
   });
 
   ipcMain.handle('ollama:chat', async (event, { message, activeModule }) => {
@@ -120,9 +121,11 @@ function registerIPC() {
     // Build system prompt with current profile state
     const systemPrompt = buildSystemPrompt(activeModule);
 
-    // Get windowed message history
+    // Get windowed message history and model settings
     const settings = loadSettings();
     const messages = getMessageWindow(settings.context_window || 50);
+    const modelToUse = settings.model_name || 'bestie-light';
+    const numCtxToUse = settings.num_ctx || 8192;
 
     return new Promise((resolve, reject) => {
       streamChat(
@@ -147,7 +150,11 @@ function registerIPC() {
           mainWindow?.webContents.send('ollama:error', error.message);
           reject(error);
         },
-        activeAbortController.signal
+        activeAbortController.signal,
+        {
+          model: modelToUse,
+          num_ctx: numCtxToUse
+        }
       );
     });
   });
@@ -164,6 +171,8 @@ function registerIPC() {
     const extractionPrompt = getExtractionPrompt(phase, userResponse);
     const abortCtrl = new AbortController();
     const timeout = setTimeout(() => abortCtrl.abort(), 15000); // 15s max for extraction
+    const settings = loadSettings();
+    const modelToUse = settings.model_name || 'bestie-light';
     
     return new Promise((resolve) => {
       streamChat(
@@ -183,10 +192,13 @@ function registerIPC() {
         (error) => {
           clearTimeout(timeout);
           console.warn('Extraction fallback:', error?.message || error);
-          resolve({ error: error?.message, parseError: true });
+          resolve({ error: error?.message || 'timeout', raw: userResponse });
         },
         abortCtrl.signal,
-        { num_ctx: 2048, temperature: 0.1 }
+        {
+          model: modelToUse,
+          num_ctx: 2048
+        }
       );
     });
   });

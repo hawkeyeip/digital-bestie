@@ -36,6 +36,13 @@
         </div>
       </div>
       <div class="titlebar-center">
+        <div class="model-picker-wrap" title="Active Ollama Model">
+          <span class="model-icon">⚡</span>
+          <select id="header-model-select" class="header-model-select" aria-label="Active Ollama Model">
+            <option value="bestie-light">bestie-light (14B • Fast)</option>
+            <option value="bestie">bestie (70B • Deep)</option>
+          </select>
+        </div>
         <button id="btn-quick-feedback" class="feedback-pill-btn" title="Call out and log bug issues or feature recommendations">
           <span class="pill-dot"></span>
           <span class="pill-icon">🐞 / 💡</span>
@@ -438,7 +445,10 @@
               </label>
               <label class="setting-item">
                 <span>Model Name</span>
-                <input type="text" id="setting-model-name" class="setting-input" value="bestie" />
+                <select id="setting-model-name" class="setting-input">
+                  <option value="bestie-light">bestie-light (14B • Fast & Responsive)</option>
+                  <option value="bestie">bestie (Hermes 3 70B • Deep)</option>
+                </select>
               </label>
               <label class="setting-item">
                 <span>Context Window (tokens)</span>

@@ -123,6 +123,9 @@ const els = {
   btnClearConversation: $('#btn-clear-conversation'),
   btnRerunOnboarding: $('#btn-rerun-onboarding'),
 
+  // Titlebar / Header Model Selector
+  headerModelSelect: $('#header-model-select'),
+
   // Settings
   settingOllamaUrl: $('#setting-ollama-url'),
   settingModelName: $('#setting-model-name'),
@@ -203,9 +206,10 @@ async function init() {
   // Apply settings to form
   if (state.settings) {
     els.settingOllamaUrl.value = state.settings.ollama_url || 'http://localhost:11434';
-    els.settingModelName.value = state.settings.model_name || 'bestie';
+    if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-light';
     els.settingNumCtx.value = state.settings.num_ctx || 16384;
     els.settingContextWindow.value = state.settings.context_window || 50;
+    if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-light';
   }
 
   // Check Ollama connection
@@ -233,6 +237,35 @@ async function init() {
   }
 }
 
+function updateModelDropdowns(models, activeModel) {
+  if (!models || models.length === 0) return;
+
+  const current = activeModel || state.settings?.model_name || 'bestie-light';
+  
+  // Sort with current or bestie models at top
+  const sorted = [...models].sort((a, b) => {
+    if (a.name.includes('bestie') && !b.name.includes('bestie')) return -1;
+    if (!a.name.includes('bestie') && b.name.includes('bestie')) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const optionsHtml = sorted.map(m => {
+    const isSelected = m.name === current || m.name.startsWith(`${current}:`);
+    const sizeGb = (m.size / (1024 * 1024 * 1024)).toFixed(1);
+    const speedTag = m.size < 12 * 1024 * 1024 * 1024 ? '⚡ Fast' : '🧠 Deep';
+    return `<option value="${m.name}" ${isSelected ? 'selected' : ''}>${m.name} (${sizeGb} GB • ${speedTag})</option>`;
+  }).join('');
+
+  if (els.headerModelSelect) {
+    els.headerModelSelect.innerHTML = optionsHtml;
+    els.headerModelSelect.value = current;
+  }
+  if (els.settingModelName) {
+    els.settingModelName.innerHTML = optionsHtml;
+    els.settingModelName.value = current;
+  }
+}
+
 async function checkConnection() {
   try {
     const status = await window.bestie.ollama.checkStatus();
@@ -242,6 +275,10 @@ async function checkConnection() {
     els.statusText.textContent = state.isConnected
       ? 'Connected'
       : (status.error || 'Disconnected');
+
+    if (status.models && status.models.length > 0) {
+      updateModelDropdowns(status.models, state.settings?.model_name || status.activeModel);
+    }
   } catch (e) {
     state.isConnected = false;
     els.statusDot.className = 'status-dot disconnected';
@@ -333,17 +370,29 @@ function registerEventListeners() {
     startOnboarding();
   });
 
+  // Titlebar Model Switcher
+  els.headerModelSelect?.addEventListener('change', async (e) => {
+    const selected = e.target.value;
+    state.settings = state.settings || {};
+    state.settings.model_name = selected;
+    await window.bestie.settings.save(state.settings);
+    if (els.settingModelName) els.settingModelName.value = selected;
+    showToast(`Model switched to ${selected} ⚡`);
+    checkConnection();
+  });
+
   // Settings
   els.btnSaveSettings.addEventListener('click', async () => {
     const settings = {
       ollama_url: els.settingOllamaUrl.value,
       model_name: els.settingModelName.value,
-      num_ctx: parseInt(els.settingNumCtx.value),
-      context_window: parseInt(els.settingContextWindow.value),
+      num_ctx: parseInt(els.settingNumCtx.value) || 8192,
+      context_window: parseInt(els.settingContextWindow.value) || 50,
       theme: 'neon-dark'
     };
     await window.bestie.settings.save(settings);
     state.settings = settings;
+    if (els.headerModelSelect) els.headerModelSelect.value = settings.model_name;
     showToast('Settings saved');
     checkConnection();
   });

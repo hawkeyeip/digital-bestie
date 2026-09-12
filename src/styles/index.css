@@ -1011,6 +1011,46 @@ html, body {
   -webkit-app-region: no-drag;
 }
 
+.model-picker-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-radius: var(--radius-full);
+  margin-right: 10px;
+  transition: var(--transition-fast);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+}
+
+.model-picker-wrap:hover {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.25);
+}
+
+.model-picker-wrap .model-icon {
+  font-size: 11px;
+}
+
+.header-model-select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  padding-right: 4px;
+}
+
+.header-model-select option {
+  background: #111422;
+  color: #e2e8f0;
+}
+
 .feedback-pill-btn {
   display: inline-flex;
   align-items: center;
