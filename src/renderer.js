@@ -167,6 +167,28 @@ const els = {
   btnOpenNewFeedbackPage: $('#btn-open-new-feedback-page'),
   feedbackItemsContainer: $('#feedback-items-container'),
   feedbackItemsContainerPage: $('#feedback-items-container-page'),
+
+  // Superbrain Hub
+  btnSyncAllSuperbrain: $('#btn-sync-all-superbrain'),
+  rtStatusPill: $('#rt-status-pill'),
+  btnSyncRt: $('#btn-sync-rt'),
+  rtSourceInput: $('#rt-source-input'),
+  btnDetectRt: $('#btn-detect-rt'),
+  rtWeeklyBurn: $('#rt-weekly-burn'),
+  rtMonthlyBurn: $('#rt-monthly-burn'),
+  rtSubCount: $('#rt-sub-count'),
+  rtTravelCredits: $('#rt-travel-credits'),
+  rtHardwareVal: $('#rt-hardware-val'),
+  rtRenewalsList: $('#rt-renewals-list'),
+  nbStatusPill: $('#nb-status-pill'),
+  btnImportNb: $('#btn-import-nb'),
+  btnExportNb: $('#btn-export-nb'),
+  nbOpenTasks: $('#nb-open-tasks'),
+  nbHighPriTasks: $('#nb-high-pri-tasks'),
+  nbNotesCount: $('#nb-notes-count'),
+  nbPromptsCount: $('#nb-prompts-count'),
+  nbTasksList: $('#nb-tasks-list'),
+  superbrainTelemetryPreview: $('#superbrain-telemetry-preview'),
 };
 
 // ============================================================
@@ -201,6 +223,9 @@ async function init() {
 
   // Load feedback badge
   await refreshFeedbackBadge();
+
+  // Auto-sync Superbrain telemetry if available
+  autoSyncSuperbrain();
 
   // Check if onboarding is needed
   if (!state.profile?.onboarding_state?.completed) {
@@ -376,6 +401,72 @@ function registerEventListeners() {
   els.feedbackSearch?.addEventListener('input', () => {
     renderFeedbackList(cachedFeedback, els.feedbackSearch.value);
   });
+
+  // Superbrain Hub
+  els.btnSyncAllSuperbrain?.addEventListener('click', async () => {
+    showToast('Synchronizing Superbrain data into Living Dossier...');
+    await window.bestie.superbrain.syncResourceTracker(els.rtSourceInput?.value?.trim() || null);
+    state.profile = await window.bestie.memory.getProfile();
+    await refreshSuperbrainView();
+    showToast('Superbrain telemetry synchronized into Dossier! ⚡');
+  });
+
+  els.btnSyncRt?.addEventListener('click', async () => {
+    const inputPath = els.rtSourceInput?.value?.trim() || null;
+    showToast('Connecting to Resource Tracker...');
+    const res = await window.bestie.superbrain.syncResourceTracker(inputPath);
+    if (res.success) {
+      showToast(`Connected! Synced ${res.count} items. Weekly burn: $${res.metrics.weekly_burn_rate}`);
+    } else {
+      showToast(`Could not connect: ${res.error}`);
+    }
+    await refreshSuperbrainView();
+  });
+
+  els.btnDetectRt?.addEventListener('click', async () => {
+    const detected = await window.bestie.superbrain.detectPath();
+    if (detected) {
+      if (els.rtSourceInput) els.rtSourceInput.value = detected;
+      showToast(`Found Resource Tracker data at: ${detected}`);
+      await window.bestie.superbrain.syncResourceTracker(detected);
+      await refreshSuperbrainView();
+    } else {
+      showToast('No standard Resource Tracker data file found. Enter path or start local server.');
+    }
+  });
+
+  els.btnImportNb?.addEventListener('click', async () => {
+    const res = await window.bestie.superbrain.importNeonBrainDialog();
+    if (res && res.success) {
+      showToast(`Imported from Neon Brain: ${res.tasksCount} tasks, ${res.notesCount} notes, ${res.promptsCount} prompts! 🧠`);
+      await refreshSuperbrainView();
+    }
+  });
+
+  els.btnExportNb?.addEventListener('click', async () => {
+    const sbData = await window.bestie.superbrain.getData();
+    const tasks = (sbData.neon_brain?.tasks || []).concat([
+      {
+        id: `task-bestie-${Date.now()}`,
+        title: 'Review 90-Day North Star with Digital Bestie',
+        description: 'Living Dossier strategic calibration',
+        priority: 'high',
+        status: 'todo',
+        createdAt: new Date().toISOString()
+      }
+    ]);
+    const exportPayload = {
+      exported_from: 'Digital Bestie',
+      exported_at: new Date().toISOString(),
+      tasks,
+      notes: sbData.neon_brain?.notes || [],
+      prompts: sbData.neon_brain?.prompts || []
+    };
+    const res = await window.bestie.superbrain.exportToNeonBrainDialog(exportPayload);
+    if (res && res.success) {
+      showToast(`Exported plan to: ${res.path} 🚀`);
+    }
+  });
 }
 
 // ============================================================
@@ -395,6 +486,7 @@ function switchView(viewName) {
 
   if (viewName === 'memory') refreshMemoryView();
   if (viewName === 'feedback') refreshFeedbackView();
+  if (viewName === 'superbrain') refreshSuperbrainView();
 }
 
 // ============================================================
@@ -1038,6 +1130,108 @@ async function handleExportFeedbackMd() {
 
   await navigator.clipboard.writeText(md);
   showToast('Copied all feedback to clipboard as Markdown! 📋');
+}
+
+// ============================================================
+// SUPERBRAIN HUB (RESOURCE TRACKER & NEON BRAIN)
+// ============================================================
+
+async function autoSyncSuperbrain() {
+  try {
+    const detected = await window.bestie.superbrain.detectPath();
+    if (detected) {
+      await window.bestie.superbrain.syncResourceTracker(detected);
+    }
+  } catch (_) {}
+}
+
+async function refreshSuperbrainView() {
+  try {
+    const data = await window.bestie.superbrain.getData();
+    const rt = data.resource_tracker || {};
+    const nb = data.neon_brain || {};
+
+    // Resource Tracker UI
+    const rtConnected = rt.connected;
+    if (els.rtStatusPill) {
+      els.rtStatusPill.className = `status-badge ${rtConnected ? 'connected' : 'disconnected'}`;
+      els.rtStatusPill.textContent = rtConnected ? `Connected (${rt.source_type})` : 'Disconnected';
+    }
+    if (els.rtSourceInput && !els.rtSourceInput.value) {
+      els.rtSourceInput.value = rt.source_path || '';
+    }
+
+    const rm = rt.metrics || {};
+    if (els.rtWeeklyBurn) els.rtWeeklyBurn.textContent = `$${rm.weekly_burn_rate || 0}`;
+    if (els.rtMonthlyBurn) els.rtMonthlyBurn.textContent = `$${rm.monthly_burn_rate || 0}`;
+    if (els.rtSubCount) els.rtSubCount.textContent = rm.subscription_count || 0;
+    if (els.rtTravelCredits) els.rtTravelCredits.textContent = `$${rm.total_travel_credits || 0}`;
+    if (els.rtHardwareVal) els.rtHardwareVal.textContent = `$${rm.hardware_asset_value || 0}`;
+
+    if (els.rtRenewalsList) {
+      const renewals = rt.upcoming_renewals || [];
+      if (renewals.length === 0) {
+        els.rtRenewalsList.innerHTML = `<div class="empty-state-sm">No renewals tracked yet</div>`;
+      } else {
+        els.rtRenewalsList.innerHTML = renewals.map(r => `
+          <div class="renewal-item">
+            <div>
+              <strong>${escapeHtml(r.title)}</strong>
+              <div style="font-size: 10px; color: var(--text-dim);">${r.renewalDate}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="color: var(--neon-cyan); font-weight: 600;">$${r.cost}</div>
+              <div style="font-size: 10px; color: ${r.daysLeft <= 3 ? '#ff4d4d' : 'var(--text-muted)'};">${r.daysLeft} days left</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Neon Brain UI
+    const nbConnected = nb.connected;
+    if (els.nbStatusPill) {
+      els.nbStatusPill.className = `status-badge ${nbConnected ? 'connected' : 'disconnected'}`;
+      els.nbStatusPill.textContent = nbConnected ? `Connected (${nb.source_type})` : 'Disconnected';
+    }
+
+    const nm = nb.metrics || {};
+    if (els.nbOpenTasks) els.nbOpenTasks.textContent = nm.open_tasks_count || 0;
+    if (els.nbHighPriTasks) els.nbHighPriTasks.textContent = nm.high_priority_tasks_count || 0;
+    if (els.nbNotesCount) els.nbNotesCount.textContent = nm.notes_count || 0;
+    if (els.nbPromptsCount) els.nbPromptsCount.textContent = nm.prompts_count || 0;
+
+    if (els.nbTasksList) {
+      const highTasks = (nb.tasks || []).filter(t => !t.completed && (t.priority === 'high' || t.priority === 'urgent'));
+      if (highTasks.length === 0) {
+        els.nbTasksList.innerHTML = `<div class="empty-state-sm">No high-priority tasks in vault</div>`;
+      } else {
+        els.nbTasksList.innerHTML = highTasks.slice(0, 5).map(t => `
+          <div class="task-summary-item">
+            <div>
+              <span class="badge-tag badge-sev-high" style="font-size: 9px; margin-right: 6px;">${(t.priority || 'high').toUpperCase()}</span>
+              <strong>${escapeHtml(t.title)}</strong>
+            </div>
+            <span style="font-size: 11px; color: var(--text-dim);">${t.status || 'todo'}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Telemetry Snippet Preview
+    if (els.superbrainTelemetryPreview) {
+      let preview = '';
+      if (rtConnected) {
+        preview += `🌌 RESOURCE TRACKER:\n- Weekly Burn: $${rm.weekly_burn_rate} ($${rm.monthly_burn_rate}/mo)\n- Tracked Subscriptions: ${rm.subscription_count}\n- Travel Credits & Vouchers: $${rm.total_travel_credits}\n- Hardware Assets: $${rm.hardware_asset_value}\n\n`;
+      }
+      if (nbConnected) {
+        preview += `⚡ NEON BRAIN:\n- Open Tasks: ${nm.open_tasks_count} (${nm.high_priority_tasks_count} urgent)\n- Thought Vault Notes: ${nm.notes_count}\n- Prompt Templates: ${nm.prompts_count}\n`;
+      }
+      els.superbrainTelemetryPreview.textContent = preview.trim() || 'No active telemetry yet. Connect Resource Tracker or import Neon Brain above.';
+    }
+  } catch (err) {
+    console.error('Error refreshing superbrain view:', err);
+  }
 }
 
 // ============================================================

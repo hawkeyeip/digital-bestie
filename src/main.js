@@ -20,6 +20,12 @@ import {
   loadFeedback, addFeedbackItem, deleteFeedbackItem, updateFeedbackStatus
 } from './services/memory.js';
 import { buildSystemPrompt, getOnboardingPrompt, getExtractionPrompt } from './services/system-prompt.js';
+import {
+  loadSuperbrainData,
+  syncResourceTracker,
+  importNeonBrainBackup,
+  detectResourceTrackerPath
+} from './services/superbrain.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -291,6 +297,39 @@ function registerIPC() {
         }
       });
     });
+  });
+
+  // --- Superbrain Bridge (Resource Tracker & Neon Brain) ---
+  ipcMain.handle('superbrain:getData', () => loadSuperbrainData());
+  ipcMain.handle('superbrain:detectPath', () => detectResourceTrackerPath());
+  ipcMain.handle('superbrain:syncResourceTracker', async (event, customPathOrUrl) => {
+    return syncResourceTracker(customPathOrUrl);
+  });
+
+  ipcMain.handle('superbrain:importNeonBrainDialog', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Neon Brain Backup',
+      filters: [{ name: 'JSON Backup', extensions: ['json'] }],
+      properties: ['openFile']
+    });
+    if (!result.canceled && result.filePaths.length) {
+      const filePath = result.filePaths[0];
+      return importNeonBrainBackup(filePath);
+    }
+    return { canceled: true };
+  });
+
+  ipcMain.handle('superbrain:exportToNeonBrainDialog', async (event, payload) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export for Neon Brain Import',
+      defaultPath: `neon-brain-sync-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (!result.canceled && result.filePath) {
+      fs.writeFileSync(result.filePath, JSON.stringify(payload, null, 2));
+      return { success: true, path: result.filePath };
+    }
+    return { canceled: true };
   });
 }
 

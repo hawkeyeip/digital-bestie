@@ -5,6 +5,7 @@
  */
 
 import { loadProfile } from './memory.js';
+import { getSuperbrainPromptSnippet } from './superbrain.js';
 
 /**
  * Build the complete system prompt with current user profile injected
@@ -38,6 +39,11 @@ ${profileJSON}
 ## ACTIVE TONE CALIBRATION
 Tone: ${tonePreference} | Execution style: ${executionStyle}
 `;
+
+  const superbrainSnippet = getSuperbrainPromptSnippet();
+  if (superbrainSnippet) {
+    prompt += superbrainSnippet;
+  }
 
   if (activeModule && MODULE_PROMPTS[activeModule]) {
     prompt += `\n\n## ACTIVE MODULE: ${activeModule.toUpperCase()}\n${MODULE_PROMPTS[activeModule]}`;

@@ -77,6 +77,12 @@
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
             </svg>
           </button>
+          <button class="nav-btn" data-view="superbrain" title="Superbrain Hub (Resource Tracker + Neon Brain)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a4.5 4.5 0 0 0-4.5 4.5c0 1.25.5 2.38 1.32 3.2A6.5 6.5 0 0 0 3 16v1a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-1a6.5 6.5 0 0 0-5.82-6.3 4.5 4.5 0 0 0 1.32-3.2A4.5 4.5 0 0 0 12 2Z"/>
+              <path d="M9 10h6"/>
+            </svg>
+          </button>
           <div class="nav-spacer"></div>
           <button class="nav-btn" data-view="settings" title="Settings">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -293,6 +299,126 @@
             </div>
             <div id="feedback-items-container-page" class="feedback-items-container">
               <!-- Rendered items -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Superbrain Hub View -->
+        <div id="view-superbrain" class="view">
+          <div class="panel-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h2 class="panel-title">🧠 Superbrain Hub</h2>
+                <p class="panel-subtitle">Unifying Resource Tracker &amp; Neon Brain with your Living Dossier</p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button id="btn-sync-all-superbrain" class="btn-neon">⚡ Sync All to Dossier</button>
+              </div>
+            </div>
+          </div>
+          <div class="superbrain-content">
+            <!-- Grid of 2 major sub-systems -->
+            <div class="superbrain-grid">
+              <!-- Resource Tracker Card -->
+              <div class="superbrain-card">
+                <div class="superbrain-card-header">
+                  <div class="superbrain-card-title">
+                    <span class="superbrain-icon">🌌</span>
+                    <div>
+                      <h3>Resource Tracker</h3>
+                      <span id="rt-status-pill" class="status-badge disconnected">Disconnected</span>
+                    </div>
+                  </div>
+                  <button id="btn-sync-rt" class="btn-glass btn-sm">Sync Resources</button>
+                </div>
+                <div class="superbrain-source-row">
+                  <input type="text" id="rt-source-input" class="feedback-input flex-1" placeholder="File path (data.json) or API URL (http://localhost:5174)" />
+                  <button id="btn-detect-rt" class="btn-glass btn-sm" title="Auto-detect local Resource Tracker">Auto-Detect</button>
+                </div>
+                <!-- Metrics -->
+                <div class="superbrain-metrics-grid">
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Weekly Burn</span>
+                    <span id="rt-weekly-burn" class="sb-metric-val">$0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Monthly Burn</span>
+                    <span id="rt-monthly-burn" class="sb-metric-val">$0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Subscriptions</span>
+                    <span id="rt-sub-count" class="sb-metric-val">0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Travel Credits</span>
+                    <span id="rt-travel-credits" class="sb-metric-val">$0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Hardware Assets</span>
+                    <span id="rt-hardware-val" class="sb-metric-val">$0</span>
+                  </div>
+                </div>
+                <div class="superbrain-sub-section">
+                  <h4>Upcoming Renewals (Next 30 Days)</h4>
+                  <div id="rt-renewals-list" class="renewals-list">
+                    <div class="empty-state-sm">No renewals tracked yet</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Neon Brain Card -->
+              <div class="superbrain-card">
+                <div class="superbrain-card-header">
+                  <div class="superbrain-card-title">
+                    <span class="superbrain-icon">⚡</span>
+                    <div>
+                      <h3>Neon Brain</h3>
+                      <span id="nb-status-pill" class="status-badge disconnected">Disconnected</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 6px;">
+                    <button id="btn-import-nb" class="btn-glass btn-sm">📥 Import Backup</button>
+                    <button id="btn-export-nb" class="btn-glass btn-sm">📤 Export Plan</button>
+                  </div>
+                </div>
+                <div class="superbrain-source-row">
+                  <span class="superbrain-source-note">Synchronize tasks, thought notes, and prompt templates from your Neon Brain vault</span>
+                </div>
+                <!-- Metrics -->
+                <div class="superbrain-metrics-grid">
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Open Tasks</span>
+                    <span id="nb-open-tasks" class="sb-metric-val">0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">High Priority</span>
+                    <span id="nb-high-pri-tasks" class="sb-metric-val">0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Thought Vault</span>
+                    <span id="nb-notes-count" class="sb-metric-val">0</span>
+                  </div>
+                  <div class="sb-metric-box">
+                    <span class="sb-metric-label">Prompts</span>
+                    <span id="nb-prompts-count" class="sb-metric-val">0</span>
+                  </div>
+                </div>
+                <div class="superbrain-sub-section">
+                  <h4>Active Urgent Tasks</h4>
+                  <div id="nb-tasks-list" class="renewals-list">
+                    <div class="empty-state-sm">No active tasks imported</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Prompt Telemetry Preview -->
+            <div class="superbrain-prompt-preview">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; font-size: 12px; color: var(--neon-cyan); text-transform: uppercase;">Active Telemetry Injected into AI Prompt</h4>
+                <span style="font-size: 11px; color: var(--text-dim);">Auto-refreshed on generation</span>
+              </div>
+              <pre><code id="superbrain-telemetry-preview">No telemetry active yet. Connect Resource Tracker or import Neon Brain above.</code></pre>
             </div>
           </div>
         </div>

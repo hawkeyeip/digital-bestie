@@ -78,5 +78,15 @@ contextBridge.exposeInMainWorld('bestie', {
     getDiagnostics: () => ipcRenderer.invoke('feedback:getDiagnostics'),
     createGithubIssue: (payload) => ipcRenderer.invoke('feedback:createGithubIssue', payload),
   },
+
+  // --- Superbrain Bridge (Resource Tracker & Neon Brain) ---
+  superbrain: {
+    getData: () => ipcRenderer.invoke('superbrain:getData'),
+    detectPath: () => ipcRenderer.invoke('superbrain:detectPath'),
+    syncResourceTracker: (pathOrUrl) => ipcRenderer.invoke('superbrain:syncResourceTracker', pathOrUrl),
+    importNeonBrainDialog: () => ipcRenderer.invoke('superbrain:importNeonBrainDialog'),
+    exportToNeonBrainDialog: (payload) => ipcRenderer.invoke('superbrain:exportToNeonBrainDialog', payload),
+  },
 });
+
 
