@@ -11,6 +11,7 @@ const DATA_DIR = path.join(os.homedir(), '.digital-bestie');
 const PROFILE_PATH = path.join(DATA_DIR, 'user_profile.json');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 const CONVERSATION_PATH = path.join(DATA_DIR, 'conversation.json');
+const FEEDBACK_PATH = path.join(DATA_DIR, 'feedback_and_bugs.json');
 
 /** Default empty profile matching the Living Dossier schema */
 const DEFAULT_PROFILE = {
@@ -247,4 +248,49 @@ export function importProfile(data) {
   if (data.conversation) saveConversation(data.conversation);
 }
 
-export { DATA_DIR, DEFAULT_PROFILE, DEFAULT_SETTINGS };
+// --- Feedback & Bug Logging ---
+
+export function loadFeedback() {
+  return loadJSON(FEEDBACK_PATH, []);
+}
+
+export function saveFeedback(items) {
+  saveJSON(FEEDBACK_PATH, items);
+}
+
+export function addFeedbackItem(item) {
+  const items = loadFeedback();
+  const newItem = {
+    id: `fb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    type: item.type || 'bug', // 'bug' | 'feature'
+    title: item.title || 'Untitled',
+    description: item.description || '',
+    severity: item.severity || 'medium', // 'low' | 'medium' | 'high' | 'critical'
+    diagnostics: item.diagnostics || null,
+    status: 'open',
+    createdAt: new Date().toISOString()
+  };
+  items.unshift(newItem);
+  saveFeedback(items);
+  return newItem;
+}
+
+export function deleteFeedbackItem(id) {
+  const items = loadFeedback();
+  const filtered = items.filter(it => it.id !== id);
+  saveFeedback(filtered);
+  return filtered;
+}
+
+export function updateFeedbackStatus(id, status) {
+  const items = loadFeedback();
+  const target = items.find(it => it.id === id);
+  if (target) {
+    target.status = status;
+    saveFeedback(items);
+  }
+  return items;
+}
+
+export { DATA_DIR, DEFAULT_PROFILE, DEFAULT_SETTINGS, FEEDBACK_PATH };
+

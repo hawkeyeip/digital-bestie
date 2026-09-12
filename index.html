@@ -35,6 +35,14 @@
           <span class="status-text">Connecting...</span>
         </div>
       </div>
+      <div class="titlebar-center">
+        <button id="btn-quick-feedback" class="feedback-pill-btn" title="Call out and log bug issues or feature recommendations">
+          <span class="pill-dot"></span>
+          <span class="pill-icon">🐞 / 💡</span>
+          <span class="pill-text">Log Issue / Idea</span>
+          <span id="feedback-badge" class="badge-count hidden">0</span>
+        </button>
+      </div>
       <div class="titlebar-controls">
         <button id="btn-minimize" class="titlebar-btn" aria-label="Minimize">
           <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" rx="1" fill="currentColor"/></svg>
@@ -272,6 +280,23 @@
           </div>
         </div>
 
+        <!-- Feedback & Bugs Full View -->
+        <div id="view-feedback" class="view">
+          <div class="panel-header">
+            <h2 class="panel-title">Bug Reports & Feature Ideas</h2>
+            <p class="panel-subtitle">Track glitches, request improvements, and synchronize with GitHub</p>
+          </div>
+          <div class="memory-content">
+            <div class="feedback-actions" style="border-top: none; padding-top: 0; justify-content: flex-start; margin-bottom: 16px;">
+              <button id="btn-open-new-feedback-page" class="btn-neon">+ Log New Issue or Idea</button>
+              <button id="btn-export-feedback-md-page" class="btn-glass">📋 Copy All as Markdown</button>
+            </div>
+            <div id="feedback-items-container-page" class="feedback-items-container">
+              <!-- Rendered items -->
+            </div>
+          </div>
+        </div>
+
         <!-- Settings View -->
         <div id="view-settings" class="view">
           <div class="panel-header">
@@ -305,6 +330,99 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Persistent Floating Feedback Button (Quick Access) -->
+    <div id="persistent-feedback-bar" class="persistent-feedback-bar" title="Call out and log bug issues or feature recommendations">
+      <span class="pill-dot"></span>
+      <span class="bar-icon">🐞 / 💡</span>
+      <span class="bar-label">Log Bug / Idea</span>
+      <span id="feedback-floating-badge" class="badge-count hidden">0</span>
+    </div>
+
+    <!-- Feedback & Bug Reporter Modal -->
+    <div id="feedback-overlay" class="feedback-overlay hidden">
+      <div class="feedback-card">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap">
+              <span id="feedback-header-icon">🐞</span>
+            </div>
+            <div>
+              <h3 id="feedback-modal-title">Log Issue or Recommendation</h3>
+              <p class="feedback-subtitle">Track bugs, rough edges, and feature improvements locally and push to GitHub.</p>
+            </div>
+          </div>
+          <button id="btn-close-feedback" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-tabs">
+          <button class="feedback-tab active" data-tab="new">New Entry</button>
+          <button class="feedback-tab" data-tab="list">Logged Items (<span id="tab-count">0</span>)</button>
+        </div>
+
+        <!-- Tab: New Entry -->
+        <div id="tab-feedback-new" class="feedback-tab-content active">
+          <div class="feedback-form">
+            <div class="feedback-type-toggle">
+              <button type="button" class="type-btn active" data-type="bug">
+                <span class="type-icon">🐞</span> Bug / Glitch
+              </button>
+              <button type="button" class="type-btn" data-type="feature">
+                <span class="type-icon">💡</span> Feature / Improvement
+              </button>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="feedback-title">Title / Summary</label>
+                <input type="text" id="feedback-title" class="feedback-input" placeholder="e.g. Model response delayed on cold start..." />
+              </div>
+              <div class="form-group severity-group">
+                <label for="feedback-severity">Severity / Priority</label>
+                <select id="feedback-severity" class="feedback-select">
+                  <option value="low">Low (Nice to have)</option>
+                  <option value="medium" selected>Medium (Noticeable)</option>
+                  <option value="high">High (Pain point)</option>
+                  <option value="critical">Critical (Blocker)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="feedback-desc">Description & Reproduction Steps</label>
+              <textarea id="feedback-desc" class="feedback-textarea" rows="4" placeholder="What happened, what did you expect, or what feature would level this up?"></textarea>
+            </div>
+
+            <div class="diagnostics-toggle-wrap">
+              <label class="checkbox-label">
+                <input type="checkbox" id="feedback-include-diag" checked />
+                <span>Attach system snapshot (App version, OS, Ollama connection, active module, memory)</span>
+              </label>
+              <button type="button" id="btn-view-diag" class="btn-text-link">Preview Diagnostics</button>
+            </div>
+            <div id="diagnostics-preview" class="diagnostics-preview hidden">
+              <pre><code id="diag-preview-code">Loading...</code></pre>
+            </div>
+
+            <div class="feedback-actions">
+              <button id="btn-save-feedback-local" class="btn-glass">Save Locally</button>
+              <button id="btn-save-and-github" class="btn-neon">Save & Create GitHub Issue 🚀</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Logged Items List -->
+        <div id="tab-feedback-list" class="feedback-tab-content">
+          <div class="feedback-list-toolbar">
+            <input type="text" id="feedback-search" class="feedback-search" placeholder="Filter logged issues..." />
+            <button id="btn-export-feedback-md" class="btn-glass btn-sm" title="Copy as Markdown">📋 Copy All MD</button>
+          </div>
+          <div id="feedback-items-container" class="feedback-items-container">
+            <!-- Items rendered dynamically -->
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Onboarding Modal -->

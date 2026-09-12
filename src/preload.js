@@ -68,4 +68,15 @@ contextBridge.exposeInMainWorld('bestie', {
   onboarding: {
     getPrompt: (phase) => ipcRenderer.invoke('onboarding:getPrompt', phase),
   },
+
+  // --- Feedback & Bug Logging ---
+  feedback: {
+    load: () => ipcRenderer.invoke('feedback:load'),
+    add: (item) => ipcRenderer.invoke('feedback:add', item),
+    delete: (id) => ipcRenderer.invoke('feedback:delete', id),
+    updateStatus: (id, status) => ipcRenderer.invoke('feedback:updateStatus', { id, status }),
+    getDiagnostics: () => ipcRenderer.invoke('feedback:getDiagnostics'),
+    createGithubIssue: (payload) => ipcRenderer.invoke('feedback:createGithubIssue', payload),
+  },
 });
+

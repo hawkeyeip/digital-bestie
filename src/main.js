@@ -3,9 +3,11 @@
  * Electron main process with IPC handlers for Ollama, memory, and window management
  */
 
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
+import { execFile } from 'node:child_process';
 import started from 'electron-squirrel-startup';
 
 // Services (ESM imports — bundled by Vite)
@@ -14,7 +16,8 @@ import {
   loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
   loadConversation, saveConversation, appendMessage, getMessageWindow, clearConversation,
   loadSettings, saveSettings, updateSetting,
-  exportProfile, importProfile
+  exportProfile, importProfile,
+  loadFeedback, addFeedbackItem, deleteFeedbackItem, updateFeedbackStatus
 } from './services/memory.js';
 import { buildSystemPrompt, getOnboardingPrompt, getExtractionPrompt } from './services/system-prompt.js';
 
@@ -242,6 +245,52 @@ function registerIPC() {
   // --- Onboarding Prompts ---
   ipcMain.handle('onboarding:getPrompt', (event, phase) => {
     return getOnboardingPrompt(phase);
+  });
+
+  // --- Feedback & Bug Logging ---
+  ipcMain.handle('feedback:load', () => loadFeedback());
+  ipcMain.handle('feedback:add', (event, item) => addFeedbackItem(item));
+  ipcMain.handle('feedback:delete', (event, id) => deleteFeedbackItem(id));
+  ipcMain.handle('feedback:updateStatus', (event, { id, status }) => updateFeedbackStatus(id, status));
+
+  ipcMain.handle('feedback:getDiagnostics', async () => {
+    const ollamaStatus = await checkOllamaStatus();
+    return {
+      appName: 'Digital Bestie',
+      appVersion: app.getVersion(),
+      electronVersion: process.versions.electron,
+      chromeVersion: process.versions.chrome,
+      nodeVersion: process.versions.node,
+      os: `${os.type()} ${os.release()} (${os.arch()})`,
+      totalMemory: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))} GB`,
+      freeMemory: `${Math.round(os.freemem() / (1024 * 1024 * 1024))} GB`,
+      uptime: `${Math.round(os.uptime() / 3600)} hours`,
+      ollama: ollamaStatus,
+      timestamp: new Date().toISOString()
+    };
+  });
+
+  ipcMain.handle('feedback:createGithubIssue', async (event, { title, body, labels }) => {
+    return new Promise((resolve) => {
+      // First try using GitHub CLI
+      const args = ['issue', 'create', '--repo', 'hawkeyeip/digital-bestie', '--title', title, '--body', body];
+      if (labels && labels.length) {
+        args.push('--label', labels.join(','));
+      }
+
+      execFile('gh', args, (err, stdout, stderr) => {
+        if (!err && stdout) {
+          resolve({ success: true, url: stdout.trim() });
+        } else {
+          // Fallback: open GitHub new issue URL in user default browser
+          const encodedTitle = encodeURIComponent(title);
+          const encodedBody = encodeURIComponent(body);
+          const issueUrl = `https://github.com/hawkeyeip/digital-bestie/issues/new?title=${encodedTitle}&body=${encodedBody}`;
+          shell.openExternal(issueUrl);
+          resolve({ success: true, url: issueUrl, fallbackBrowser: true });
+        }
+      });
+    });
   });
 }
 

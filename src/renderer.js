@@ -137,6 +137,36 @@ const els = {
   btnOnboardingSkip: $('#btn-onboarding-skip'),
   btnOnboardingNext: $('#btn-onboarding-next'),
   progressDots: $$('.progress-dot'),
+
+  // Feedback & Bug Reporter
+  btnQuickFeedback: $('#btn-quick-feedback'),
+  persistentFeedbackBar: $('#persistent-feedback-bar'),
+  feedbackOverlay: $('#feedback-overlay'),
+  btnCloseFeedback: $('#btn-close-feedback'),
+  feedbackBadge: $('#feedback-badge'),
+  feedbackFloatingBadge: $('#feedback-floating-badge'),
+  feedbackHeaderIcon: $('#feedback-header-icon'),
+  feedbackModalTitle: $('#feedback-modal-title'),
+  feedbackTabs: $$('.feedback-tab'),
+  tabCount: $('#tab-count'),
+  tabFeedbackNew: $('#tab-feedback-new'),
+  tabFeedbackList: $('#tab-feedback-list'),
+  typeBtns: $$('.type-btn'),
+  feedbackTitle: $('#feedback-title'),
+  feedbackSeverity: $('#feedback-severity'),
+  feedbackDesc: $('#feedback-desc'),
+  feedbackIncludeDiag: $('#feedback-include-diag'),
+  btnViewDiag: $('#btn-view-diag'),
+  diagPreview: $('#diagnostics-preview'),
+  diagPreviewCode: $('#diag-preview-code'),
+  btnSaveFeedbackLocal: $('#btn-save-feedback-local'),
+  btnSaveAndGithub: $('#btn-save-and-github'),
+  feedbackSearch: $('#feedback-search'),
+  btnExportFeedbackMd: $('#btn-export-feedback-md'),
+  btnExportFeedbackMdPage: $('#btn-export-feedback-md-page'),
+  btnOpenNewFeedbackPage: $('#btn-open-new-feedback-page'),
+  feedbackItemsContainer: $('#feedback-items-container'),
+  feedbackItemsContainerPage: $('#feedback-items-container-page'),
 };
 
 // ============================================================
@@ -168,6 +198,9 @@ async function init() {
 
   // Load existing conversation
   await loadExistingConversation();
+
+  // Load feedback badge
+  await refreshFeedbackBadge();
 
   // Check if onboarding is needed
   if (!state.profile?.onboarding_state?.completed) {
@@ -298,6 +331,51 @@ function registerEventListeners() {
       handleOnboardingNext();
     }
   });
+
+  // Feedback & Bug reporter
+  els.btnQuickFeedback?.addEventListener('click', () => openFeedbackModal());
+  els.persistentFeedbackBar?.addEventListener('click', () => openFeedbackModal());
+  els.btnCloseFeedback?.addEventListener('click', () => closeFeedbackModal());
+
+  els.feedbackTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      switchFeedbackTab(tab.dataset.tab);
+    });
+  });
+
+  els.typeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      els.typeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFeedbackType = btn.dataset.type;
+      if (els.feedbackHeaderIcon) els.feedbackHeaderIcon.textContent = activeFeedbackType === 'bug' ? '🐞' : '💡';
+      if (els.feedbackModalTitle) els.feedbackModalTitle.textContent = activeFeedbackType === 'bug' ? 'Log Bug / Glitch' : 'Suggest Feature / Improvement';
+    });
+  });
+
+  els.btnViewDiag?.addEventListener('click', async () => {
+    if (els.diagPreview.classList.contains('hidden')) {
+      const diag = await window.bestie.feedback.getDiagnostics();
+      diag.activeModule = state.activeModule || 'None (General Chat)';
+      els.diagPreviewCode.textContent = JSON.stringify(diag, null, 2);
+      els.diagPreview.classList.remove('hidden');
+      els.btnViewDiag.textContent = 'Hide Diagnostics';
+    } else {
+      els.diagPreview.classList.add('hidden');
+      els.btnViewDiag.textContent = 'Preview Diagnostics';
+    }
+  });
+
+  els.btnSaveFeedbackLocal?.addEventListener('click', () => handleSaveFeedback(false));
+  els.btnSaveAndGithub?.addEventListener('click', () => handleSaveFeedback(true));
+
+  els.btnExportFeedbackMd?.addEventListener('click', handleExportFeedbackMd);
+  els.btnExportFeedbackMdPage?.addEventListener('click', handleExportFeedbackMd);
+  els.btnOpenNewFeedbackPage?.addEventListener('click', () => openFeedbackModal());
+
+  els.feedbackSearch?.addEventListener('input', () => {
+    renderFeedbackList(cachedFeedback, els.feedbackSearch.value);
+  });
 }
 
 // ============================================================
@@ -314,6 +392,9 @@ function switchView(viewName) {
   els.views.forEach(view => {
     view.classList.toggle('active', view.id === `view-${viewName}`);
   });
+
+  if (viewName === 'memory') refreshMemoryView();
+  if (viewName === 'feedback') refreshFeedbackView();
 }
 
 // ============================================================
@@ -715,6 +796,248 @@ function handleOnboardingSkip() {
     els.onboardingOverlay.classList.add('hidden');
     addMessage('assistant', 'Got it — we can fill in the blanks as we go. What\'s on your mind?');
   }
+}
+
+// ============================================================
+// FEEDBACK & BUG REPORTER
+// ============================================================
+
+let activeFeedbackType = 'bug';
+let cachedFeedback = [];
+
+async function refreshFeedbackBadge() {
+  try {
+    const items = await window.bestie.feedback.load();
+    cachedFeedback = items || [];
+    const count = cachedFeedback.length;
+    
+    if (els.feedbackBadge) {
+      els.feedbackBadge.textContent = count;
+      els.feedbackBadge.classList.toggle('hidden', count === 0);
+    }
+    if (els.feedbackFloatingBadge) {
+      els.feedbackFloatingBadge.textContent = count;
+      els.feedbackFloatingBadge.classList.toggle('hidden', count === 0);
+    }
+    if (els.tabCount) {
+      els.tabCount.textContent = count;
+    }
+  } catch (err) {
+    console.warn('Error loading feedback badge:', err);
+  }
+}
+
+async function openFeedbackModal(type = 'bug') {
+  activeFeedbackType = type;
+  els.typeBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  if (els.feedbackHeaderIcon) {
+    els.feedbackHeaderIcon.textContent = type === 'bug' ? '🐞' : '💡';
+  }
+  if (els.feedbackModalTitle) {
+    els.feedbackModalTitle.textContent = type === 'bug' ? 'Log Bug / Glitch' : 'Suggest Feature / Improvement';
+  }
+  els.feedbackTitle.value = '';
+  els.feedbackDesc.value = '';
+  els.diagPreview.classList.add('hidden');
+  if (els.btnViewDiag) els.btnViewDiag.textContent = 'Preview Diagnostics';
+
+  switchFeedbackTab('new');
+  els.feedbackOverlay.classList.remove('hidden');
+  els.feedbackTitle.focus();
+}
+
+function closeFeedbackModal() {
+  els.feedbackOverlay.classList.add('hidden');
+}
+
+function switchFeedbackTab(tabName) {
+  els.feedbackTabs.forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+  if (tabName === 'new') {
+    els.tabFeedbackNew.classList.add('active');
+    els.tabFeedbackList.classList.remove('active');
+  } else {
+    els.tabFeedbackNew.classList.remove('active');
+    els.tabFeedbackList.classList.add('active');
+    loadAndRenderFeedback();
+  }
+}
+
+async function loadAndRenderFeedback() {
+  const items = await window.bestie.feedback.load();
+  cachedFeedback = items || [];
+  renderFeedbackList(cachedFeedback, els.feedbackSearch?.value || '');
+  await refreshFeedbackBadge();
+}
+
+function renderFeedbackList(items, filter = '') {
+  const containers = [els.feedbackItemsContainer, els.feedbackItemsContainerPage].filter(Boolean);
+  
+  const query = filter.toLowerCase().trim();
+  const filtered = query
+    ? items.filter(it => (it.title || '').toLowerCase().includes(query) || (it.description || '').toLowerCase().includes(query))
+    : items;
+
+  containers.forEach(container => {
+    if (!filtered || filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-feedback-state">
+          <p>No logged items yet.</p>
+          <p style="margin-top: 4px; font-size: 11px; opacity: 0.7;">Click "New Entry" above to log a bug or suggest a feature.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+      const isBug = item.type === 'bug';
+      const typeBadge = isBug 
+        ? `<span class="badge-tag badge-bug">🐞 Bug</span>`
+        : `<span class="badge-tag badge-feature">💡 Idea</span>`;
+      
+      const sevBadge = `<span class="badge-tag badge-sev-${item.severity || 'medium'}">${(item.severity || 'medium').toUpperCase()}</span>`;
+      const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
+
+      return `
+        <div class="feedback-item-card" data-id="${item.id}">
+          <div class="feedback-item-header">
+            <div class="feedback-item-tags">
+              ${typeBadge}
+              ${sevBadge}
+            </div>
+            <span class="feedback-item-time">${dateStr}</span>
+          </div>
+          <div class="feedback-item-title">${escapeHtml(item.title)}</div>
+          ${item.description ? `<div class="feedback-item-desc">${escapeHtml(item.description)}</div>` : ''}
+          <div class="feedback-item-actions">
+            <button class="btn-glass btn-sm btn-delete-feedback" data-id="${item.id}">Delete</button>
+            <button class="btn-glass btn-sm btn-github-issue" data-id="${item.id}">Open in GitHub</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach listeners
+    container.querySelectorAll('.btn-delete-feedback').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        await window.bestie.feedback.delete(id);
+        showToast('Item deleted');
+        loadAndRenderFeedback();
+      });
+    });
+
+    container.querySelectorAll('.btn-github-issue').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const target = cachedFeedback.find(it => it.id === id);
+        if (target) {
+          const body = formatIssueBody(target);
+          const labels = target.type === 'bug' ? ['bug'] : ['enhancement'];
+          const res = await window.bestie.feedback.createGithubIssue({
+            title: target.title,
+            body,
+            labels
+          });
+          if (res.success) {
+            showToast('GitHub issue created / opened!');
+          }
+        }
+      });
+    });
+  });
+}
+
+function formatIssueBody(item) {
+  let body = `### Description\n${item.description || 'No description provided.'}\n\n`;
+  body += `**Severity / Priority**: ${item.severity || 'medium'}\n`;
+  body += `**Logged At**: ${item.createdAt}\n\n`;
+  if (item.diagnostics) {
+    body += `<details>\n<summary>System Diagnostics</summary>\n\n\`\`\`json\n${JSON.stringify(item.diagnostics, null, 2)}\n\`\`\`\n</details>\n`;
+  }
+  return body;
+}
+
+async function handleSaveFeedback(pushToGithub = false) {
+  const title = els.feedbackTitle.value.trim();
+  if (!title) {
+    showToast('Please enter a title or summary');
+    els.feedbackTitle.focus();
+    return;
+  }
+
+  const description = els.feedbackDesc.value.trim();
+  const severity = els.feedbackSeverity.value;
+  const includeDiag = els.feedbackIncludeDiag.checked;
+
+  let diagnostics = null;
+  if (includeDiag) {
+    diagnostics = await window.bestie.feedback.getDiagnostics();
+    diagnostics.activeModule = state.activeModule || 'None (General Chat)';
+  }
+
+  const newItem = await window.bestie.feedback.add({
+    type: activeFeedbackType,
+    title,
+    description,
+    severity,
+    diagnostics
+  });
+
+  if (pushToGithub) {
+    showToast('Creating GitHub issue...');
+    const body = formatIssueBody(newItem);
+    const labels = activeFeedbackType === 'bug' ? ['bug'] : ['enhancement'];
+    const res = await window.bestie.feedback.createGithubIssue({
+      title,
+      body,
+      labels
+    });
+    if (res.success) {
+      showToast('Logged & GitHub issue created! 🚀');
+    }
+  } else {
+    showToast('Logged locally! 💾');
+  }
+
+  closeFeedbackModal();
+  await refreshFeedbackBadge();
+  if (state.currentView === 'feedback') {
+    refreshFeedbackView();
+  }
+}
+
+async function refreshFeedbackView() {
+  await loadAndRenderFeedback();
+}
+
+async function handleExportFeedbackMd() {
+  const items = await window.bestie.feedback.load();
+  if (!items || items.length === 0) {
+    showToast('No feedback items to export');
+    return;
+  }
+
+  let md = `# Digital Bestie — Feedback & Bug Log\n*Exported: ${new Date().toLocaleString()}*\n\n`;
+  items.forEach((it, idx) => {
+    md += `## ${idx + 1}. [${it.type.toUpperCase()}] ${it.title}\n`;
+    md += `- **Severity**: ${it.severity}\n`;
+    md += `- **Date**: ${it.createdAt}\n`;
+    md += `- **Status**: ${it.status}\n\n`;
+    md += `${it.description || '*No description*'}\n\n`;
+    if (it.diagnostics) {
+      md += `\`\`\`json\n${JSON.stringify(it.diagnostics, null, 2)}\n\`\`\`\n\n`;
+    }
+    md += `---\n\n`;
+  });
+
+  await navigator.clipboard.writeText(md);
+  showToast('Copied all feedback to clipboard as Markdown! 📋');
 }
 
 // ============================================================
