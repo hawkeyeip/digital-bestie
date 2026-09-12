@@ -805,16 +805,54 @@ async function handleOnboardingNext() {
   const response = els.onboardingInput.value.trim();
   if (!response) return;
 
-  // Show processing state
-  const card = document.querySelector('.onboarding-card');
-  card.classList.add('processing');
+  const currentPhase = onboardingPhase;
 
-  try {
-    // Extract structured data from response
-    const extracted = await window.bestie.ollama.extract(onboardingPhase, response);
+  // 1. Immediately save response into profile state so nothing is ever lost
+  state.profile = await window.bestie.memory.getProfile();
+  if (!state.profile.onboarding_state) state.profile.onboarding_state = {};
+  if (!state.profile.onboarding_state.phase_responses) state.profile.onboarding_state.phase_responses = {};
+  state.profile.onboarding_state.phase_responses[currentPhase] = response;
+  state.profile.onboarding_state.current_phase = currentPhase;
 
+  // Instant direct baseline mapping
+  if (currentPhase === 1) {
+    state.profile.user_profile.identity_and_baseline.current_living_situation = response;
+    state.profile.user_profile.identity_and_baseline.primary_acute_stressor = response;
+  } else if (currentPhase === 2) {
+    state.profile.user_profile.cognitive_and_behavioral_profile.primary_avoidance_triggers = [response];
+  } else if (currentPhase === 3) {
+    state.profile.user_profile.cognitive_and_behavioral_profile.escape_mechanisms = [response];
+  } else if (currentPhase === 4) {
+    state.profile.user_profile.goal_and_boundary_matrix.north_star_90_day = response;
+  } else if (currentPhase === 5) {
+    const lower = response.toLowerCase();
+    if (lower.includes('c') || lower.includes('bestie') || lower.includes('ride-or-die')) {
+      state.profile.user_profile.cognitive_and_behavioral_profile.tone_preference = 'digital_bestie';
+    } else if (lower.includes('b') || lower.includes('direct') || lower.includes('factual')) {
+      state.profile.user_profile.cognitive_and_behavioral_profile.tone_preference = 'direct_factual';
+    } else if (lower.includes('a') || lower.includes('gentle')) {
+      state.profile.user_profile.cognitive_and_behavioral_profile.tone_preference = 'gentle';
+    }
+  }
+
+  await window.bestie.memory.saveProfile(state.profile);
+
+  // 2. Immediately advance to next phase in UI — zero freeze, zero waiting!
+  if (onboardingPhase < 5) {
+    onboardingPhase++;
+    updateOnboardingUI();
+  } else {
+    // Complete onboarding
+    state.profile.onboarding_state.completed = true;
+    await window.bestie.memory.saveProfile(state.profile);
+    els.onboardingOverlay.classList.add('hidden');
+    
+    addMessage('assistant', 'Onboarding complete! 🎉 I\'ve got your baseline profile locked in. I know your situation, your patterns, your goals, and how you want me to talk to you. Let\'s get to work — what\'s the most pressing thing on your plate right now?');
+  }
+
+  // 3. Run LLM structured extraction asynchronously in the background
+  window.bestie.ollama.extract(currentPhase, response).then(async (extracted) => {
     if (extracted && !extracted.parseError) {
-      // Map extracted data to profile fields
       const fieldMap = {
         1: {
           'user_profile.identity_and_baseline.current_living_situation': extracted.current_living_situation,
@@ -838,40 +876,17 @@ async function handleOnboardingNext() {
         },
       };
 
-      const fields = fieldMap[onboardingPhase] || {};
+      const fields = fieldMap[currentPhase] || {};
       for (const [path, value] of Object.entries(fields)) {
         if (value !== undefined && value !== null && value !== '') {
           await window.bestie.memory.updateField(path, value);
         }
       }
+      state.profile = await window.bestie.memory.getProfile();
     }
-
-    // Save phase response
-    state.profile = await window.bestie.memory.getProfile();
-    if (!state.profile.onboarding_state) state.profile.onboarding_state = {};
-    if (!state.profile.onboarding_state.phase_responses) state.profile.onboarding_state.phase_responses = {};
-    state.profile.onboarding_state.phase_responses[onboardingPhase] = response;
-    state.profile.onboarding_state.current_phase = onboardingPhase;
-    await window.bestie.memory.saveProfile(state.profile);
-
-  } catch (err) {
-    console.error('Onboarding extraction error:', err);
-    // Continue anyway — the raw response is saved
-  }
-
-  card.classList.remove('processing');
-
-  if (onboardingPhase < 5) {
-    onboardingPhase++;
-    updateOnboardingUI();
-  } else {
-    // Complete onboarding
-    state.profile.onboarding_state.completed = true;
-    await window.bestie.memory.saveProfile(state.profile);
-    els.onboardingOverlay.classList.add('hidden');
-    
-    addMessage('assistant', 'Onboarding complete! 🎉 I\'ve got your profile saved. I know your situation, your patterns, your goals, and how you want me to talk to you. Let\'s get to work — what\'s the most pressing thing on your plate right now?');
-  }
+  }).catch((err) => {
+    console.warn('Background extraction note:', err?.message || err);
+  });
 }
 
 function handleOnboardingSkip() {

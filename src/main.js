@@ -162,6 +162,8 @@ function registerIPC() {
   // --- Onboarding Extraction ---
   ipcMain.handle('ollama:extract', async (event, { phase, userResponse }) => {
     const extractionPrompt = getExtractionPrompt(phase, userResponse);
+    const abortCtrl = new AbortController();
+    const timeout = setTimeout(() => abortCtrl.abort(), 15000); // 15s max for extraction
     
     return new Promise((resolve) => {
       streamChat(
@@ -169,6 +171,7 @@ function registerIPC() {
         [{ role: 'user', content: extractionPrompt }],
         () => {}, // ignore tokens
         (result) => {
+          clearTimeout(timeout);
           try {
             const cleaned = (result.fullResponse || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const data = JSON.parse(cleaned);
@@ -178,11 +181,12 @@ function registerIPC() {
           }
         },
         (error) => {
+          clearTimeout(timeout);
           console.warn('Extraction fallback:', error?.message || error);
           resolve({ error: error?.message, parseError: true });
         },
-        null,
-        { num_ctx: 4096, temperature: 0.1 }
+        abortCtrl.signal,
+        { num_ctx: 2048, temperature: 0.1 }
       );
     });
   });
