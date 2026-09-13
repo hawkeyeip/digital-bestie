@@ -103,7 +103,7 @@ export function saveProfile(profile) {
 /**
  * Update a nested field using dot notation
  */
-export function updateProfileField(dotPath, value) {
+export function updateProfileField(dotPath, value, action = 'set') {
   const profile = loadProfile();
   const keys = dotPath.split('.');
   let obj = profile;
@@ -111,7 +111,21 @@ export function updateProfileField(dotPath, value) {
     if (obj[keys[i]] === undefined) obj[keys[i]] = {};
     obj = obj[keys[i]];
   }
-  obj[keys[keys.length - 1]] = value;
+  const lastKey = keys[keys.length - 1];
+  if (action === 'append') {
+    if (!Array.isArray(obj[lastKey])) {
+      obj[lastKey] = obj[lastKey] ? [obj[lastKey]] : [];
+    }
+    if (Array.isArray(value)) {
+      value.forEach(v => {
+        if (!obj[lastKey].includes(v)) obj[lastKey].push(v);
+      });
+    } else if (value && !obj[lastKey].includes(value)) {
+      obj[lastKey].push(value);
+    }
+  } else {
+    obj[lastKey] = value;
+  }
   saveProfile(profile);
   return profile;
 }

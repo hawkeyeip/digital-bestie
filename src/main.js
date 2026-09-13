@@ -209,8 +209,8 @@ function registerIPC() {
     saveProfile(profile);
     return true;
   });
-  ipcMain.handle('memory:updateField', (event, { path: dotPath, value }) => {
-    return updateProfileField(dotPath, value);
+  ipcMain.handle('memory:updateField', (event, { path: dotPath, value, action = 'set' }) => {
+    return updateProfileField(dotPath, value, action);
   });
   ipcMain.handle('memory:deleteField', (event, { path: dotPath }) => {
     return deleteProfileField(dotPath);

@@ -3,6 +3,9 @@
  * Main application logic for the UI
  */
 
+import { CALIBRATION_PACKS, getDossierValue } from './services/calibration.js';
+import { MODULES_METADATA } from './services/modules-data.js';
+
 // ============================================================
 // MARKDOWN PARSER (lightweight, no dependencies)
 // ============================================================
@@ -115,9 +118,22 @@ const els = {
   activeModuleIndicator: $('#active-module-indicator'),
   activeModuleName: $('#active-module-name'),
   btnClearModule: $('#btn-clear-module'),
+  moduleTooltip: $('#module-tooltip'),
+  ttIcon: $('#tt-icon'),
+  ttTitle: $('#tt-title'),
+  ttBadge: $('#tt-badge'),
+  ttWhen: $('#tt-when'),
+  ttCaps: $('#tt-caps'),
+  ttExample: $('#tt-example'),
 
-  // Memory
+  // Memory & Calibration Lab
   memoryContent: $('#memory-content'),
+  tabMemoryDossier: $('#tab-memory-dossier'),
+  tabMemoryCalibration: $('#tab-memory-calibration'),
+  btnOpenCalibrationFromMemory: $('#btn-open-calibration-from-memory'),
+  btnSwitchToDossier: $('#btn-switch-to-dossier'),
+  calibrationCategories: $('#calibration-categories'),
+  calibrationActiveCard: $('#calibration-active-card'),
   btnExport: $('#btn-export'),
   btnImport: $('#btn-import'),
   btnClearConversation: $('#btn-clear-conversation'),
@@ -342,6 +358,9 @@ function registerEventListeners() {
     deactivateModule();
   });
 
+  // Setup rich hover tooltips for all operational modules
+  setupModuleTooltips();
+
   // Memory actions
   els.btnExport.addEventListener('click', async () => {
     const result = await window.bestie.data.export();
@@ -443,6 +462,23 @@ function registerEventListeners() {
   els.btnSaveFeedbackLocal?.addEventListener('click', () => handleSaveFeedback(false));
   els.btnSaveAndGithub?.addEventListener('click', () => handleSaveFeedback(true));
 
+  // --- Calibration Lab & Dossier Deepening ---
+  els.tabMemoryDossier?.addEventListener('click', () => switchView('memory'));
+  els.tabMemoryCalibration?.addEventListener('click', () => switchView('calibration'));
+  els.btnOpenCalibrationFromMemory?.addEventListener('click', () => switchView('calibration'));
+  els.btnSwitchToDossier?.addEventListener('click', () => switchView('memory'));
+
+  els.calibrationCategories?.addEventListener('click', (e) => {
+    const pill = e.target.closest('.cal-cat-pill');
+    if (!pill) return;
+    const cat = pill.dataset.category;
+    if (cat) {
+      state.calibrationCategory = cat;
+      $$('.cal-cat-pill', els.calibrationCategories).forEach(p => p.classList.toggle('active', p.dataset.category === cat));
+      renderActiveCalibrationCategory(cat);
+    }
+  });
+
   els.btnExportFeedbackMd?.addEventListener('click', handleExportFeedbackMd);
   els.btnExportFeedbackMdPage?.addEventListener('click', handleExportFeedbackMd);
   els.btnOpenNewFeedbackPage?.addEventListener('click', () => openFeedbackModal());
@@ -534,6 +570,7 @@ function switchView(viewName) {
   });
 
   if (viewName === 'memory') refreshMemoryView();
+  if (viewName === 'calibration') refreshCalibrationView();
   if (viewName === 'feedback') refreshFeedbackView();
   if (viewName === 'superbrain') refreshSuperbrainView();
 }
@@ -562,12 +599,20 @@ function setupOllamaListeners() {
     }
   });
 
-  removeDoneListener = window.bestie.ollama.onDone((result) => {
+  removeDoneListener = window.bestie.ollama.onDone(async (result) => {
     state.isGenerating = false;
     els.typingIndicator.classList.add('hidden');
     els.btnSend.disabled = !els.chatInput.value.trim();
     els.btnAbort.classList.add('hidden');
     els.btnSend.classList.remove('hidden');
+
+    if (currentStreamEl) {
+      const contentEl = currentStreamEl.querySelector('.message-raw-content');
+      if (contentEl && contentEl.textContent.includes('<DOSSIER_UPDATE>')) {
+        await handleDossierUpdatesInContent(contentEl.textContent, currentStreamEl);
+      }
+    }
+
     currentStreamEl = null;
     scrollToBottom();
   });
@@ -745,8 +790,104 @@ function deactivateModule() {
   addMessage('assistant', 'Module deactivated. Back to general mode — what\'s on your mind?');
 }
 
+let tooltipTimeout = null;
+
+function setupModuleTooltips() {
+  if (!els.moduleTooltip) return;
+
+  const hideTooltip = () => {
+    tooltipTimeout = setTimeout(() => {
+      els.moduleTooltip.classList.remove('visible');
+      setTimeout(() => {
+        if (!els.moduleTooltip.classList.contains('visible')) {
+          els.moduleTooltip.classList.add('hidden');
+        }
+      }, 180);
+    }, 120);
+  };
+
+  const showTooltip = (card) => {
+    clearTimeout(tooltipTimeout);
+    const modKey = card.dataset.module;
+    const meta = MODULES_METADATA[modKey];
+    if (!meta) return;
+
+    els.ttIcon.textContent = meta.icon;
+    els.ttTitle.textContent = meta.name;
+    els.ttBadge.textContent = meta.badge;
+    els.ttBadge.style.color = meta.color;
+    els.ttIcon.style.border = `1px solid ${meta.color}55`;
+    els.ttIcon.style.background = `${meta.color}15`;
+    els.ttWhen.textContent = meta.whenToUse;
+    
+    els.ttCaps.innerHTML = meta.whatItDoes.map(c => `<li>${escapeHtml(c)}</li>`).join('');
+    els.ttExample.textContent = `"${meta.examplePrompt}"`;
+    els.moduleTooltip.dataset.activeModule = modKey;
+
+    // Position tooltip relative to card
+    const rect = card.getBoundingClientRect();
+    const ttWidth = 330;
+    const ttHeight = 310;
+    let left = rect.right + 12;
+    let top = rect.top - 8;
+
+    // If overflowing right window boundary, position to left of card
+    if (left + ttWidth > window.innerWidth - 16) {
+      left = rect.left - ttWidth - 12;
+    }
+    // If still off-screen to the left (narrow window), align below card
+    if (left < 16) {
+      left = Math.max(16, rect.left);
+      top = rect.bottom + 8;
+    }
+    // Prevent vertical overflow
+    if (top + ttHeight > window.innerHeight - 16) {
+      top = Math.max(16, window.innerHeight - ttHeight - 16);
+    }
+    if (top < 50) {
+      top = 50;
+    }
+
+    els.moduleTooltip.style.left = `${Math.round(left)}px`;
+    els.moduleTooltip.style.top = `${Math.round(top)}px`;
+
+    els.moduleTooltip.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      els.moduleTooltip.classList.add('visible');
+    });
+  };
+
+  els.moduleCards.forEach(card => {
+    card.addEventListener('mouseenter', () => showTooltip(card));
+    card.addEventListener('mouseleave', () => hideTooltip());
+  });
+
+  els.moduleTooltip.addEventListener('mouseenter', () => {
+    clearTimeout(tooltipTimeout);
+  });
+
+  els.moduleTooltip.addEventListener('mouseleave', () => {
+    hideTooltip();
+  });
+
+  // Clicking the example prompt inside the tooltip immediately activates the module, loads the prompt, and runs in chat
+  els.ttExample?.addEventListener('click', () => {
+    const modKey = els.moduleTooltip.dataset.activeModule;
+    const meta = MODULES_METADATA[modKey];
+    if (meta && modKey) {
+      activateModule(modKey);
+      switchView('chat');
+      els.chatInput.value = meta.examplePrompt;
+      autoResizeTextarea(els.chatInput);
+      els.moduleTooltip.classList.remove('visible');
+      els.moduleTooltip.classList.add('hidden');
+      sendMessage();
+    }
+  });
+}
+
 // ============================================================
-// MEMORY VIEW
+// MEMORY VIEW & DOSSIER DEEPENING
 // ============================================================
 
 async function refreshMemoryView() {
@@ -758,16 +899,18 @@ async function refreshMemoryView() {
     return;
   }
 
-  const renderField = (label, value) => {
+  const renderField = (label, value, dotPath, type = 'string') => {
     const displayVal = Array.isArray(value)
       ? (value.length ? value.join(', ') : null)
       : value;
     
     const isEmpty = !displayVal && displayVal !== 0;
+    const rawVal = Array.isArray(value) ? value.join(', ') : (value ?? '');
     return `
-      <div class="memory-field">
+      <div class="memory-field memory-field-editable" data-path="${dotPath}" data-type="${type}" data-label="${label}" data-val="${escapeHtml(String(rawVal))}">
         <span class="memory-field-label">${label}</span>
         <span class="memory-field-value ${isEmpty ? 'memory-field-empty' : ''}">${isEmpty ? 'Not set' : escapeHtml(String(displayVal))}</span>
+        <button class="field-quick-edit-btn" title="Quick edit ${label}">✏️</button>
       </div>
     `;
   };
@@ -780,43 +923,285 @@ async function refreshMemoryView() {
 
   els.memoryContent.innerHTML = `
     <div class="memory-section">
-      <h3>Identity & Baseline</h3>
-      ${renderField('Living Situation', b.current_living_situation)}
-      ${renderField('Cash Reserve', b.liquid_cash_reserve != null ? '$' + b.liquid_cash_reserve : null)}
-      ${renderField('Cash Floor', b.hard_cash_floor != null ? '$' + b.hard_cash_floor : null)}
-      ${renderField('Weekly Burn Rate', b.burn_rate_weekly != null ? '$' + b.burn_rate_weekly : null)}
-      ${renderField('Primary Stressor', b.primary_acute_stressor)}
-      ${renderField('Location', b.active_location)}
+      <div class="memory-section-header">
+        <h3>📍 Identity & Baseline</h3>
+        <div class="memory-section-actions">
+          <button class="btn-section-action highlight btn-deepen-category" data-category="boundaries">⚡ Deepen Setup</button>
+        </div>
+      </div>
+      ${renderField('Living Situation', b.current_living_situation, 'user_profile.identity_and_baseline.current_living_situation')}
+      ${renderField('Cash Reserve', b.liquid_cash_reserve != null ? '$' + b.liquid_cash_reserve : null, 'user_profile.identity_and_baseline.liquid_cash_reserve', 'number')}
+      ${renderField('Cash Floor', b.hard_cash_floor != null ? '$' + b.hard_cash_floor : null, 'user_profile.identity_and_baseline.hard_cash_floor', 'number')}
+      ${renderField('Weekly Burn Rate', b.burn_rate_weekly != null ? '$' + b.burn_rate_weekly : null, 'user_profile.identity_and_baseline.burn_rate_weekly', 'number')}
+      ${renderField('Primary Stressor', b.primary_acute_stressor, 'user_profile.identity_and_baseline.primary_acute_stressor')}
+      ${renderField('Location', b.active_location, 'user_profile.identity_and_baseline.active_location')}
     </div>
     <div class="memory-section">
-      <h3>Cognitive & Behavioral Profile</h3>
-      ${renderField('Decision Bias', c.decision_bias)}
-      ${renderField('Avoidance Triggers', c.primary_avoidance_triggers)}
-      ${renderField('Escape Mechanisms', c.escape_mechanisms)}
-      ${renderField('Tone Preference', c.tone_preference)}
-      ${renderField('Execution Style', c.execution_style)}
+      <div class="memory-section-header">
+        <h3>⚡ Cognitive & Behavioral Profile</h3>
+        <div class="memory-section-actions">
+          <button class="btn-section-action highlight btn-deepen-category" data-category="triggers">⚡ Deepen Triggers</button>
+        </div>
+      </div>
+      ${renderField('Decision Bias', c.decision_bias, 'user_profile.cognitive_and_behavioral_profile.decision_bias')}
+      ${renderField('Avoidance Triggers', c.primary_avoidance_triggers, 'user_profile.cognitive_and_behavioral_profile.primary_avoidance_triggers', 'array')}
+      ${renderField('Escape Mechanisms', c.escape_mechanisms, 'user_profile.cognitive_and_behavioral_profile.escape_mechanisms', 'array')}
+      ${renderField('Tone Preference', c.tone_preference, 'user_profile.cognitive_and_behavioral_profile.tone_preference')}
+      ${renderField('Execution Style', c.execution_style, 'user_profile.cognitive_and_behavioral_profile.execution_style')}
     </div>
     <div class="memory-section">
-      <h3>Goals & Boundaries</h3>
-      ${renderField('90-Day North Star', g.north_star_90_day)}
-      ${renderField('Anti-Goals', g.anti_goals)}
-      ${renderField('Rate Floor', g.rate_floor)}
-      ${renderField('Deposit Policy', g.deposit_policy)}
-      ${renderField('Client Red Flags', g.client_red_flags)}
+      <div class="memory-section-header">
+        <h3>🎯 Goals & Boundaries</h3>
+        <div class="memory-section-actions">
+          <button class="btn-section-action highlight btn-deepen-category" data-category="intentions">⚡ Deepen Goals</button>
+        </div>
+      </div>
+      ${renderField('90-Day North Star', g.north_star_90_day, 'user_profile.goal_and_boundary_matrix.north_star_90_day')}
+      ${renderField('Anti-Goals', g.anti_goals, 'user_profile.goal_and_boundary_matrix.anti_goals', 'array')}
+      ${renderField('Rate Floor', g.rate_floor, 'user_profile.goal_and_boundary_matrix.rate_floor')}
+      ${renderField('Deposit Policy', g.deposit_policy, 'user_profile.goal_and_boundary_matrix.deposit_policy')}
+      ${renderField('Client Red Flags', g.client_red_flags, 'user_profile.goal_and_boundary_matrix.client_red_flags', 'array')}
     </div>
     <div class="memory-section">
-      <h3>Venture Incubator</h3>
-      ${renderField('Active Project', v.active_project_name)}
-      ${renderField('Core Skills', v.core_skills_leveraged)}
-      ${renderField('Backlog Tasks', v.backlog_micro_tasks)}
+      <div class="memory-section-header">
+        <h3>🚀 Venture Incubator</h3>
+        <div class="memory-section-actions">
+          <button class="btn-section-action highlight btn-deepen-category" data-category="ventures">⚡ Deepen Ventures</button>
+        </div>
+      </div>
+      ${renderField('Active Project', v.active_project_name, 'user_profile.secret_venture_incubator.active_project_name')}
+      ${renderField('Core Skills', v.core_skills_leveraged, 'user_profile.secret_venture_incubator.core_skills_leveraged', 'array')}
+      ${renderField('Backlog Tasks', v.backlog_micro_tasks, 'user_profile.secret_venture_incubator.backlog_micro_tasks', 'array')}
     </div>
     <div class="memory-section">
-      <h3>Third Places</h3>
+      <div class="memory-section-header">
+        <h3>☕ Third Places</h3>
+      </div>
       ${s.verified_third_places?.length 
         ? s.verified_third_places.map(p => renderField(p.name, `${p.type} — ${p.notes || 'No notes'}`)).join('')
         : '<div class="memory-field"><span class="memory-field-label">No places saved yet</span></div>'}
     </div>
   `;
+
+  // Attach quick-edit and deepen listeners to memory fields
+  $$('.btn-deepen-category', els.memoryContent).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.category;
+      state.calibrationCategory = cat;
+      switchView('calibration');
+    });
+  });
+
+  $$('.field-quick-edit-btn', els.memoryContent).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const fieldEl = e.target.closest('.memory-field-editable');
+      if (!fieldEl) return;
+      openInlineFieldEdit(fieldEl);
+    });
+  });
+}
+
+function openInlineFieldEdit(fieldEl) {
+  const dotPath = fieldEl.dataset.path;
+  const label = fieldEl.dataset.label;
+  const type = fieldEl.dataset.type;
+  const currVal = fieldEl.dataset.val || '';
+
+  const form = document.createElement('div');
+  form.className = 'memory-inline-form';
+  form.innerHTML = `
+    <span style="font-size: 11px; color: var(--neon-cyan); font-weight: 600;">Edit ${label}:</span>
+    <input type="text" class="memory-inline-input" value="${escapeHtml(currVal)}" placeholder="Enter updated value (comma-separated for lists)" />
+    <div class="memory-inline-actions">
+      <button class="btn-glass btn-sm btn-cancel-edit">Cancel</button>
+      <button class="btn-neon btn-sm btn-save-edit">Save</button>
+    </div>
+  `;
+
+  fieldEl.style.display = 'none';
+  fieldEl.parentNode.insertBefore(form, fieldEl.nextSibling);
+
+  const input = form.querySelector('.memory-inline-input');
+  input.focus();
+  input.select();
+
+  form.querySelector('.btn-cancel-edit').addEventListener('click', () => {
+    form.remove();
+    fieldEl.style.display = '';
+  });
+
+  form.querySelector('.btn-save-edit').addEventListener('click', async () => {
+    const rawVal = input.value.trim();
+    let finalVal = rawVal;
+    if (type === 'number') {
+      finalVal = rawVal === '' ? null : Number(rawVal.replace(/[^0-9.-]+/g, ''));
+    } else if (type === 'array') {
+      finalVal = rawVal === '' ? [] : rawVal.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    await window.bestie.memory.updateField(dotPath, finalVal);
+    showToast(`Updated ${label} in Living Dossier ✨`);
+    form.remove();
+    await refreshMemoryView();
+  });
+}
+
+// ============================================================
+// CALIBRATION LAB (DEEPENING HUB)
+// ============================================================
+
+async function refreshCalibrationView() {
+  state.profile = await window.bestie.memory.getProfile();
+  const activeCat = state.calibrationCategory || 'intentions';
+  
+  // Highlight active pill
+  if (els.calibrationCategories) {
+    $$('.cal-cat-pill', els.calibrationCategories).forEach(pill => {
+      pill.classList.toggle('active', pill.dataset.category === activeCat);
+    });
+  }
+
+  renderActiveCalibrationCategory(activeCat);
+}
+
+function renderActiveCalibrationCategory(catKey) {
+  const pack = CALIBRATION_PACKS[catKey];
+  if (!pack || !els.calibrationActiveCard) return;
+
+  const profile = state.profile;
+
+  const questionsHtml = pack.questions.map((q, idx) => {
+    const existingVal = getDossierValue(profile, q.path);
+    const displayVal = Array.isArray(existingVal)
+      ? (existingVal.length ? existingVal.join(', ') : '')
+      : (existingVal != null ? String(existingVal) : '');
+
+    return `
+      <div class="cal-q-card" data-q-path="${q.path}" data-q-type="${q.type}">
+        <div class="cal-q-header">
+          <h4 class="cal-q-title">${idx + 1}. ${q.title}</h4>
+          <span class="cal-q-tag">${q.type.toUpperCase()}</span>
+        </div>
+        <div class="cal-q-desc">${q.desc}</div>
+        <div class="cal-q-examples">💡 Example: ${q.examples}</div>
+        ${displayVal ? `<div class="cal-q-current">Currently in memory: <strong>${escapeHtml(displayVal)}</strong></div>` : ''}
+        <textarea class="cal-q-textarea" placeholder="Type your answer, reflections, or guidelines here...">${escapeHtml(displayVal)}</textarea>
+        <div class="cal-q-actions">
+          <span class="cal-q-status"></span>
+          <button class="cal-q-save-btn">Save to Dossier</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  els.calibrationActiveCard.innerHTML = `
+    <div class="cal-hero-card">
+      <div class="cal-hero-info">
+        <div class="cal-hero-title">
+          <span>${pack.emoji} ${pack.title}</span>
+          <span class="cal-hero-badge">${pack.badge}</span>
+        </div>
+        <p class="cal-hero-desc">${pack.description}</p>
+      </div>
+      <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
+        <span>🎙️</span>
+        <span>Start 1-on-1 Interview in Chat</span>
+      </button>
+    </div>
+
+    <div class="cal-questions-list">
+      ${questionsHtml}
+    </div>
+  `;
+
+  // Attach question save handlers
+  $$('.cal-q-card', els.calibrationActiveCard).forEach(card => {
+    const saveBtn = card.querySelector('.cal-q-save-btn');
+    const textarea = card.querySelector('.cal-q-textarea');
+    const statusSpan = card.querySelector('.cal-q-status');
+    const path = card.dataset.qPath;
+    const type = card.dataset.qType;
+
+    saveBtn.addEventListener('click', async () => {
+      const raw = textarea.value.trim();
+      let value = raw;
+      if (type === 'number') {
+        value = raw === '' ? null : Number(raw.replace(/[^0-9.-]+/g, ''));
+      } else if (type === 'array') {
+        value = raw === '' ? [] : raw.split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      await window.bestie.memory.updateField(path, value);
+      state.profile = await window.bestie.memory.getProfile();
+
+      statusSpan.textContent = '✓ Saved to Living Dossier';
+      statusSpan.className = 'cal-q-status saved';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Saved!';
+      showToast(`Updated Living Dossier ✨`);
+
+      setTimeout(() => {
+        saveBtn.textContent = 'Save to Dossier';
+        statusSpan.textContent = '';
+      }, 2500);
+    });
+  });
+
+  // Attach interview launcher
+  const interviewBtn = $('#btn-launch-interview', els.calibrationActiveCard);
+  interviewBtn?.addEventListener('click', () => {
+    startCalibrationInterview(catKey);
+  });
+}
+
+async function startCalibrationInterview(catKey) {
+  const pack = CALIBRATION_PACKS[catKey];
+  if (!pack) return;
+
+  // Activate the dossier-interviewer module
+  activateModule('dossier-interviewer');
+
+  // Switch to chat view
+  switchView('chat');
+
+  // Add the user trigger message and send
+  const promptText = pack.interviewPrompt;
+  els.chatInput.value = promptText;
+  sendMessage();
+}
+
+/**
+ * Parses machine <DOSSIER_UPDATE> blocks from assistant messages and syncs them directly into memory
+ */
+async function handleDossierUpdatesInContent(rawText, messageEl) {
+  const regex = /<DOSSIER_UPDATE>([\s\S]*?)<\/DOSSIER_UPDATE>/gi;
+  let match;
+  let updatedAny = false;
+
+  while ((match = regex.exec(rawText)) !== null) {
+    try {
+      const payload = JSON.parse(match[1].trim());
+      if (payload.path && payload.value !== undefined) {
+        await window.bestie.memory.updateField(payload.path, payload.value, payload.action || 'set');
+        updatedAny = true;
+        const lastPart = payload.path.split('.').pop().replace(/_/g, ' ');
+        showToast(`Auto-committed to Dossier: ${lastPart} ✨`);
+      }
+    } catch (e) {
+      console.warn('Failed to parse DOSSIER_UPDATE payload:', e);
+    }
+  }
+
+  if (updatedAny) {
+    state.profile = await window.bestie.memory.getProfile();
+    // Clean raw block from display
+    const cleaned = rawText.replace(/<DOSSIER_UPDATE>[\s\S]*?<\/DOSSIER_UPDATE>/gi, '').trim();
+    const contentEl = messageEl.querySelector('.message-content');
+    if (contentEl) contentEl.innerHTML = parseMarkdown(cleaned);
+  }
 }
 
 // ============================================================

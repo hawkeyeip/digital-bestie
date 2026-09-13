@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld('bestie', {
   memory: {
     getProfile: () => ipcRenderer.invoke('memory:getProfile'),
     saveProfile: (profile) => ipcRenderer.invoke('memory:saveProfile', profile),
-    updateField: (path, value) => ipcRenderer.invoke('memory:updateField', { path, value }),
+    updateField: (path, value, action = 'set') => ipcRenderer.invoke('memory:updateField', { path, value, action }),
     deleteField: (path) => ipcRenderer.invoke('memory:deleteField', { path }),
     getProfileSummary: () => ipcRenderer.invoke('memory:getProfileSummary'),
   },

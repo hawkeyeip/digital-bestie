@@ -79,9 +79,19 @@
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
-          <button class="nav-btn" data-view="memory" title="Memory Bank">
+          <button class="nav-btn" data-view="memory" title="Memory Bank & Living Dossier">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
+            </svg>
+          </button>
+          <button class="nav-btn" data-view="calibration" title="Calibration Lab (Deepen Memory & Intentions)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="22" y1="12" x2="18" y2="12"/>
+              <line x1="6" y1="12" x2="2" y2="12"/>
+              <line x1="12" y1="6" x2="12" y2="2"/>
+              <line x1="12" y1="22" x2="12" y2="18"/>
+              <circle cx="12" cy="12" r="3"/>
             </svg>
           </button>
           <button class="nav-btn" data-view="superbrain" title="Superbrain Hub (Resource Tracker + Neon Brain)">
@@ -274,22 +284,107 @@
               <p>Find workflows to automate</p>
             </button>
           </div>
+
+          <!-- Floating Module Tooltip Popover -->
+          <div id="module-tooltip" class="module-tooltip-popover hidden" role="tooltip">
+            <div class="module-tooltip-header">
+              <span id="tt-icon" class="module-tooltip-icon">🚀</span>
+              <div>
+                <h4 id="tt-title" class="module-tooltip-title">Module Name</h4>
+                <span id="tt-badge" class="module-tooltip-badge">Category</span>
+              </div>
+            </div>
+            <div class="module-tooltip-body">
+              <div class="module-tooltip-section">
+                <span class="module-tooltip-label">🎯 WHEN TO USE:</span>
+                <p id="tt-when" class="module-tooltip-when">When to reach for this module.</p>
+              </div>
+              <div class="module-tooltip-section">
+                <span class="module-tooltip-label">⚡ WHAT BESTIE DOES:</span>
+                <ul id="tt-caps" class="module-tooltip-capabilities"></ul>
+              </div>
+              <div class="module-tooltip-example-wrap">
+                <span class="module-tooltip-label">💬 EXAMPLE PROMPT:</span>
+                <div id="tt-example" class="module-tooltip-example" title="Click to load into chat"></div>
+                <span class="module-tooltip-hint">Click example to activate &amp; run in Chat →</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Memory View -->
         <div id="view-memory" class="view">
           <div class="panel-header">
-            <h2 class="panel-title">Memory Bank</h2>
-            <p class="panel-subtitle">Your Living Dossier — everything I remember about you</p>
+            <div class="panel-header-flex">
+              <div>
+                <h2 class="panel-title">Memory Bank &amp; Living Dossier</h2>
+                <p class="panel-subtitle">Everything Digital Bestie understands about your baseline, psychology, boundaries, and ventures</p>
+              </div>
+              <div class="memory-tab-switch">
+                <button id="tab-memory-dossier" class="memory-tab-btn active">📋 Living Dossier</button>
+                <button id="tab-memory-calibration" class="memory-tab-btn">🧪 Calibration Lab</button>
+              </div>
+            </div>
           </div>
           <div id="memory-content" class="memory-content">
             <div class="memory-loading">Loading your profile...</div>
           </div>
           <div class="memory-actions">
+            <button id="btn-open-calibration-from-memory" class="btn-neon">⚡ Deepen Memory with Question Packs</button>
             <button id="btn-export" class="btn-glass">Export Data</button>
             <button id="btn-import" class="btn-glass">Import Data</button>
             <button id="btn-clear-conversation" class="btn-glass btn-danger">Clear Chat History</button>
             <button id="btn-rerun-onboarding" class="btn-glass">Re-run Onboarding</button>
+          </div>
+        </div>
+
+        <!-- Calibration Lab View (Deepen Memory & Prompt Packs) -->
+        <div id="view-calibration" class="view">
+          <div class="panel-header">
+            <div class="panel-header-flex">
+              <div>
+                <h2 class="panel-title">🧪 Memory Calibration Lab</h2>
+                <p class="panel-subtitle">Deepen Bestie's understanding of your psychology, blind spots, financial runway, and boundaries through guided drills or an interactive 1-on-1 interview</p>
+              </div>
+              <div class="header-action-group">
+                <button id="btn-switch-to-dossier" class="btn-glass">📋 View Living Dossier</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="calibration-container">
+            <!-- Category Filter Pills -->
+            <div class="calibration-categories" id="calibration-categories">
+              <button class="cal-cat-pill active" data-category="intentions">
+                <span class="cat-emoji">🎯</span>
+                <span class="cat-label">90-Day North Star</span>
+              </button>
+              <button class="cal-cat-pill" data-category="triggers">
+                <span class="cat-emoji">⚡</span>
+                <span class="cat-label">Avoidance &amp; Freeze</span>
+              </button>
+              <button class="cal-cat-pill" data-category="financials">
+                <span class="cat-emoji">💰</span>
+                <span class="cat-label">Runway &amp; Capital Floors</span>
+              </button>
+              <button class="cal-cat-pill" data-category="boundaries">
+                <span class="cat-emoji">🛡️</span>
+                <span class="cat-label">Red Flags &amp; Boundaries</span>
+              </button>
+              <button class="cal-cat-pill" data-category="ventures">
+                <span class="cat-emoji">🚀</span>
+                <span class="cat-label">Ventures &amp; Superpowers</span>
+              </button>
+              <button class="cal-cat-pill" data-category="tone">
+                <span class="cat-emoji">🎙️</span>
+                <span class="cat-label">Tone &amp; Accountability</span>
+              </button>
+            </div>
+
+            <!-- Dynamic Active Category Content -->
+            <div id="calibration-active-card" class="calibration-active-card">
+              <!-- Rendered via JS -->
+            </div>
           </div>
         </div>
 
