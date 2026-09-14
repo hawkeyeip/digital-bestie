@@ -24,7 +24,9 @@ import {
   loadSuperbrainData,
   syncResourceTracker,
   importNeonBrainBackup,
-  detectResourceTrackerPath
+  detectResourceTrackerPath,
+  addResourceItem,
+  deleteResourceItem
 } from './services/superbrain.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -320,6 +322,12 @@ function registerIPC() {
   ipcMain.handle('superbrain:detectPath', () => detectResourceTrackerPath());
   ipcMain.handle('superbrain:syncResourceTracker', async (event, customPathOrUrl) => {
     return syncResourceTracker(customPathOrUrl);
+  });
+  ipcMain.handle('superbrain:addResource', async (event, item) => {
+    return addResourceItem(item);
+  });
+  ipcMain.handle('superbrain:deleteResource', async (event, id) => {
+    return deleteResourceItem(id);
   });
 
   ipcMain.handle('superbrain:importNeonBrainDialog', async () => {

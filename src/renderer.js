@@ -189,6 +189,19 @@ const els = {
 
   // Superbrain Hub
   btnSyncAllSuperbrain: $('#btn-sync-all-superbrain'),
+  btnAddResource: $('#btn-add-resource'),
+  resourceModal: $('#resource-modal'),
+  btnCloseResourceModal: $('#btn-close-resource-modal'),
+  btnCancelResource: $('#btn-cancel-resource'),
+  btnSubmitResource: $('#btn-submit-resource'),
+  resInputTitle: $('#res-input-title'),
+  resInputCategory: $('#res-input-category'),
+  resInputCost: $('#res-input-cost'),
+  resInputCycle: $('#res-input-cycle'),
+  resInputDate: $('#res-input-date'),
+  resInputNotes: $('#res-input-notes'),
+  rtItemsList: $('#rt-items-list'),
+  rtItemsCount: $('#rt-items-count'),
   rtStatusPill: $('#rt-status-pill'),
   btnSyncRt: $('#btn-sync-rt'),
   rtSourceInput: $('#rt-source-input'),
@@ -517,6 +530,97 @@ function registerEventListeners() {
       await refreshSuperbrainView();
     } else {
       showToast('No standard Resource Tracker data file found. Enter path or start local server.');
+    }
+  });
+
+  // Resource Tracker - Add Resource Modal handlers
+  els.btnAddResource?.addEventListener('click', () => {
+    if (els.resInputTitle) els.resInputTitle.value = '';
+    if (els.resInputCost) els.resInputCost.value = '';
+    if (els.resInputNotes) els.resInputNotes.value = '';
+    if (els.resInputDate) els.resInputDate.value = '';
+    if (els.resInputCategory) els.resInputCategory.value = 'Subscription';
+    if (els.resInputCycle) els.resInputCycle.value = 'Monthly';
+    els.resourceModal?.classList.remove('hidden');
+    els.resInputTitle?.focus();
+  });
+
+  const closeResourceModal = () => {
+    els.resourceModal?.classList.add('hidden');
+  };
+
+  els.btnCloseResourceModal?.addEventListener('click', closeResourceModal);
+  els.btnCancelResource?.addEventListener('click', closeResourceModal);
+  els.resourceModal?.addEventListener('click', (e) => {
+    if (e.target === els.resourceModal) closeResourceModal();
+  });
+
+  // Submit new resource
+  els.btnSubmitResource?.addEventListener('click', async () => {
+    const title = els.resInputTitle?.value?.trim();
+    const category = els.resInputCategory?.value || 'Subscription';
+    const cost = parseFloat(els.resInputCost?.value);
+    const billingCycle = els.resInputCycle?.value || 'Monthly';
+    const renewalDate = els.resInputDate?.value || null;
+    const notes = els.resInputNotes?.value?.trim() || '';
+
+    if (!title) {
+      showToast('Please enter a resource name');
+      els.resInputTitle?.focus();
+      return;
+    }
+    if (isNaN(cost) || cost < 0) {
+      showToast('Please enter a valid cost (e.g. 20.00)');
+      els.resInputCost?.focus();
+      return;
+    }
+
+    try {
+      showToast('Saving resource to tracker...');
+      const res = await window.bestie.superbrain.addResource({
+        title,
+        category,
+        cost,
+        billingCycle,
+        renewalDate,
+        notes
+      });
+
+      if (res && res.success) {
+        showToast(`Added "${title}" to Resource Tracker! Burn rate updated. 🚀`);
+        closeResourceModal();
+        await refreshSuperbrainView();
+      } else {
+        showToast(`Could not add resource: ${res?.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error adding resource:', err);
+      showToast(`Error adding resource: ${err.message}`);
+    }
+  });
+
+  // Delegated delete handler for tracked resources list
+  els.rtItemsList?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-delete-resource');
+    if (!btn) return;
+    const itemId = btn.dataset.id;
+    const itemTitle = btn.dataset.title || 'Resource';
+    if (!itemId) return;
+
+    if (confirm(`Remove "${itemTitle}" from Resource Tracker?`)) {
+      try {
+        showToast(`Removing "${itemTitle}"...`);
+        const res = await window.bestie.superbrain.deleteResource(itemId);
+        if (res && res.success) {
+          showToast(`Removed "${itemTitle}". Burn rate recalculated!`);
+          await refreshSuperbrainView();
+        } else {
+          showToast(`Error deleting item: ${res?.error || 'Unknown error'}`);
+        }
+      } catch (err) {
+        console.error('Error deleting resource:', err);
+        showToast(`Failed to delete resource: ${err.message}`);
+      }
     }
   });
 
@@ -1634,6 +1738,52 @@ async function refreshSuperbrainView() {
             </div>
           </div>
         `).join('');
+      }
+    }
+
+    // Render Tracked Resources List
+    if (els.rtItemsList) {
+      const items = rt.items || [];
+      if (els.rtItemsCount) els.rtItemsCount.textContent = items.length;
+
+      if (items.length === 0) {
+        els.rtItemsList.innerHTML = `<div class="empty-state-sm">No resources logged yet. Click "+ Add Resource" to track subscriptions, hardware, or travel credits.</div>`;
+      } else {
+        els.rtItemsList.innerHTML = items.map(item => {
+          const cat = (item.category || 'Subscription').toLowerCase();
+          let catClass = '';
+          if (cat.includes('hardware')) catClass = 'hardware';
+          else if (cat.includes('travel') || cat.includes('voucher')) catClass = 'travel';
+          else if (cat.includes('living') || cat.includes('utility')) catClass = 'living';
+          else if (cat.includes('cloud')) catClass = 'cloud';
+
+          const renewalStr = item.renewalDate || item.renewal_date;
+          const cycleStr = item.billingCycle || item.billing_cycle || 'Monthly';
+          const costVal = parseFloat(item.cost) || 0;
+
+          return `
+            <div class="resource-item-card">
+              <div class="resource-item-main">
+                <div class="resource-item-title-row">
+                  <span class="resource-item-title">${escapeHtml(item.title || item.name || 'Untitled Resource')}</span>
+                  <span class="resource-cat-badge ${catClass}">${escapeHtml(item.category || 'Resource')}</span>
+                </div>
+                <div class="resource-item-meta">
+                  <span>🔄 ${escapeHtml(cycleStr)}</span>
+                  ${renewalStr ? `<span>📅 Renews: ${escapeHtml(renewalStr)}</span>` : ''}
+                  ${item.notes ? `<span>📝 ${escapeHtml(item.notes)}</span>` : ''}
+                </div>
+              </div>
+              <div class="resource-item-right">
+                <div class="resource-item-cost">
+                  $${costVal.toFixed(2)}
+                  <span class="resource-item-cost-sub">${escapeHtml(cycleStr)}</span>
+                </div>
+                <button class="btn-delete-resource" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title || 'Resource')}" title="Delete resource">🗑️</button>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
     }
 

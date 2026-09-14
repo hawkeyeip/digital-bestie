@@ -431,7 +431,10 @@
                       <span id="rt-status-pill" class="status-badge disconnected">Disconnected</span>
                     </div>
                   </div>
-                  <button id="btn-sync-rt" class="btn-glass btn-sm">Sync Resources</button>
+                  <div style="display: flex; gap: 6px;">
+                    <button id="btn-add-resource" class="btn-neon btn-sm">+ Add Resource</button>
+                    <button id="btn-sync-rt" class="btn-glass btn-sm">Sync Resources</button>
+                  </div>
                 </div>
                 <div class="superbrain-source-row">
                   <input type="text" id="rt-source-input" class="feedback-input flex-1" placeholder="File path (data.json) or API URL (http://localhost:5174)" />
@@ -464,6 +467,15 @@
                   <h4>Upcoming Renewals (Next 30 Days)</h4>
                   <div id="rt-renewals-list" class="renewals-list">
                     <div class="empty-state-sm">No renewals tracked yet</div>
+                  </div>
+                </div>
+                <div class="superbrain-sub-section">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h4>Tracked Resources &amp; Assets</h4>
+                    <span id="rt-items-count" class="badge-count">0</span>
+                  </div>
+                  <div id="rt-items-list" class="resources-items-list">
+                    <div class="empty-state-sm">No resources logged yet. Click "+ Add Resource" to track subscriptions, hardware, or travel credits.</div>
                   </div>
                 </div>
               </div>
@@ -683,6 +695,75 @@
           <div class="onboarding-actions">
             <button id="btn-onboarding-skip" class="btn-glass">Skip This</button>
             <button id="btn-onboarding-next" class="btn-neon">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Resource Modal -->
+    <div id="resource-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 520px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan);">
+              <span>🌌</span>
+            </div>
+            <div>
+              <h3 id="resource-modal-title">Add Resource to Tracker</h3>
+              <p class="feedback-subtitle">Track subscriptions, hardware assets, or vouchers directly into your second brain.</p>
+            </div>
+          </div>
+          <button id="btn-close-resource-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <div class="form-group">
+            <label for="res-input-title">Resource / Service Name *</label>
+            <input type="text" id="res-input-title" class="feedback-input" placeholder="e.g. Cursor Pro, MacBook Pro M3, Delta Flight Voucher" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="res-input-category">Category</label>
+              <select id="res-input-category" class="feedback-select">
+                <option value="Subscription" selected>🔄 Subscription / SaaS</option>
+                <option value="Hardware">💻 Hardware / Physical Asset</option>
+                <option value="Travel Credit">✈️ Travel Credit / Voucher</option>
+                <option value="Cloud / Hosting">☁️ Cloud / Hosting / API</option>
+                <option value="Living / Utility">⚡ Living / Health / Utility</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="res-input-cost">Cost ($) *</label>
+              <input type="number" step="0.01" min="0" id="res-input-cost" class="feedback-input" placeholder="20.00" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="res-input-cycle">Billing Cycle</label>
+              <select id="res-input-cycle" class="feedback-select">
+                <option value="Monthly" selected>Monthly</option>
+                <option value="Yearly">Yearly (Annual)</option>
+                <option value="Weekly">Weekly</option>
+                <option value="One-Time / Asset">One-Time / Asset</option>
+                <option value="Voucher">Voucher / Credit</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="res-input-date">Renewal / Expiration Date</label>
+              <input type="date" id="res-input-date" class="feedback-input" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="res-input-notes">Notes / Purpose / Card Details</label>
+            <input type="text" id="res-input-notes" class="feedback-input" placeholder="e.g. Renews on card 4021, used for client dev" />
+          </div>
+
+          <div class="feedback-actions" style="margin-top: 14px;">
+            <button type="button" id="btn-cancel-resource" class="btn-glass">Cancel</button>
+            <button type="button" id="btn-submit-resource" class="btn-neon">Save Resource &amp; Update Dossier 🚀</button>
           </div>
         </div>
       </div>

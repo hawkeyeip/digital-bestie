@@ -84,6 +84,8 @@ contextBridge.exposeInMainWorld('bestie', {
     getData: () => ipcRenderer.invoke('superbrain:getData'),
     detectPath: () => ipcRenderer.invoke('superbrain:detectPath'),
     syncResourceTracker: (pathOrUrl) => ipcRenderer.invoke('superbrain:syncResourceTracker', pathOrUrl),
+    addResource: (item) => ipcRenderer.invoke('superbrain:addResource', item),
+    deleteResource: (id) => ipcRenderer.invoke('superbrain:deleteResource', id),
     importNeonBrainDialog: () => ipcRenderer.invoke('superbrain:importNeonBrainDialog'),
     exportToNeonBrainDialog: (payload) => ipcRenderer.invoke('superbrain:exportToNeonBrainDialog', payload),
   },

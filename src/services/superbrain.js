@@ -367,3 +367,115 @@ export function getSuperbrainPromptSnippet() {
 
   return '';
 }
+
+/**
+ * Add a new resource item to Resource Tracker from Digital Bestie
+ */
+export async function addResourceItem(resource) {
+  const state = loadSuperbrainData();
+  const newItem = {
+    id: resource.id || `res-${Date.now()}`,
+    title: resource.title || resource.name || 'Untitled Resource',
+    category: resource.category || 'Subscription',
+    cost: parseFloat(resource.cost) || 0,
+    billingCycle: resource.billingCycle || resource.billing_cycle || 'Monthly',
+    renewalDate: resource.renewalDate || resource.renewal_date || null,
+    notes: resource.notes || '',
+    createdAt: new Date().toISOString()
+  };
+
+  if (!Array.isArray(state.resource_tracker.items)) {
+    state.resource_tracker.items = [];
+  }
+
+  // Prepend new item
+  state.resource_tracker.items.unshift(newItem);
+
+  const computed = computeResourceMetrics(state.resource_tracker.items);
+  state.resource_tracker.connected = true;
+  if (state.resource_tracker.source_type === 'none') {
+    state.resource_tracker.source_type = 'digital-bestie';
+  }
+  state.resource_tracker.last_synced = new Date().toISOString();
+  state.resource_tracker.metrics = {
+    monthly_burn_rate: computed.monthly_burn_rate,
+    weekly_burn_rate: computed.weekly_burn_rate,
+    subscription_count: computed.subscription_count,
+    total_travel_credits: computed.total_travel_credits,
+    hardware_asset_value: computed.hardware_asset_value,
+  };
+  state.resource_tracker.upcoming_renewals = computed.upcoming_renewals;
+
+  saveSuperbrainData(state);
+
+  // If local file exists and is linked, append/save to file as well
+  if (state.resource_tracker.source_path && fs.existsSync(state.resource_tracker.source_path)) {
+    try {
+      const raw = fs.readFileSync(state.resource_tracker.source_path, 'utf-8');
+      const existing = JSON.parse(raw);
+      if (Array.isArray(existing)) {
+        existing.unshift(newItem);
+        fs.writeFileSync(state.resource_tracker.source_path, JSON.stringify(existing, null, 2), 'utf-8');
+      } else if (existing && typeof existing === 'object') {
+        const listKey = existing.resources ? 'resources' : (existing.items ? 'items' : null);
+        if (listKey && Array.isArray(existing[listKey])) {
+          existing[listKey].unshift(newItem);
+          fs.writeFileSync(state.resource_tracker.source_path, JSON.stringify(existing, null, 2), 'utf-8');
+        }
+      }
+    } catch (err) {
+      console.warn('Could not write back to original Resource Tracker file:', err.message);
+    }
+  }
+
+  // Update profile burn rate automatically
+  await updateProfileField('user_profile.identity_and_baseline.burn_rate_weekly', computed.weekly_burn_rate);
+
+  return { success: true, item: newItem, metrics: computed };
+}
+
+/**
+ * Delete a resource item from Resource Tracker
+ */
+export async function deleteResourceItem(itemId) {
+  const state = loadSuperbrainData();
+  if (!Array.isArray(state.resource_tracker.items)) {
+    return { success: false, error: 'No items found' };
+  }
+
+  state.resource_tracker.items = state.resource_tracker.items.filter(i => i.id !== itemId);
+  const computed = computeResourceMetrics(state.resource_tracker.items);
+  state.resource_tracker.metrics = {
+    monthly_burn_rate: computed.monthly_burn_rate,
+    weekly_burn_rate: computed.weekly_burn_rate,
+    subscription_count: computed.subscription_count,
+    total_travel_credits: computed.total_travel_credits,
+    hardware_asset_value: computed.hardware_asset_value,
+  };
+  state.resource_tracker.upcoming_renewals = computed.upcoming_renewals;
+
+  saveSuperbrainData(state);
+
+  // If local file exists, remove it there too
+  if (state.resource_tracker.source_path && fs.existsSync(state.resource_tracker.source_path)) {
+    try {
+      const raw = fs.readFileSync(state.resource_tracker.source_path, 'utf-8');
+      const existing = JSON.parse(raw);
+      if (Array.isArray(existing)) {
+        const filtered = existing.filter(i => i.id !== itemId);
+        fs.writeFileSync(state.resource_tracker.source_path, JSON.stringify(filtered, null, 2), 'utf-8');
+      } else if (existing && typeof existing === 'object') {
+        const listKey = existing.resources ? 'resources' : (existing.items ? 'items' : null);
+        if (listKey && Array.isArray(existing[listKey])) {
+          existing[listKey] = existing[listKey].filter(i => i.id !== itemId);
+          fs.writeFileSync(state.resource_tracker.source_path, JSON.stringify(existing, null, 2), 'utf-8');
+        }
+      }
+    } catch (err) {
+      console.warn('Could not write back to original Resource Tracker file:', err.message);
+    }
+  }
+
+  await updateProfileField('user_profile.identity_and_baseline.burn_rate_weekly', computed.weekly_burn_rate);
+  return { success: true, metrics: computed };
+}
