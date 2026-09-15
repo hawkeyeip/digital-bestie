@@ -51,8 +51,16 @@ function parseMarkdown(text) {
   // Ordered lists
   html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links (strictly sanitized: only http, https, and mailto allowed)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+    const trimmed = (url || '').trim();
+    if (/^(https?:\/\/|mailto:)/i.test(trimmed)) {
+      const safeUrl = trimmed.replace(/"/g, '&quot;');
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    }
+    // Neutralize dangerous protocols (e.g. javascript:, file:, data:)
+    return `<span class="insecure-link" title="Blocked untrusted protocol">${text}</span>`;
+  });
 
   // Tables
   html = html.replace(/^(\|.+\|)\n\|[\s:|-]+\|\n((?:\|.+\|\n?)*)/gm, (_, header, body) => {
@@ -84,6 +92,12 @@ let state = {
   isConnected: false,
   profile: null,
   settings: null,
+  conversations: [],
+  folders: [],
+  activeConversationId: null,
+  activeFolderFilter: 'all',
+  historySearchQuery: '',
+  selectedFolderEmoji: '📁',
 };
 
 // ============================================================
@@ -112,6 +126,42 @@ const els = {
   btnSend: $('#btn-send'),
   btnAbort: $('#btn-abort'),
   typingIndicator: $('#typing-indicator'),
+
+  // Chat History Sidebar & Folders
+  chatHistorySidebar: $('#chat-history-sidebar'),
+  btnCollapseHistory: $('#btn-collapse-history'),
+  btnToggleHistorySidebar: $('#btn-toggle-history-sidebar'),
+  btnNewChat: $('#btn-new-chat'),
+  historySearchInput: $('#history-search-input'),
+  foldersFilterList: $('#folders-filter-list'),
+  btnAddFolder: $('#btn-add-folder'),
+  historyConversationList: $('#history-conversation-list'),
+  historyChatCount: $('#history-chat-count'),
+  historyListHeading: $('#history-list-heading'),
+  activeChatTitle: $('#active-chat-title'),
+  activeChatFolderTag: $('#active-chat-folder-tag'),
+  btnRenameActiveChat: $('#btn-rename-active-chat'),
+  btnMoveActiveChat: $('#btn-move-active-chat'),
+  btnClearActiveChat: $('#btn-clear-active-chat'),
+
+  // Folder Modal
+  folderModal: $('#folder-modal'),
+  folderModalTitle: $('#folder-modal-title'),
+  folderModalIconPreview: $('#folder-modal-icon-preview'),
+  folderEditId: $('#folder-edit-id'),
+  folderInputName: $('#folder-input-name'),
+  folderEmojiPicker: $('#folder-emoji-picker'),
+  btnCloseFolderModal: $('#btn-close-folder-modal'),
+  btnCancelFolder: $('#btn-cancel-folder'),
+  btnSaveFolder: $('#btn-save-folder'),
+
+  // Move Chat Modal
+  moveChatModal: $('#move-chat-modal'),
+  moveChatId: $('#move-chat-id'),
+  moveChatFolderSelect: $('#move-chat-folder-select'),
+  btnCloseMoveModal: $('#btn-close-move-modal'),
+  btnCancelMove: $('#btn-cancel-move'),
+  btnConfirmMove: $('#btn-confirm-move'),
 
   // Modules
   moduleCards: $$('.module-card'),
@@ -251,8 +301,14 @@ async function init() {
   // Set up Ollama streaming listeners
   setupOllamaListeners();
 
-  // Load existing conversation
-  await loadExistingConversation();
+  // Restore history sidebar collapse state
+  if (localStorage.getItem('bestie_history_collapsed') === 'true' && els.chatHistorySidebar) {
+    els.chatHistorySidebar.classList.add('collapsed');
+  }
+
+  // Initialize multi-conversation vault
+  await refreshConversationsList();
+  await loadActiveConversationMessages();
 
   // Load feedback badge
   await refreshFeedbackBadge();
@@ -357,6 +413,134 @@ function registerEventListeners() {
 
   els.btnAbort.addEventListener('click', () => {
     window.bestie.ollama.abort();
+  });
+
+  // --- Chat History Sidebar & Topbar ---
+  const toggleHistorySidebar = () => {
+    if (!els.chatHistorySidebar) return;
+    const isNowCollapsed = els.chatHistorySidebar.classList.toggle('collapsed');
+    localStorage.setItem('bestie_history_collapsed', isNowCollapsed ? 'true' : 'false');
+  };
+
+  els.btnCollapseHistory?.addEventListener('click', toggleHistorySidebar);
+  els.btnToggleHistorySidebar?.addEventListener('click', toggleHistorySidebar);
+
+  // Global hotkey: Cmd+B or Ctrl+B to toggle history sidebar
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      toggleHistorySidebar();
+    }
+  });
+
+  // + New Chat button
+  els.btnNewChat?.addEventListener('click', handleCreateNewChat);
+
+  // History search filter
+  els.historySearchInput?.addEventListener('input', (e) => {
+    state.historySearchQuery = e.target.value;
+    renderConversationsList();
+  });
+
+  // Folder filter clicking (delegated)
+  els.foldersFilterList?.addEventListener('click', (e) => {
+    const item = e.target.closest('.folder-filter-item');
+    if (item) {
+      state.activeFolderFilter = item.dataset.folderId;
+      renderFoldersFilter();
+      renderConversationsList();
+    }
+  });
+
+  // Add category folder button
+  els.btnAddFolder?.addEventListener('click', () => openFolderModal());
+
+  // Conversation list clicking & action buttons (delegated)
+  els.historyConversationList?.addEventListener('click', async (e) => {
+    const actionBtn = e.target.closest('.conv-action-btn');
+    if (actionBtn) {
+      e.stopPropagation();
+      const action = actionBtn.dataset.action;
+      const convId = actionBtn.dataset.id;
+      if (action === 'rename') {
+        handleRenameConversation(convId);
+      } else if (action === 'delete') {
+        handleDeleteConversation(convId);
+      } else if (action === 'move') {
+        openMoveChatModal(convId);
+      }
+      return;
+    }
+
+    const item = e.target.closest('.conversation-item');
+    if (item && item.dataset.convId) {
+      handleSwitchConversation(item.dataset.convId);
+    }
+  });
+
+  // Topbar active chat actions
+  els.activeChatTitle?.addEventListener('click', () => {
+    if (state.activeConversationId) handleRenameConversation(state.activeConversationId);
+  });
+  els.btnRenameActiveChat?.addEventListener('click', () => {
+    if (state.activeConversationId) handleRenameConversation(state.activeConversationId);
+  });
+  els.btnMoveActiveChat?.addEventListener('click', () => {
+    if (state.activeConversationId) openMoveChatModal(state.activeConversationId);
+  });
+  els.btnClearActiveChat?.addEventListener('click', async () => {
+    if (confirm('Clear all messages in this conversation?')) {
+      await window.bestie.conversation.clear();
+      await loadActiveConversationMessages();
+      await refreshConversationsList();
+    }
+  });
+
+  // Folder Modal handlers
+  els.btnCloseFolderModal?.addEventListener('click', closeFolderModal);
+  els.btnCancelFolder?.addEventListener('click', closeFolderModal);
+  els.folderModal?.addEventListener('click', (e) => {
+    if (e.target === els.folderModal) closeFolderModal();
+  });
+
+  els.folderEmojiPicker?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.emoji-btn');
+    if (btn) {
+      $$('.emoji-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedFolderEmoji = btn.dataset.emoji;
+      if (els.folderModalIconPreview) els.folderModalIconPreview.textContent = state.selectedFolderEmoji;
+    }
+  });
+
+  els.btnSaveFolder?.addEventListener('click', async () => {
+    const name = (els.folderInputName.value || '').trim();
+    if (!name) return;
+    const editId = els.folderEditId.value;
+    if (editId) {
+      await window.bestie.folder.rename(editId, name, state.selectedFolderEmoji);
+    } else {
+      await window.bestie.folder.create({ name, icon: state.selectedFolderEmoji });
+    }
+    closeFolderModal();
+    await refreshConversationsList();
+  });
+
+  // Move Chat Modal handlers
+  els.btnCloseMoveModal?.addEventListener('click', closeMoveChatModal);
+  els.btnCancelMove?.addEventListener('click', closeMoveChatModal);
+  els.moveChatModal?.addEventListener('click', (e) => {
+    if (e.target === els.moveChatModal) closeMoveChatModal();
+  });
+
+  els.btnConfirmMove?.addEventListener('click', async () => {
+    const convId = els.moveChatId.value;
+    const folderId = els.moveChatFolderSelect.value || null;
+    if (convId) {
+      await window.bestie.conversation.moveToFolder(convId, folderId);
+      closeMoveChatModal();
+      await refreshConversationsList();
+    }
   });
 
   // Modules
@@ -719,6 +903,7 @@ function setupOllamaListeners() {
 
     currentStreamEl = null;
     scrollToBottom();
+    await refreshConversationsList();
   });
 
   removeErrorListener = window.bestie.ollama.onError((error) => {
@@ -744,6 +929,7 @@ async function sendMessage() {
 
   // Add user message to UI
   addMessage('user', text);
+  refreshConversationsList();
 
   // Show typing indicator
   state.isGenerating = true;
@@ -817,23 +1003,258 @@ function addWelcomeMessage() {
   els.chatMessages.appendChild(div);
 }
 
-async function loadExistingConversation() {
+// ============================================================
+// CHAT VAULT: MULTI-CONVERSATION & FOLDERS
+// ============================================================
+
+async function refreshConversationsList() {
   try {
-    const conversation = await window.bestie.conversation.load();
+    const summary = await window.bestie.conversation.list();
+    if (!summary) return;
+
+    state.conversations = summary.conversations || [];
+    state.folders = summary.folders || [];
+    state.activeConversationId = summary.activeId || (state.conversations[0]?.id ?? null);
+
+    // Update active chat title & folder badge in topbar
+    const active = state.conversations.find(c => c.id === state.activeConversationId);
+    if (active) {
+      if (els.activeChatTitle) els.activeChatTitle.textContent = active.title || 'New Conversation';
+      if (els.activeChatFolderTag) {
+        const folder = state.folders.find(f => f.id === active.folderId);
+        els.activeChatFolderTag.textContent = folder ? `${folder.icon || '📁'} ${folder.name}` : '💬 General';
+      }
+    }
+
+    renderFoldersFilter();
+    renderConversationsList();
+  } catch (err) {
+    console.error('Error refreshing conversations list:', err);
+  }
+}
+
+function renderFoldersFilter() {
+  if (!els.foldersFilterList) return;
+
+  const totalAll = state.conversations.length;
+  let html = `
+    <div class="folder-filter-item ${state.activeFolderFilter === 'all' ? 'active' : ''}" data-folder-id="all">
+      <div class="folder-filter-name">
+        <span>🌟</span>
+        <span>All Chats</span>
+      </div>
+      <span class="folder-count-badge">${totalAll}</span>
+    </div>
+  `;
+
+  state.folders.forEach(f => {
+    const count = state.conversations.filter(c => c.folderId === f.id).length;
+    const isAct = state.activeFolderFilter === f.id;
+    html += `
+      <div class="folder-filter-item ${isAct ? 'active' : ''}" data-folder-id="${f.id}" title="${escapeHtml(f.name)}">
+        <div class="folder-filter-name">
+          <span>${f.icon || '📁'}</span>
+          <span>${escapeHtml(f.name)}</span>
+        </div>
+        <span class="folder-count-badge">${count}</span>
+      </div>
+    `;
+  });
+
+  els.foldersFilterList.innerHTML = html;
+}
+
+function renderConversationsList() {
+  if (!els.historyConversationList) return;
+
+  let filtered = state.conversations;
+
+  // Filter by folder
+  if (state.activeFolderFilter !== 'all') {
+    filtered = filtered.filter(c => c.folderId === state.activeFolderFilter);
+  }
+
+  // Filter by search query
+  if (state.historySearchQuery && state.historySearchQuery.trim()) {
+    const q = state.historySearchQuery.trim().toLowerCase();
+    filtered = filtered.filter(c => 
+      (c.title || '').toLowerCase().includes(q) || 
+      (c.preview || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (els.historyChatCount) {
+    els.historyChatCount.textContent = filtered.length;
+  }
+
+  if (els.historyListHeading) {
+    if (state.activeFolderFilter === 'all') {
+      els.historyListHeading.textContent = 'CONVERSATIONS';
+    } else {
+      const currentFolder = state.folders.find(f => f.id === state.activeFolderFilter);
+      els.historyListHeading.textContent = currentFolder ? currentFolder.name.toUpperCase() : 'CONVERSATIONS';
+    }
+  }
+
+  if (filtered.length === 0) {
+    els.historyConversationList.innerHTML = `
+      <div style="padding: 16px 10px; text-align: center; color: var(--text-muted); font-size: 0.78rem;">
+        No conversations found
+      </div>
+    `;
+    return;
+  }
+
+  const html = filtered.map(c => {
+    const isActive = c.id === state.activeConversationId;
+    const folder = state.folders.find(f => f.id === c.folderId);
+    const dateStr = formatRelativeDate(c.updatedAt);
+    return `
+      <div class="conversation-item ${isActive ? 'active' : ''}" data-conv-id="${c.id}">
+        <div class="conversation-item-info">
+          <div class="conversation-item-title" title="${escapeHtml(c.title)}">${escapeHtml(c.title)}</div>
+          <div class="conversation-item-meta">
+            <span>${dateStr}</span>
+            ${folder && state.activeFolderFilter === 'all' ? `<span class="conversation-folder-pill">${folder.icon || '📁'} ${escapeHtml(folder.name)}</span>` : ''}
+          </div>
+        </div>
+        <div class="conversation-item-actions">
+          <button class="conv-action-btn move" data-action="move" data-id="${c.id}" title="Move to folder">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button class="conv-action-btn rename" data-action="rename" data-id="${c.id}" title="Rename chat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
+          <button class="conv-action-btn delete" data-action="delete" data-id="${c.id}" title="Delete chat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  els.historyConversationList.innerHTML = html;
+}
+
+function formatRelativeDate(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function loadActiveConversationMessages() {
+  try {
+    const conversation = await window.bestie.conversation.getActive();
+    els.chatMessages.innerHTML = '';
+
     if (conversation?.messages?.length > 0) {
-      // Clear the welcome message
-      els.chatMessages.innerHTML = '';
-      
-      // Add all existing messages
       conversation.messages.forEach(msg => {
         addMessage(msg.role, msg.content);
       });
-      
-      scrollToBottom();
+    } else {
+      addWelcomeMessage();
     }
+    scrollToBottom();
   } catch (e) {
-    console.error('Failed to load conversation:', e);
+    console.error('Failed to load active conversation messages:', e);
   }
+}
+
+async function handleSwitchConversation(id) {
+  if (state.isGenerating) return;
+  await window.bestie.conversation.switch(id);
+  await refreshConversationsList();
+  await loadActiveConversationMessages();
+}
+
+async function handleCreateNewChat() {
+  if (state.isGenerating) return;
+  const targetFolder = state.activeFolderFilter !== 'all' ? state.activeFolderFilter : null;
+  await window.bestie.conversation.create({
+    title: 'New Conversation',
+    folderId: targetFolder
+  });
+  await refreshConversationsList();
+  await loadActiveConversationMessages();
+  if (els.chatInput) els.chatInput.focus();
+}
+
+async function handleRenameConversation(id) {
+  const conv = state.conversations.find(c => c.id === id);
+  const currentTitle = conv ? conv.title : '';
+  const newTitle = window.prompt('Rename conversation:', currentTitle);
+  if (newTitle && newTitle.trim() && newTitle.trim() !== currentTitle) {
+    await window.bestie.conversation.rename(id, newTitle.trim());
+    await refreshConversationsList();
+  }
+}
+
+async function handleDeleteConversation(id) {
+  const conv = state.conversations.find(c => c.id === id);
+  const title = conv ? conv.title : 'this conversation';
+  if (window.confirm(`Delete "${title}"? This cannot be undone.`)) {
+    await window.bestie.conversation.delete(id);
+    await refreshConversationsList();
+    await loadActiveConversationMessages();
+  }
+}
+
+function openMoveChatModal(id) {
+  if (!els.moveChatModal) return;
+  const conv = state.conversations.find(c => c.id === id);
+  if (!conv) return;
+
+  els.moveChatId.value = id;
+  const select = els.moveChatFolderSelect;
+  select.innerHTML = `
+    <option value="" ${!conv.folderId ? 'selected' : ''}>💬 General (Uncategorized)</option>
+    ${state.folders.map(f => `<option value="${f.id}" ${conv.folderId === f.id ? 'selected' : ''}>${f.icon || '📁'} ${escapeHtml(f.name)}</option>`).join('')}
+  `;
+  els.moveChatModal.classList.remove('hidden');
+}
+
+function closeMoveChatModal() {
+  if (els.moveChatModal) els.moveChatModal.classList.add('hidden');
+}
+
+function openFolderModal(editFolderId = null) {
+  if (!els.folderModal) return;
+  els.folderEditId.value = editFolderId || '';
+  if (editFolderId) {
+    const f = state.folders.find(x => x.id === editFolderId);
+    els.folderModalTitle.textContent = 'Edit Category Folder';
+    els.folderInputName.value = f ? f.name : '';
+    state.selectedFolderEmoji = f ? (f.icon || '📁') : '📁';
+  } else {
+    els.folderModalTitle.textContent = 'New Category Folder';
+    els.folderInputName.value = '';
+    state.selectedFolderEmoji = '📁';
+  }
+  if (els.folderModalIconPreview) els.folderModalIconPreview.textContent = state.selectedFolderEmoji;
+
+  // Update active emoji button
+  $$('.emoji-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-emoji') === state.selectedFolderEmoji);
+  });
+
+  els.folderModal.classList.remove('hidden');
+  els.folderInputName.focus();
+}
+
+function closeFolderModal() {
+  if (els.folderModal) els.folderModal.classList.add('hidden');
 }
 
 function scrollToBottom() {

@@ -6,12 +6,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { safeStorage } from 'electron';
 
 const DATA_DIR = path.join(os.homedir(), '.digital-bestie');
 const PROFILE_PATH = path.join(DATA_DIR, 'user_profile.json');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 const CONVERSATION_PATH = path.join(DATA_DIR, 'conversation.json');
+const CONVERSATIONS_PATH = path.join(DATA_DIR, 'conversations.json');
 const FEEDBACK_PATH = path.join(DATA_DIR, 'feedback_and_bugs.json');
+
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+const DEFAULT_FOLDERS = [
+  { id: 'folder_finances', name: 'Finances & Burn Rate', icon: '💰' },
+  { id: 'folder_diary', name: 'Diary & Mindset', icon: '📓' },
+  { id: 'folder_ventures', name: 'Ventures & Strategy', icon: '🚀' },
+  { id: 'folder_general', name: 'General Real Talk', icon: '💬' }
+];
 
 /** Default empty profile matching the Living Dossier schema */
 const DEFAULT_PROFILE = {
@@ -68,15 +79,36 @@ const DEFAULT_SETTINGS = {
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  } else {
+    try {
+      fs.chmodSync(DATA_DIR, 0o700);
+    } catch {
+      // Ignore if chmod not supported on filesystem
+    }
   }
 }
 
-function loadJSON(filePath, defaults) {
+export function loadJSON(filePath, defaults) {
   try {
     if (fs.existsSync(filePath)) {
       const raw = fs.readFileSync(filePath, 'utf-8');
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+
+      // Check if this is an encrypted safeStorage envelope
+      if (parsed && parsed._security && parsed._security.encrypted && parsed.payload) {
+        if (safeStorage && typeof safeStorage.isEncryptionAvailable === 'function' && safeStorage.isEncryptionAvailable()) {
+          const buffer = Buffer.from(parsed.payload, 'base64');
+          const decrypted = safeStorage.decryptString(buffer);
+          return JSON.parse(decrypted);
+        } else {
+          console.error(`[Security] Cannot decrypt ${filePath}: safeStorage encryption is unavailable.`);
+          return JSON.parse(JSON.stringify(defaults));
+        }
+      }
+
+      // Legacy unencrypted JSON: return directly (will be transparently encrypted on next save)
+      return parsed;
     }
   } catch (err) {
     console.error(`Error loading ${filePath}:`, err.message);
@@ -84,9 +116,31 @@ function loadJSON(filePath, defaults) {
   return JSON.parse(JSON.stringify(defaults));
 }
 
-function saveJSON(filePath, data) {
+export function saveJSON(filePath, data) {
   ensureDataDir();
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  const rawString = JSON.stringify(data, null, 2);
+
+  // Use OS hardware / Keychain backed safeStorage if available
+  if (safeStorage && typeof safeStorage.isEncryptionAvailable === 'function' && safeStorage.isEncryptionAvailable()) {
+    try {
+      const encryptedBuffer = safeStorage.encryptString(rawString);
+      const envelope = {
+        _security: {
+          encrypted: true,
+          version: 1,
+          algorithm: 'electron-safe-storage'
+        },
+        payload: encryptedBuffer.toString('base64')
+      };
+      fs.writeFileSync(filePath, JSON.stringify(envelope, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      return;
+    } catch (err) {
+      console.warn(`[Security] safeStorage encryption failed for ${filePath}, falling back:`, err.message);
+    }
+  }
+
+  // Fallback if encryption unavailable (written with strict user-only permissions)
+  fs.writeFileSync(filePath, rawString, { encoding: 'utf-8', mode: 0o600 });
 }
 
 // --- Profile ---
@@ -101,11 +155,17 @@ export function saveProfile(profile) {
 }
 
 /**
- * Update a nested field using dot notation
+ * Update a nested field using dot notation with prototype pollution defense
  */
 export function updateProfileField(dotPath, value, action = 'set') {
-  const profile = loadProfile();
+  if (typeof dotPath !== 'string') return loadProfile();
   const keys = dotPath.split('.');
+  if (keys.some(k => DANGEROUS_KEYS.has(k))) {
+    console.warn(`[Security] Blocked attempt to modify dangerous property: ${dotPath}`);
+    return loadProfile();
+  }
+
+  const profile = loadProfile();
   let obj = profile;
   for (let i = 0; i < keys.length - 1; i++) {
     if (obj[keys[i]] === undefined) obj[keys[i]] = {};
@@ -131,8 +191,14 @@ export function updateProfileField(dotPath, value, action = 'set') {
 }
 
 export function deleteProfileField(dotPath) {
-  const profile = loadProfile();
+  if (typeof dotPath !== 'string') return loadProfile();
   const keys = dotPath.split('.');
+  if (keys.some(k => DANGEROUS_KEYS.has(k))) {
+    console.warn(`[Security] Blocked attempt to delete dangerous property: ${dotPath}`);
+    return loadProfile();
+  }
+
+  const profile = loadProfile();
   let obj = profile;
   for (let i = 0; i < keys.length - 1; i++) {
     if (obj[keys[i]] === undefined) return profile;
@@ -191,40 +257,300 @@ export function getProfileSummary() {
     : 'No profile data stored yet.';
 }
 
-// --- Conversation ---
+// --- Multi-Conversation & Folder Store ---
+
+export function loadConversationsStore() {
+  ensureDataDir();
+  let store = loadJSON(CONVERSATIONS_PATH, null);
+
+  // If conversations.json does not exist yet, migrate from legacy conversation.json
+  if (!store || !Array.isArray(store.conversations)) {
+    const legacy = loadJSON(CONVERSATION_PATH, { messages: [] });
+    const initialId = `conv_${Date.now()}`;
+    const initialMessages = Array.isArray(legacy?.messages) ? legacy.messages : [];
+    
+    let initialTitle = 'New Conversation';
+    if (initialMessages.length > 0) {
+      const firstUserMsg = initialMessages.find(m => m.role === 'user');
+      if (firstUserMsg && firstUserMsg.content) {
+        initialTitle = firstUserMsg.content.slice(0, 35).trim() || 'Previous Conversation';
+      } else {
+        initialTitle = 'Previous Conversation';
+      }
+    }
+
+    store = {
+      activeId: initialId,
+      folders: JSON.parse(JSON.stringify(DEFAULT_FOLDERS)),
+      conversations: [
+        {
+          id: initialId,
+          title: initialTitle,
+          folderId: 'folder_general',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messages: initialMessages
+        }
+      ]
+    };
+    saveConversationsStore(store);
+  }
+
+  // Ensure folders list exists
+  if (!Array.isArray(store.folders) || store.folders.length === 0) {
+    store.folders = JSON.parse(JSON.stringify(DEFAULT_FOLDERS));
+  }
+
+  // Ensure activeId is valid
+  if (!store.activeId || !store.conversations.some(c => c.id === store.activeId)) {
+    if (store.conversations.length > 0) {
+      store.activeId = store.conversations[0].id;
+    } else {
+      const newId = `conv_${Date.now()}`;
+      store.conversations.push({
+        id: newId,
+        title: 'New Conversation',
+        folderId: 'folder_general',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        messages: []
+      });
+      store.activeId = newId;
+    }
+  }
+
+  return store;
+}
+
+export function saveConversationsStore(store) {
+  saveJSON(CONVERSATIONS_PATH, store);
+  // Keep legacy conversation.json synced with active conversation for backward compatibility
+  const active = store.conversations.find(c => c.id === store.activeId);
+  if (active) {
+    saveJSON(CONVERSATION_PATH, { messages: active.messages });
+  }
+}
+
+export function getConversationsSummary() {
+  const store = loadConversationsStore();
+  const list = store.conversations.map(c => {
+    const lastMsg = c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1] : null;
+    return {
+      id: c.id,
+      title: c.title,
+      folderId: c.folderId || null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      messageCount: c.messages?.length || 0,
+      preview: lastMsg ? (lastMsg.content || '').slice(0, 80) : 'No messages yet'
+    };
+  });
+
+  list.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  return {
+    activeId: store.activeId,
+    folders: store.folders,
+    conversations: list
+  };
+}
+
+export function getActiveConversation() {
+  const store = loadConversationsStore();
+  const active = store.conversations.find(c => c.id === store.activeId);
+  if (active) return active;
+  return store.conversations[0] || null;
+}
+
+export function switchActiveConversation(id) {
+  const store = loadConversationsStore();
+  const target = store.conversations.find(c => c.id === id);
+  if (target) {
+    store.activeId = target.id;
+    saveConversationsStore(store);
+    return target;
+  }
+  return getActiveConversation();
+}
+
+export function createConversation({ title = 'New Conversation', folderId = null } = {}) {
+  const store = loadConversationsStore();
+  const newId = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const newConv = {
+    id: newId,
+    title: (title || '').trim() || 'New Conversation',
+    folderId: folderId || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    messages: []
+  };
+  store.conversations.unshift(newConv);
+  store.activeId = newId;
+  saveConversationsStore(store);
+  return newConv;
+}
+
+export function renameConversation(id, newTitle) {
+  const store = loadConversationsStore();
+  const target = store.conversations.find(c => c.id === id);
+  if (target && newTitle && typeof newTitle === 'string') {
+    target.title = newTitle.trim() || target.title;
+    target.updatedAt = new Date().toISOString();
+    saveConversationsStore(store);
+    return target;
+  }
+  return null;
+}
+
+export function deleteConversation(id) {
+  const store = loadConversationsStore();
+  store.conversations = store.conversations.filter(c => c.id !== id);
+  if (store.conversations.length === 0) {
+    const freshId = `conv_${Date.now()}`;
+    const fresh = {
+      id: freshId,
+      title: 'New Conversation',
+      folderId: 'folder_general',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: []
+    };
+    store.conversations.push(fresh);
+    store.activeId = freshId;
+  } else if (store.activeId === id) {
+    store.activeId = store.conversations[0].id;
+  }
+  saveConversationsStore(store);
+  return getConversationsSummary();
+}
+
+export function moveConversationToFolder(id, folderId) {
+  const store = loadConversationsStore();
+  const target = store.conversations.find(c => c.id === id);
+  if (target) {
+    target.folderId = folderId || null;
+    target.updatedAt = new Date().toISOString();
+    saveConversationsStore(store);
+    return target;
+  }
+  return null;
+}
+
+export function clearActiveConversation() {
+  const store = loadConversationsStore();
+  const active = store.conversations.find(c => c.id === store.activeId);
+  if (active) {
+    active.messages = [];
+    active.updatedAt = new Date().toISOString();
+    saveConversationsStore(store);
+    return active;
+  }
+  return null;
+}
+
+// --- Folder Management ---
+
+export function createFolder({ name, icon = '📁' }) {
+  if (!name || typeof name !== 'string') return null;
+  const store = loadConversationsStore();
+  const newFolder = {
+    id: `folder_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    name: name.trim(),
+    icon: icon || '📁',
+    createdAt: new Date().toISOString()
+  };
+  store.folders.push(newFolder);
+  saveConversationsStore(store);
+  return newFolder;
+}
+
+export function renameFolder(id, name, icon) {
+  const store = loadConversationsStore();
+  const target = store.folders.find(f => f.id === id);
+  if (target) {
+    if (name && typeof name === 'string') target.name = name.trim();
+    if (icon) target.icon = icon;
+    saveConversationsStore(store);
+    return target;
+  }
+  return null;
+}
+
+export function deleteFolder(id) {
+  const store = loadConversationsStore();
+  store.folders = store.folders.filter(f => f.id !== id);
+  store.conversations.forEach(c => {
+    if (c.folderId === id) c.folderId = null;
+  });
+  saveConversationsStore(store);
+  return store.folders;
+}
+
+// --- Legacy & Bridge Conversation Functions ---
 
 export function loadConversation() {
-  ensureDataDir();
-  return loadJSON(CONVERSATION_PATH, { messages: [] });
+  return getActiveConversation();
 }
 
 export function saveConversation(conversation) {
-  saveJSON(CONVERSATION_PATH, conversation);
+  const store = loadConversationsStore();
+  const active = store.conversations.find(c => c.id === store.activeId);
+  if (active) {
+    active.messages = conversation.messages || [];
+    active.updatedAt = new Date().toISOString();
+    saveConversationsStore(store);
+  }
 }
 
 export function appendMessage(role, content) {
-  const conversation = loadConversation();
-  conversation.messages.push({
+  const store = loadConversationsStore();
+  let active = store.conversations.find(c => c.id === store.activeId);
+  if (!active) {
+    active = store.conversations[0];
+    store.activeId = active ? active.id : null;
+  }
+  if (!active) {
+    const newId = `conv_${Date.now()}`;
+    active = {
+      id: newId,
+      title: 'New Conversation',
+      folderId: 'folder_general',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: []
+    };
+    store.conversations.push(active);
+    store.activeId = newId;
+  }
+
+  active.messages.push({
     role,
     content,
     timestamp: new Date().toISOString()
   });
-  saveConversation(conversation);
-  return conversation;
+  active.updatedAt = new Date().toISOString();
+
+  // Smart auto-title generation if this is the first user message and title is default
+  if (role === 'user' && (active.title === 'New Conversation' || !active.title)) {
+    const cleanSnippet = content.trim().replace(/^#+\s*/, '').slice(0, 32).trim();
+    if (cleanSnippet) {
+      active.title = cleanSnippet + (content.trim().length > 32 ? '...' : '');
+    }
+  }
+
+  saveConversationsStore(store);
+  return active;
 }
 
-/**
- * Get the sliding window of recent messages for Ollama context
- */
 export function getMessageWindow(windowSize = 50) {
-  const conversation = loadConversation();
-  const messages = conversation.messages || [];
+  const active = getActiveConversation();
+  const messages = active?.messages || [];
   const windowed = messages.slice(-windowSize);
   return windowed.map(m => ({ role: m.role, content: m.content }));
 }
 
 export function clearConversation() {
-  saveConversation({ messages: [] });
+  return clearActiveConversation();
 }
 
 // --- Settings ---
@@ -252,6 +578,7 @@ export function exportProfile() {
     profile: loadProfile(),
     settings: loadSettings(),
     conversation: loadConversation(),
+    conversationsStore: loadConversationsStore(),
     exportedAt: new Date().toISOString()
   };
 }
@@ -259,7 +586,8 @@ export function exportProfile() {
 export function importProfile(data) {
   if (data.profile) saveProfile(data.profile);
   if (data.settings) saveSettings(data.settings);
-  if (data.conversation) saveConversation(data.conversation);
+  if (data.conversationsStore) saveConversationsStore(data.conversationsStore);
+  else if (data.conversation) saveConversation(data.conversation);
 }
 
 // --- Feedback & Bug Logging ---
@@ -306,5 +634,12 @@ export function updateFeedbackStatus(id, status) {
   return items;
 }
 
-export { DATA_DIR, DEFAULT_PROFILE, DEFAULT_SETTINGS, FEEDBACK_PATH };
+export {
+  DATA_DIR,
+  DEFAULT_PROFILE,
+  DEFAULT_SETTINGS,
+  FEEDBACK_PATH,
+  loadJSON as loadSecureJSON,
+  saveJSON as saveSecureJSON
+};
 

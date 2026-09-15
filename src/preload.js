@@ -48,7 +48,21 @@ contextBridge.exposeInMainWorld('bestie', {
   // --- Conversation ---
   conversation: {
     load: () => ipcRenderer.invoke('conversation:load'),
+    list: () => ipcRenderer.invoke('conversation:list'),
+    getActive: () => ipcRenderer.invoke('conversation:getActive'),
+    switch: (id) => ipcRenderer.invoke('conversation:switch', id),
+    create: (payload) => ipcRenderer.invoke('conversation:create', payload),
+    rename: (id, title) => ipcRenderer.invoke('conversation:rename', { id, title }),
+    delete: (id) => ipcRenderer.invoke('conversation:delete', id),
+    moveToFolder: (id, folderId) => ipcRenderer.invoke('conversation:moveToFolder', { id, folderId }),
     clear: () => ipcRenderer.invoke('conversation:clear'),
+  },
+
+  // --- Folders ---
+  folder: {
+    create: (payload) => ipcRenderer.invoke('folder:create', payload),
+    rename: (id, name, icon) => ipcRenderer.invoke('folder:rename', { id, name, icon }),
+    delete: (id) => ipcRenderer.invoke('folder:delete', id),
   },
 
   // --- Settings ---

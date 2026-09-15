@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:11434 http://localhost:5174 ws://localhost:* http://localhost:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; script-src 'self' 'unsafe-inline';" />
     <title>Digital Bestie</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,61 +121,142 @@
       <main id="main-content" class="main-content">
         <!-- Chat View (default) -->
         <div id="view-chat" class="view active">
-          <div id="chat-messages" class="chat-messages">
-            <!-- Welcome message -->
-            <div class="message assistant welcome-message">
-              <div class="message-avatar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <defs>
-                    <linearGradient id="neonGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#00f0ff"/>
-                      <stop offset="100%" style="stop-color:#b347ff"/>
-                    </linearGradient>
-                  </defs>
-                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                </svg>
-              </div>
-              <div class="message-content">
-                <p>Hey! I'm your Digital Bestie — your personal confidante, operational strategist, and second brain. 💜</p>
-                <p>No judgment, no corporate fluff, just real talk and real help. What's on your mind?</p>
-              </div>
-            </div>
-          </div>
+          <div class="chat-layout">
+            <!-- Collapsible Chat History & Folders Sidebar -->
+            <aside id="chat-history-sidebar" class="chat-history-sidebar">
+              <div class="history-sidebar-header">
+                <div class="history-header-top">
+                  <div class="history-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>Chat Vault</span>
+                  </div>
+                  <button id="btn-collapse-history" class="history-collapse-btn" title="Collapse history sidebar (⌘B)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+                  </button>
+                </div>
+                
+                <button id="btn-new-chat" class="btn-new-chat">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>New Chat</span>
+                </button>
 
-          <!-- Typing Indicator -->
-          <div id="typing-indicator" class="typing-indicator hidden">
-            <div class="message-avatar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-            </div>
-            <div class="typing-dots">
-              <span></span><span></span><span></span>
-            </div>
-          </div>
+                <div class="history-search-wrap">
+                  <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input type="text" id="history-search-input" class="history-search-input" placeholder="Search conversations..." />
+                </div>
+              </div>
 
-          <!-- Chat Input -->
-          <div class="chat-input-area">
-            <div class="chat-input-container">
-              <textarea
-                id="chat-input"
-                class="chat-input"
-                placeholder="Talk to your Bestie..."
-                rows="1"
-                maxlength="16000"
-              ></textarea>
-              <button id="btn-send" class="btn-send" title="Send message" disabled>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
-                </svg>
-              </button>
-              <button id="btn-abort" class="btn-abort hidden" title="Stop generating">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="6" width="12" height="12" rx="2"/>
-                </svg>
-              </button>
-            </div>
-            <div class="chat-input-hint">
-              <span>Enter to send · Shift+Enter for new line</span>
-            </div>
+              <!-- Folders / Categories Filter List -->
+              <div class="history-folders-section">
+                <div class="history-section-header">
+                  <span class="history-section-title">CATEGORIES</span>
+                  <button id="btn-add-folder" class="btn-add-folder-mini" title="Create new category folder">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
+                </div>
+                <div id="folders-filter-list" class="folders-filter-list">
+                  <!-- Dynamically rendered folders -->
+                </div>
+              </div>
+
+              <!-- Conversations List -->
+              <div class="history-conversations-section">
+                <div class="history-section-header">
+                  <span class="history-section-title" id="history-list-heading">CONVERSATIONS</span>
+                  <span id="history-chat-count" class="history-badge">0</span>
+                </div>
+                <div id="history-conversation-list" class="history-conversation-list">
+                  <!-- Dynamically rendered conversation items -->
+                </div>
+              </div>
+            </aside>
+
+            <!-- Main Chat Column -->
+            <section class="chat-main-column">
+              <!-- Chat Topbar -->
+              <header class="chat-topbar">
+                <div class="chat-topbar-left">
+                  <button id="btn-toggle-history-sidebar" class="chat-sidebar-toggle-btn" title="Toggle history sidebar (⌘B)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  </button>
+                  <div class="chat-title-wrapper">
+                    <span id="active-chat-title" class="active-chat-title" title="Click to rename">New Conversation</span>
+                    <span id="active-chat-folder-tag" class="chat-folder-tag" title="Assigned folder">General</span>
+                  </div>
+                </div>
+
+                <div class="chat-topbar-actions">
+                  <button id="btn-rename-active-chat" class="chat-action-btn" title="Rename conversation">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                  </button>
+                  <button id="btn-move-active-chat" class="chat-action-btn" title="Move to folder">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                  <button id="btn-clear-active-chat" class="chat-action-btn" title="Clear messages in this chat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </header>
+
+              <div id="chat-messages" class="chat-messages">
+                <!-- Welcome message -->
+                <div class="message assistant welcome-message">
+                  <div class="message-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <defs>
+                        <linearGradient id="neonGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#00f0ff"/>
+                          <stop offset="100%" style="stop-color:#b347ff"/>
+                        </linearGradient>
+                      </defs>
+                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                    </svg>
+                  </div>
+                  <div class="message-content">
+                    <p>Hey! I'm your Digital Bestie — your personal confidante, operational strategist, and second brain. 💜</p>
+                    <p>No judgment, no corporate fluff, just real talk and real help. What's on your mind?</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Typing Indicator -->
+              <div id="typing-indicator" class="typing-indicator hidden">
+                <div class="message-avatar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#neonGrad2)" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </div>
+                <div class="typing-dots">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+
+              <!-- Chat Input -->
+              <div class="chat-input-area">
+                <div class="chat-input-container">
+                  <textarea
+                    id="chat-input"
+                    class="chat-input"
+                    placeholder="Talk to your Bestie..."
+                    rows="1"
+                    maxlength="16000"
+                  ></textarea>
+                  <button id="btn-send" class="btn-send" title="Send message" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
+                    </svg>
+                  </button>
+                  <button id="btn-abort" class="btn-abort hidden" title="Stop generating">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="chat-input-hint">
+                  <span>Enter to send · Shift+Enter for new line</span>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -764,6 +846,86 @@
           <div class="feedback-actions" style="margin-top: 14px;">
             <button type="button" id="btn-cancel-resource" class="btn-glass">Cancel</button>
             <button type="button" id="btn-submit-resource" class="btn-neon">Save Resource &amp; Update Dossier 🚀</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Folder Management Modal -->
+    <div id="folder-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 440px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(179, 71, 255, 0.15); color: var(--neon-purple);">
+              <span id="folder-modal-icon-preview">📁</span>
+            </div>
+            <div>
+              <h3 id="folder-modal-title">New Category Folder</h3>
+              <p class="feedback-subtitle">Organize and sort your chats into distinct strategic vaults.</p>
+            </div>
+          </div>
+          <button id="btn-close-folder-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <input type="hidden" id="folder-edit-id" value="" />
+          <div class="form-group">
+            <label for="folder-input-name">Category / Folder Name *</label>
+            <input type="text" id="folder-input-name" class="feedback-input" placeholder="e.g. Weekly Reflections, Client Pitching" required />
+          </div>
+
+          <div class="form-group">
+            <label>Choose Icon</label>
+            <div id="folder-emoji-picker" class="folder-emoji-picker">
+              <button type="button" class="emoji-btn active" data-emoji="📁">📁</button>
+              <button type="button" class="emoji-btn" data-emoji="💰">💰</button>
+              <button type="button" class="emoji-btn" data-emoji="📓">📓</button>
+              <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
+              <button type="button" class="emoji-btn" data-emoji="💬">💬</button>
+              <button type="button" class="emoji-btn" data-emoji="⚡">⚡</button>
+              <button type="button" class="emoji-btn" data-emoji="🎯">🎯</button>
+              <button type="button" class="emoji-btn" data-emoji="🧠">🧠</button>
+              <button type="button" class="emoji-btn" data-emoji="💡">💡</button>
+              <button type="button" class="emoji-btn" data-emoji="🛡️">🛡️</button>
+            </div>
+          </div>
+
+          <div class="feedback-actions" style="margin-top: 14px;">
+            <button type="button" id="btn-cancel-folder" class="btn-glass">Cancel</button>
+            <button type="button" id="btn-save-folder" class="btn-neon">Save Folder</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Move Conversation to Folder Modal -->
+    <div id="move-chat-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 420px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan);">
+              <span>📂</span>
+            </div>
+            <div>
+              <h3>Move to Category</h3>
+              <p class="feedback-subtitle">Select a category folder for this conversation.</p>
+            </div>
+          </div>
+          <button id="btn-close-move-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <input type="hidden" id="move-chat-id" value="" />
+          <div class="form-group">
+            <label for="move-chat-folder-select">Target Category Folder</label>
+            <select id="move-chat-folder-select" class="feedback-select">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="feedback-actions" style="margin-top: 14px;">
+            <button type="button" id="btn-cancel-move" class="btn-glass">Cancel</button>
+            <button type="button" id="btn-confirm-move" class="btn-neon">Move Chat</button>
           </div>
         </div>
       </div>

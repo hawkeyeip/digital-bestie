@@ -15,6 +15,9 @@ import { checkOllamaStatus, streamChat } from './services/ollama.js';
 import {
   loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
   loadConversation, saveConversation, appendMessage, getMessageWindow, clearConversation,
+  loadConversationsStore, getConversationsSummary, getActiveConversation, switchActiveConversation,
+  createConversation, renameConversation, deleteConversation, moveConversationToFolder, clearActiveConversation,
+  createFolder, renameFolder, deleteFolder,
   loadSettings, saveSettings, updateSetting,
   exportProfile, importProfile,
   loadFeedback, addFeedbackItem, deleteFeedbackItem, updateFeedbackStatus
@@ -53,8 +56,33 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     },
+  });
+
+  // Secure external navigation: intercept window.open and markdown links, open in system browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+        shell.openExternal(url);
+      }
+    } catch {
+      // Ignore malformed URLs
+    }
+    return { action: 'deny' };
+  });
+
+  // Block in-app window navigation to untrusted external URLs
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const devUrl = typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined' ? MAIN_WINDOW_VITE_DEV_SERVER_URL : null;
+    if (devUrl && navigationUrl.startsWith(devUrl)) {
+      return;
+    }
+    if (!devUrl && navigationUrl.startsWith('file://')) {
+      return;
+    }
+    event.preventDefault();
   });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -219,12 +247,24 @@ function registerIPC() {
   });
   ipcMain.handle('memory:getProfileSummary', () => getProfileSummary());
 
-  // --- Conversation ---
-  ipcMain.handle('conversation:load', () => loadConversation());
+  // --- Multi-Conversation & Folders ---
+  ipcMain.handle('conversation:load', () => getActiveConversation());
+  ipcMain.handle('conversation:list', () => getConversationsSummary());
+  ipcMain.handle('conversation:getActive', () => getActiveConversation());
+  ipcMain.handle('conversation:switch', (event, id) => switchActiveConversation(id));
+  ipcMain.handle('conversation:create', (event, payload) => createConversation(payload || {}));
+  ipcMain.handle('conversation:rename', (event, { id, title }) => renameConversation(id, title));
+  ipcMain.handle('conversation:delete', (event, id) => deleteConversation(id));
+  ipcMain.handle('conversation:moveToFolder', (event, { id, folderId }) => moveConversationToFolder(id, folderId));
   ipcMain.handle('conversation:clear', () => {
-    clearConversation();
+    clearActiveConversation();
     return true;
   });
+
+  // --- Folder Management ---
+  ipcMain.handle('folder:create', (event, payload) => createFolder(payload || {}));
+  ipcMain.handle('folder:rename', (event, { id, name, icon }) => renameFolder(id, name, icon));
+  ipcMain.handle('folder:delete', (event, id) => deleteFolder(id));
 
   // --- Settings ---
   ipcMain.handle('settings:load', () => loadSettings());

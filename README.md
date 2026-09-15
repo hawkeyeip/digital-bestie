@@ -19,6 +19,12 @@ An autonomous, local-first second-brain desktop application built on **Electron*
   6. 🔍 **Hidden-Assumptions Breaker**: Red-teams decisions and stress-tests beliefs.
   7. 🧠 **80/20 Learning Engine**: Strips fluff and outlines 20-30 minute micro-projects for rapid skill acquisition.
   8. 🔧 **Technical Troubleshooting Interrogator**: Methodically isolates variables and diagnoses technical issues.
+- **Chat Vault & History Sidebar (v2.0)**: Multi-conversation persistence with collapsible sidebar (`⌘B` / `Ctrl+B`), real-time search filtering, instant chat switching, and smart auto-titling.
+- **Category Folders & Sorting (v2.0)**: Organize conversations into custom strategic folders with custom emoji icons (Finances, Diary, Ventures, Strategy, and General).
+- **Apple Keychain Hardware Encryption (`safeStorage`) (v2.0)**: Hardware-backed data-at-rest encryption protecting user profiles, chat vaults, and financial assets at rest with strict POSIX `0700`/`0600` file permissions.
+- **Hardened Electron Security (v2.0)**: Chromium sandbox enforcement, strict Content Security Policy (CSP), link protocol sanitization (XSS defense), and safe external navigation handling.
+- **Superbrain Hub & Resource Tracker**: Track SaaS subscriptions, physical hardware assets, and travel credits with real-time runway/burn-rate calculations synced into your Living Dossier.
+- **Calibration Lab**: Deepen psychological profiles, review mental models, and calibrate tone/execution preferences interactively.
 - **Markdown Streaming & Code Highlighting**: Real-time response streaming with formatted code blocks, tables, lists, and quotes.
 - **Data Export & Import**: Easy single-click JSON backup and restore for your entire profile and conversation history.
 

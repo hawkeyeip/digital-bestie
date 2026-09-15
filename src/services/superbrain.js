@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { loadProfile, saveProfile, updateProfileField, DATA_DIR } from './memory.js';
+import { loadProfile, saveProfile, updateProfileField, DATA_DIR, loadSecureJSON, saveSecureJSON } from './memory.js';
 
 const SUPERBRAIN_DATA_FILE = path.join(DATA_DIR, 'superbrain.json');
 
@@ -57,32 +57,18 @@ const DEFAULT_SUPERBRAIN_STATE = {
 };
 
 /**
- * Load persistent Superbrain cache
+ * Load persistent Superbrain cache (encrypted with safeStorage)
  */
 export function loadSuperbrainData() {
-  try {
-    if (fs.existsSync(SUPERBRAIN_DATA_FILE)) {
-      const raw = fs.readFileSync(SUPERBRAIN_DATA_FILE, 'utf-8');
-      return { ...DEFAULT_SUPERBRAIN_STATE, ...JSON.parse(raw) };
-    }
-  } catch (err) {
-    console.error('Error loading Superbrain data:', err.message);
-  }
-  return JSON.parse(JSON.stringify(DEFAULT_SUPERBRAIN_STATE));
+  const loaded = loadSecureJSON(SUPERBRAIN_DATA_FILE, DEFAULT_SUPERBRAIN_STATE);
+  return { ...DEFAULT_SUPERBRAIN_STATE, ...loaded };
 }
 
 /**
- * Save Superbrain cache
+ * Save Superbrain cache (encrypted with safeStorage)
  */
 export function saveSuperbrainData(data) {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(SUPERBRAIN_DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error saving Superbrain data:', err.message);
-  }
+  saveSecureJSON(SUPERBRAIN_DATA_FILE, data);
 }
 
 /**
