@@ -103,6 +103,18 @@ contextBridge.exposeInMainWorld('bestie', {
     importNeonBrainDialog: () => ipcRenderer.invoke('superbrain:importNeonBrainDialog'),
     exportToNeonBrainDialog: (payload) => ipcRenderer.invoke('superbrain:exportToNeonBrainDialog', payload),
   },
+
+  // --- Auto-Updater ---
+  updater: {
+    check: () => ipcRenderer.invoke('updater:check'),
+    getVersion: () => ipcRenderer.invoke('updater:getVersion'),
+    openRelease: (url) => ipcRenderer.invoke('updater:openRelease', url),
+    onUpdateAvailable: (callback) => {
+      const handler = (_event, info) => callback(info);
+      ipcRenderer.on('updater:available', handler);
+      return () => ipcRenderer.removeListener('updater:available', handler);
+    },
+  },
 });
 
 

@@ -4,7 +4,7 @@
  */
 
 import { CALIBRATION_PACKS, getDossierValue } from './services/calibration.js';
-import { MODULES_METADATA } from './services/modules-data.js';
+import { MODULES_METADATA, PERSONA_CATEGORIES } from './services/modules-data.js';
 
 // ============================================================
 // MARKDOWN PARSER (lightweight, no dependencies)
@@ -98,6 +98,10 @@ let state = {
   activeFolderFilter: 'all',
   historySearchQuery: '',
   selectedFolderEmoji: '📁',
+  personaCategoryFilter: 'all',
+  personaSearchQuery: '',
+  modulesCategoryFilter: 'all',
+  modulesSearchQuery: '',
 };
 
 // ============================================================
@@ -163,8 +167,27 @@ const els = {
   btnCancelMove: $('#btn-cancel-move'),
   btnConfirmMove: $('#btn-confirm-move'),
 
-  // Modules
+  // In-Chat Persona Selector & Dropdown
+  btnPersonaSelector: $('#btn-persona-selector'),
+  personaBtnIcon: $('#persona-btn-icon'),
+  personaBtnLabel: $('#persona-btn-label'),
+  personaBtnBadge: $('#persona-btn-badge'),
+  personaDropdownMenu: $('#persona-dropdown-menu'),
+  personaSearchInput: $('#persona-search-input'),
+  btnClearPersonaSearch: $('#btn-clear-persona-search'),
+  personaCategoryFilters: $('#persona-category-filters'),
+  personaDropdownList: $('#persona-dropdown-list'),
+  personaDropdownEmpty: $('#persona-dropdown-empty'),
+  personaEmptyQuery: $('#persona-empty-query'),
+
+  // Modules Hub
   moduleCards: $$('.module-card'),
+  modulesSearchInput: $('#modules-search-input'),
+  btnClearModulesSearch: $('#btn-clear-modules-search'),
+  modulesCategoryFilters: $('#modules-category-filters'),
+  modulesGrid: $('#modules-grid'),
+  modulesEmptySearch: $('#modules-empty-search'),
+  modulesEmptyQuery: $('#modules-empty-query'),
   activeModuleIndicator: $('#active-module-indicator'),
   activeModuleName: $('#active-module-name'),
   btnClearModule: $('#btn-clear-module'),
@@ -197,7 +220,23 @@ const els = {
   settingModelName: $('#setting-model-name'),
   settingNumCtx: $('#setting-num-ctx'),
   settingContextWindow: $('#setting-context-window'),
+  settingGithubToken: $('#setting-github-token'),
   btnSaveSettings: $('#btn-save-settings'),
+
+  // Updater
+  appVersionBadge: $('#app-version-badge'),
+  updaterStatusBadge: $('#updater-status-badge'),
+  updaterStatusText: $('#updater-status-text'),
+  updaterReleaseDetails: $('#updater-release-details'),
+  updaterReleaseTitle: $('#updater-release-title'),
+  updaterReleaseSnippet: $('#updater-release-snippet'),
+  btnCheckUpdates: $('#btn-check-updates'),
+  btnDownloadUpdate: $('#btn-download-update'),
+  updateNotificationBanner: $('#update-notification-banner'),
+  updateBannerVersion: $('#update-banner-version'),
+  updateBannerTitle: $('#update-banner-title'),
+  btnUpdateBannerDownload: $('#btn-update-banner-download'),
+  btnUpdateBannerDismiss: $('#btn-update-banner-dismiss'),
 
   // Onboarding
   onboardingOverlay: $('#onboarding-overlay'),
@@ -288,6 +327,7 @@ async function init() {
     if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-light';
     els.settingNumCtx.value = state.settings.num_ctx || 16384;
     els.settingContextWindow.value = state.settings.context_window || 50;
+    if (els.settingGithubToken) els.settingGithubToken.value = state.settings.github_token || '';
     if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-light';
   }
 
@@ -315,6 +355,14 @@ async function init() {
 
   // Auto-sync Superbrain telemetry if available
   autoSyncSuperbrain();
+
+  // Initialize In-Chat Persona Menu & Modules Hub
+  renderPersonaDropdown();
+  setupModulesHub();
+
+  // Initialize Application Updater
+  setupUpdater();
+  updatePersonaSwitcherUI();
 
   // Check if onboarding is needed
   if (!state.profile?.onboarding_state?.completed) {
@@ -425,11 +473,21 @@ function registerEventListeners() {
   els.btnCollapseHistory?.addEventListener('click', toggleHistorySidebar);
   els.btnToggleHistorySidebar?.addEventListener('click', toggleHistorySidebar);
 
-  // Global hotkey: Cmd+B or Ctrl+B to toggle history sidebar
+  // Global hotkeys
   window.addEventListener('keydown', (e) => {
+    // Cmd+B / Ctrl+B: Toggle history sidebar
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       toggleHistorySidebar();
+    }
+    // Cmd+P / Ctrl+P: Toggle persona switcher menu
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      togglePersonaDropdown();
+    }
+    // Escape: Close persona menu if open
+    if (e.key === 'Escape') {
+      closePersonaDropdown();
     }
   });
 
@@ -543,7 +601,44 @@ function registerEventListeners() {
     }
   });
 
-  // Modules
+  // Persona Switcher & In-Chat Dropdown
+  els.btnPersonaSelector?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePersonaDropdown();
+  });
+
+  els.personaDropdownMenu?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.persona-switcher-wrapper')) {
+      closePersonaDropdown();
+    }
+  });
+
+  // Persona search input in dropdown
+  els.personaSearchInput?.addEventListener('input', (e) => {
+    state.personaSearchQuery = e.target.value;
+    els.btnClearPersonaSearch?.classList.toggle('hidden', !state.personaSearchQuery);
+    renderPersonaDropdownList();
+  });
+
+  els.btnClearPersonaSearch?.addEventListener('click', () => {
+    if (els.personaSearchInput) {
+      els.personaSearchInput.value = '';
+      state.personaSearchQuery = '';
+      els.btnClearPersonaSearch.classList.add('hidden');
+      renderPersonaDropdownList();
+    }
+  });
+
+  // Default Confidante item in dropdown
+  document.querySelector('.persona-dropdown-item.default-item')?.addEventListener('click', () => {
+    deactivateModule();
+  });
+
+  // Modules Cards (Hub View)
   els.moduleCards.forEach(card => {
     card.addEventListener('click', () => {
       const moduleName = card.dataset.module;
@@ -604,6 +699,7 @@ function registerEventListeners() {
       model_name: els.settingModelName.value,
       num_ctx: parseInt(els.settingNumCtx.value) || 8192,
       context_window: parseInt(els.settingContextWindow.value) || 50,
+      github_token: els.settingGithubToken ? els.settingGithubToken.value.trim() : '',
       theme: 'neon-dark'
     };
     await window.bestie.settings.save(settings);
@@ -1269,133 +1365,460 @@ function autoResizeTextarea(textarea) {
 }
 
 // ============================================================
-// MODULES
+// PERSONA MENU & OPERATIONAL MODULES
 // ============================================================
 
-function activateModule(moduleName) {
+function togglePersonaDropdown() {
+  if (!els.personaDropdownMenu) return;
+  const isHidden = els.personaDropdownMenu.classList.contains('hidden');
+  if (isHidden) {
+    openPersonaDropdown();
+  } else {
+    closePersonaDropdown();
+  }
+}
+
+function openPersonaDropdown() {
+  if (!els.personaDropdownMenu) return;
+  els.personaDropdownMenu.classList.remove('hidden');
+  els.btnPersonaSelector?.classList.add('open');
+  els.personaSearchInput?.focus();
+}
+
+function closePersonaDropdown() {
+  if (!els.personaDropdownMenu) return;
+  els.personaDropdownMenu.classList.add('hidden');
+  els.btnPersonaSelector?.classList.remove('open');
+}
+
+function appendPersonaSwitchBanner(name, tag, desc) {
+  if (!els.chatMessages) return;
+  const banner = document.createElement('div');
+  banner.className = 'chat-persona-switch-banner';
+  banner.innerHTML = `
+    <span class="banner-icon">✦</span>
+    <span class="banner-name">${escapeHtml(name)}</span>
+    <span class="banner-tag">${escapeHtml(tag)}</span>
+    ${desc ? `<span class="banner-desc">· ${escapeHtml(desc)}</span>` : ''}
+  `;
+  els.chatMessages.appendChild(banner);
+  scrollToBottom();
+}
+
+function updatePersonaSwitcherUI() {
+  if (!els.personaBtnLabel) return;
+  
+  if (!state.activeModule) {
+    els.personaBtnIcon.textContent = '✨';
+    els.personaBtnLabel.textContent = 'Digital Bestie';
+    els.personaBtnBadge.textContent = 'Default Confidante';
+    els.personaBtnBadge.style.color = 'var(--neon-cyan)';
+    if (els.btnPersonaSelector) {
+      els.btnPersonaSelector.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+      els.btnPersonaSelector.style.boxShadow = 'none';
+    }
+  } else {
+    const meta = MODULES_METADATA[state.activeModule];
+    if (meta) {
+      els.personaBtnIcon.textContent = meta.icon;
+      els.personaBtnLabel.textContent = meta.name;
+      els.personaBtnBadge.textContent = meta.badge;
+      els.personaBtnBadge.style.color = meta.color;
+      if (els.btnPersonaSelector) {
+        els.btnPersonaSelector.style.borderColor = `${meta.color}55`;
+        els.btnPersonaSelector.style.boxShadow = `0 0 14px ${meta.color}33`;
+      }
+    }
+  }
+
+  // Update active checkmarks and classes in dropdown items
+  $$('.persona-dropdown-item').forEach(item => {
+    const mod = item.dataset.module;
+    const isAct = (!state.activeModule && mod === 'default') || (state.activeModule === mod);
+    item.classList.toggle('active', isAct);
+  });
+}
+
+function activateModule(moduleName, starterPrompt = null) {
+  const previousModule = state.activeModule;
   state.activeModule = moduleName;
   
-  // Update module cards
-  els.moduleCards.forEach(card => {
+  // Update in-chat persona switcher button & dropdown
+  updatePersonaSwitcherUI();
+
+  // Update module cards in Modules view
+  $$('.module-card').forEach(card => {
     card.classList.toggle('active-module', card.dataset.module === moduleName);
   });
 
-  // Show indicator
-  els.activeModuleIndicator.classList.remove('hidden');
-  els.activeModuleName.textContent = moduleName.replace(/-/g, ' ');
+  // Show indicator on sidebar
+  if (els.activeModuleIndicator) {
+    els.activeModuleIndicator.classList.remove('hidden');
+    els.activeModuleName.textContent = moduleName.replace(/-/g, ' ');
+  }
 
-  // Switch to chat view
-  switchView('chat');
+  // Switch to chat view if not already there
+  if (state.currentView !== 'chat') {
+    switchView('chat');
+  }
 
-  // Add system message about module activation
-  const moduleNames = {
-    'sanity-scout': 'Sanity Scout 🗺️',
-    'venture-incubator': 'Venture Incubator 🚀',
-    'ghostwriter': 'Ghostwriter ✍️',
-    'capital-guardian': 'Capital Guardian 💰',
-    'priority-sorter': 'Priority Sorter ⚡',
-    'pre-mortem': 'Pre-Mortem 🎯',
-    'mess-converter': 'Mess → Execution 📋',
-    'assumptions-breaker': 'Assumptions Breaker 🔍',
-    'learning-engine': '80/20 Learning 📚',
-    'troubleshooter': 'Troubleshooter 🔧',
-    'ship-it': 'Ship It ✅',
-    'ceo-review': 'CEO Review 📊',
-    'compressor': 'Communication Compressor 💬',
-    'automation-scanner': 'Automation Scanner ⚙️',
-  };
+  // Close dropdown menu
+  closePersonaDropdown();
 
-  addMessage('assistant', `**${moduleNames[moduleName] || moduleName}** module activated. I'm now focused on this mode. What do you need?`);
+  // If module changed, render the in-stream transition banner into the chat
+  const meta = MODULES_METADATA[moduleName];
+  if (previousModule !== moduleName) {
+    appendPersonaSwitchBanner(meta ? `${meta.icon} ${meta.name}` : moduleName, meta?.badge || 'Specialized Mode', meta?.purpose);
+  }
+
+  // If starter prompt is provided, populate input and focus
+  if (starterPrompt && els.chatInput) {
+    els.chatInput.value = starterPrompt;
+    autoResizeTextarea(els.chatInput);
+    els.chatInput.focus();
+    if (els.btnSend) els.btnSend.disabled = !els.chatInput.value.trim();
+  }
 }
 
 function deactivateModule() {
+  const previousModule = state.activeModule;
   state.activeModule = null;
-  els.moduleCards.forEach(card => card.classList.remove('active-module'));
-  els.activeModuleIndicator.classList.add('hidden');
-  addMessage('assistant', 'Module deactivated. Back to general mode — what\'s on your mind?');
+  updatePersonaSwitcherUI();
+  $$('.module-card').forEach(card => card.classList.remove('active-module'));
+  if (els.activeModuleIndicator) els.activeModuleIndicator.classList.add('hidden');
+  closePersonaDropdown();
+
+  if (previousModule) {
+    appendPersonaSwitchBanner('✨ Digital Bestie', 'Default Confidante', 'Returned to general mode & operational second brain');
+  }
 }
 
-let tooltipTimeout = null;
+function renderPersonaDropdown() {
+  if (!els.personaDropdownList) return;
 
-function setupModuleTooltips() {
-  if (!els.moduleTooltip) return;
+  // Render Category Filter Chips if empty
+  if (els.personaCategoryFilters && els.personaCategoryFilters.children.length === 0) {
+    const categories = Object.values(PERSONA_CATEGORIES);
+    els.personaCategoryFilters.innerHTML = categories.map(cat => `
+      <button type="button" class="persona-cat-chip ${cat.id === state.personaCategoryFilter ? 'active' : ''}" data-category="${cat.id}">
+        ${cat.icon} ${cat.label}
+      </button>
+    `).join('');
 
-  const hideTooltip = () => {
-    tooltipTimeout = setTimeout(() => {
-      els.moduleTooltip.classList.remove('visible');
-      setTimeout(() => {
-        if (!els.moduleTooltip.classList.contains('visible')) {
-          els.moduleTooltip.classList.add('hidden');
-        }
-      }, 180);
-    }, 120);
-  };
+    els.personaCategoryFilters.querySelectorAll('.persona-cat-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.personaCategoryFilter = btn.dataset.category;
+        els.personaCategoryFilters.querySelectorAll('.persona-cat-chip').forEach(b => {
+          b.classList.toggle('active', b.dataset.category === state.personaCategoryFilter);
+        });
+        renderPersonaDropdownList();
+      });
+    });
+  }
 
-  const showTooltip = (card) => {
-    clearTimeout(tooltipTimeout);
+  renderPersonaDropdownList();
+}
+
+function renderPersonaDropdownList() {
+  if (!els.personaDropdownList) return;
+
+  const query = (state.personaSearchQuery || '').toLowerCase().trim();
+  const filterCat = state.personaCategoryFilter || 'all';
+
+  const modules = Object.entries(MODULES_METADATA);
+  let visibleCount = 0;
+
+  let html = '';
+  for (const [key, meta] of modules) {
+    // Check category filter
+    if (filterCat !== 'all' && meta.category !== filterCat) {
+      continue;
+    }
+
+    // Check search query
+    if (query) {
+      const matchName = meta.name.toLowerCase().includes(query);
+      const matchBadge = meta.badge.toLowerCase().includes(query);
+      const matchPurpose = meta.purpose.toLowerCase().includes(query);
+      const matchKeywords = (meta.keywords || []).some(k => k.toLowerCase().includes(query));
+      const matchPrompts = (meta.starterPrompts || []).some(p => p.toLowerCase().includes(query));
+
+      if (!matchName && !matchBadge && !matchPurpose && !matchKeywords && !matchPrompts) {
+        continue;
+      }
+    }
+
+    visibleCount++;
+    const isActive = state.activeModule === key;
+
+    // Render starter prompt chips
+    const starterChips = (meta.starterPrompts || []).map(prompt => `
+      <button type="button" class="starter-prompt-chip" data-module="${key}" data-prompt="${escapeHtml(prompt)}" title="Click to load into chat">
+        <span>${escapeHtml(prompt)}</span>
+      </button>
+    `).join('');
+
+    html += `
+      <div class="persona-dropdown-item ${isActive ? 'active' : ''}" data-module="${key}">
+        <div class="persona-item-main">
+          <span class="persona-item-icon" style="background: ${meta.color}15; border-color: ${meta.color}40; color: ${meta.color};">${meta.icon}</span>
+          <div class="persona-item-info">
+            <div class="persona-item-title-row">
+              <span class="persona-item-name">${escapeHtml(meta.name)}</span>
+              <span class="persona-item-badge" style="background: ${meta.color}20; color: ${meta.color}; border: 1px solid ${meta.color}40;">${escapeHtml(meta.badge)}</span>
+            </div>
+            <p class="persona-item-desc">${escapeHtml(meta.purpose)}</p>
+          </div>
+          <span class="persona-active-check">✓</span>
+        </div>
+        ${starterChips ? `
+          <div class="starter-prompts-container">
+            <span class="starter-prompts-label">Starter Prompts:</span>
+            ${starterChips}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  els.personaDropdownList.innerHTML = html;
+
+  // Toggle empty state
+  if (els.personaDropdownEmpty) {
+    if (visibleCount === 0) {
+      els.personaDropdownEmpty.classList.remove('hidden');
+      if (els.personaEmptyQuery) els.personaEmptyQuery.textContent = state.personaSearchQuery;
+    } else {
+      els.personaDropdownEmpty.classList.add('hidden');
+    }
+  }
+
+  // Bind click listeners for persona items and starter prompts
+  els.personaDropdownList.querySelectorAll('.persona-dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const promptBtn = e.target.closest('.starter-prompt-chip');
+      if (promptBtn) {
+        e.stopPropagation();
+        const mod = promptBtn.dataset.module;
+        const prompt = promptBtn.dataset.prompt;
+        activateModule(mod, prompt);
+        return;
+      }
+      const mod = item.dataset.module;
+      activateModule(mod);
+    });
+  });
+}
+
+function setupModulesHub() {
+  if (!els.modulesCategoryFilters) return;
+
+  // Render category filters if empty
+  if (els.modulesCategoryFilters.children.length === 0) {
+    const categories = Object.values(PERSONA_CATEGORIES);
+    els.modulesCategoryFilters.innerHTML = categories.map(cat => `
+      <button type="button" class="modules-cat-btn ${cat.id === state.modulesCategoryFilter ? 'active' : ''}" data-category="${cat.id}">
+        ${cat.icon} ${cat.label}
+      </button>
+    `).join('');
+
+    els.modulesCategoryFilters.querySelectorAll('.modules-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.modulesCategoryFilter = btn.dataset.category;
+        els.modulesCategoryFilters.querySelectorAll('.modules-cat-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.category === state.modulesCategoryFilter);
+        });
+        filterModulesGrid();
+      });
+    });
+  }
+
+  // Render all module cards dynamically from MODULES_METADATA
+  renderModulesHubGrid();
+
+  // Search input for modules hub
+  els.modulesSearchInput?.addEventListener('input', (e) => {
+    state.modulesSearchQuery = e.target.value;
+    els.btnClearModulesSearch?.classList.toggle('hidden', !state.modulesSearchQuery);
+    filterModulesGrid();
+  });
+
+  els.btnClearModulesSearch?.addEventListener('click', () => {
+    if (els.modulesSearchInput) {
+      els.modulesSearchInput.value = '';
+      state.modulesSearchQuery = '';
+      els.btnClearModulesSearch.classList.add('hidden');
+      filterModulesGrid();
+    }
+  });
+
+  // Setup rich tooltip popover
+  setupModuleTooltips();
+}
+
+function renderModulesHubGrid() {
+  if (!els.modulesGrid) return;
+  
+  const modules = Object.entries(MODULES_METADATA);
+  els.modulesGrid.innerHTML = modules.map(([modKey, meta]) => {
+    const isActive = state.activeModule === modKey;
+    const starterChips = (meta.starterPrompts || []).map(p => `
+      <div class="module-card-starter-prompt" data-module="${modKey}" data-prompt="${escapeHtml(p)}" title="Click to load into chat">
+        <span>${escapeHtml(p)}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="module-card ${isActive ? 'active-module' : ''}" data-module="${modKey}" data-category="${meta.category || 'all'}">
+        <div class="module-card-top">
+          <div class="module-icon" style="--module-color: ${meta.color}; background: ${meta.color}15; border: 1px solid ${meta.color}35; color: ${meta.color};">
+            <span style="font-size: 20px;">${meta.icon}</span>
+          </div>
+          <span class="module-info-pill">${escapeHtml(meta.badge)}</span>
+        </div>
+        <h3>${escapeHtml(meta.name)}</h3>
+        <p>${escapeHtml(meta.purpose)}</p>
+        ${starterChips ? `
+          <div class="module-card-starter-prompts">
+            <span class="module-card-prompt-label">Starter Prompts:</span>
+            ${starterChips}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // Bind click and hover listeners on all dynamically rendered cards
+  els.modulesGrid.querySelectorAll('.module-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      const promptBtn = e.target.closest('.module-card-starter-prompt');
+      const modKey = card.dataset.module;
+      if (promptBtn) {
+        e.stopPropagation();
+        activateModule(modKey, promptBtn.dataset.prompt);
+        return;
+      }
+      activateModule(modKey);
+    });
+
+    card.addEventListener('mouseenter', () => showModuleTooltip(card));
+    card.addEventListener('mouseleave', () => hideModuleTooltip());
+  });
+}
+
+function filterModulesGrid() {
+  const query = (state.modulesSearchQuery || '').toLowerCase().trim();
+  const filterCat = state.modulesCategoryFilter || 'all';
+
+  let matchCount = 0;
+  $$('.module-card').forEach(card => {
     const modKey = card.dataset.module;
     const meta = MODULES_METADATA[modKey];
     if (!meta) return;
 
-    els.ttIcon.textContent = meta.icon;
-    els.ttTitle.textContent = meta.name;
-    els.ttBadge.textContent = meta.badge;
-    els.ttBadge.style.color = meta.color;
-    els.ttIcon.style.border = `1px solid ${meta.color}55`;
-    els.ttIcon.style.background = `${meta.color}15`;
-    els.ttWhen.textContent = meta.whenToUse;
-    
-    els.ttCaps.innerHTML = meta.whatItDoes.map(c => `<li>${escapeHtml(c)}</li>`).join('');
-    els.ttExample.textContent = `"${meta.examplePrompt}"`;
-    els.moduleTooltip.dataset.activeModule = modKey;
-
-    // Position tooltip relative to card
-    const rect = card.getBoundingClientRect();
-    const ttWidth = 330;
-    const ttHeight = 310;
-    let left = rect.right + 12;
-    let top = rect.top - 8;
-
-    // If overflowing right window boundary, position to left of card
-    if (left + ttWidth > window.innerWidth - 16) {
-      left = rect.left - ttWidth - 12;
-    }
-    // If still off-screen to the left (narrow window), align below card
-    if (left < 16) {
-      left = Math.max(16, rect.left);
-      top = rect.bottom + 8;
-    }
-    // Prevent vertical overflow
-    if (top + ttHeight > window.innerHeight - 16) {
-      top = Math.max(16, window.innerHeight - ttHeight - 16);
-    }
-    if (top < 50) {
-      top = 50;
+    let visible = true;
+    if (filterCat !== 'all' && meta.category !== filterCat) {
+      visible = false;
     }
 
-    els.moduleTooltip.style.left = `${Math.round(left)}px`;
-    els.moduleTooltip.style.top = `${Math.round(top)}px`;
+    if (visible && query) {
+      const matchName = meta.name.toLowerCase().includes(query);
+      const matchBadge = meta.badge.toLowerCase().includes(query);
+      const matchPurpose = meta.purpose.toLowerCase().includes(query);
+      const matchKeywords = (meta.keywords || []).some(k => k.toLowerCase().includes(query));
+      const matchPrompts = (meta.starterPrompts || []).some(p => p.toLowerCase().includes(query));
 
-    els.moduleTooltip.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      els.moduleTooltip.classList.add('visible');
-    });
-  };
+      if (!matchName && !matchBadge && !matchPurpose && !matchKeywords && !matchPrompts) {
+        visible = false;
+      }
+    }
 
-  els.moduleCards.forEach(card => {
-    card.addEventListener('mouseenter', () => showTooltip(card));
-    card.addEventListener('mouseleave', () => hideTooltip());
+    card.style.display = visible ? 'flex' : 'none';
+    if (visible) matchCount++;
   });
+
+  if (els.modulesEmptySearch) {
+    els.modulesEmptySearch.classList.toggle('hidden', matchCount > 0);
+    if (els.modulesEmptyQuery) els.modulesEmptyQuery.textContent = state.modulesSearchQuery;
+  }
+}
+
+let tooltipTimeout = null;
+
+function hideModuleTooltip() {
+  if (!els.moduleTooltip) return;
+  tooltipTimeout = setTimeout(() => {
+    els.moduleTooltip.classList.remove('visible');
+    setTimeout(() => {
+      if (!els.moduleTooltip.classList.contains('visible')) {
+        els.moduleTooltip.classList.add('hidden');
+      }
+    }, 180);
+  }, 120);
+}
+
+function showModuleTooltip(card) {
+  if (!els.moduleTooltip) return;
+  clearTimeout(tooltipTimeout);
+  const modKey = card.dataset.module;
+  const meta = MODULES_METADATA[modKey];
+  if (!meta) return;
+
+  els.ttIcon.textContent = meta.icon;
+  els.ttTitle.textContent = meta.name;
+  els.ttBadge.textContent = meta.badge;
+  els.ttBadge.style.color = meta.color;
+  els.ttIcon.style.border = `1px solid ${meta.color}55`;
+  els.ttIcon.style.background = `${meta.color}15`;
+  els.ttWhen.textContent = meta.whenToUse;
+  
+  els.ttCaps.innerHTML = meta.whatItDoes.map(c => `<li>${escapeHtml(c)}</li>`).join('');
+  els.ttExample.textContent = `"${meta.examplePrompt}"`;
+  els.moduleTooltip.dataset.activeModule = modKey;
+
+  // Position tooltip relative to card
+  const rect = card.getBoundingClientRect();
+  const ttWidth = 330;
+  const ttHeight = 310;
+  let left = rect.right + 12;
+  let top = rect.top - 8;
+
+  if (left + ttWidth > window.innerWidth - 16) {
+    left = rect.left - ttWidth - 12;
+  }
+  if (left < 16) {
+    left = Math.max(16, rect.left);
+    top = rect.bottom + 8;
+  }
+  if (top + ttHeight > window.innerHeight - 16) {
+    top = Math.max(16, window.innerHeight - ttHeight - 16);
+  }
+  if (top < 50) {
+    top = 50;
+  }
+
+  els.moduleTooltip.style.left = `${Math.round(left)}px`;
+  els.moduleTooltip.style.top = `${Math.round(top)}px`;
+
+  els.moduleTooltip.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    els.moduleTooltip.classList.add('visible');
+  });
+}
+
+function setupModuleTooltips() {
+  if (!els.moduleTooltip) return;
 
   els.moduleTooltip.addEventListener('mouseenter', () => {
     clearTimeout(tooltipTimeout);
   });
 
   els.moduleTooltip.addEventListener('mouseleave', () => {
-    hideTooltip();
+    hideModuleTooltip();
   });
 
-  // Clicking the example prompt inside the tooltip immediately activates the module, loads the prompt, and runs in chat
+  // Clicking the example prompt inside the tooltip immediately activates the module and runs in chat
   els.ttExample?.addEventListener('click', () => {
     const modKey = els.moduleTooltip.dataset.activeModule;
     const meta = MODULES_METADATA[modKey];
@@ -2304,6 +2727,138 @@ toastStyle.textContent = `
   }
 `;
 document.head.appendChild(toastStyle);
+
+// ============================================================
+// APPLICATION UPDATER & RELEASE NOTIFICATION
+// ============================================================
+
+function setupUpdater() {
+  if (!window.bestie || !window.bestie.updater) return;
+
+  let currentAppVersion = '2.1.0';
+  let cachedUpdateInfo = null;
+
+  // Retrieve and show current version
+  window.bestie.updater.getVersion().then((v) => {
+    if (v) {
+      currentAppVersion = v;
+      if (els.appVersionBadge) {
+        els.appVersionBadge.textContent = `v${v}`;
+      }
+    }
+  });
+
+  // Manual "Check for Updates" Button
+  els.btnCheckUpdates?.addEventListener('click', async () => {
+    if (!els.btnCheckUpdates) return;
+    const origText = els.btnCheckUpdates.textContent;
+    els.btnCheckUpdates.disabled = true;
+    els.btnCheckUpdates.textContent = 'Checking...';
+    if (els.updaterStatusText) els.updaterStatusText.textContent = 'Contacting GitHub releases...';
+
+    try {
+      const result = await window.bestie.updater.check();
+      handleUpdateResult(result);
+    } catch (err) {
+      if (els.updaterStatusText) els.updaterStatusText.textContent = `Check failed: ${err.message}`;
+      showToast('Update check failed');
+    } finally {
+      els.btnCheckUpdates.disabled = false;
+      els.btnCheckUpdates.textContent = origText;
+    }
+  });
+
+  // Download Update Button in Settings
+  els.btnDownloadUpdate?.addEventListener('click', () => {
+    if (cachedUpdateInfo) {
+      const targetUrl = cachedUpdateInfo.downloadUrl || cachedUpdateInfo.releaseUrl;
+      window.bestie.updater.openRelease(targetUrl);
+    }
+  });
+
+  // In-App Notification Banner Actions
+  els.btnUpdateBannerDownload?.addEventListener('click', () => {
+    if (cachedUpdateInfo) {
+      const targetUrl = cachedUpdateInfo.downloadUrl || cachedUpdateInfo.releaseUrl;
+      window.bestie.updater.openRelease(targetUrl);
+      els.updateNotificationBanner?.classList.add('hidden');
+    }
+  });
+
+  els.btnUpdateBannerDismiss?.addEventListener('click', () => {
+    els.updateNotificationBanner?.classList.add('hidden');
+  });
+
+  // Background check listener from main process
+  window.bestie.updater.onUpdateAvailable((info) => {
+    if (info && info.updateAvailable) {
+      cachedUpdateInfo = info;
+      showUpdateBanner(info);
+      handleUpdateResult(info);
+    }
+  });
+
+  function handleUpdateResult(res) {
+    if (!res || !res.success) {
+      if (els.updaterStatusText) {
+        els.updaterStatusText.textContent = res?.error || 'Unable to check for updates.';
+      }
+      if (els.updaterStatusBadge) {
+        els.updaterStatusBadge.textContent = 'Check Failed';
+        els.updaterStatusBadge.className = 'status-pill status-error';
+      }
+      return;
+    }
+
+    if (res.updateAvailable) {
+      cachedUpdateInfo = res;
+      if (els.updaterStatusText) {
+        els.updaterStatusText.textContent = `New version ${res.latestVersion} is available!`;
+      }
+      if (els.updaterStatusBadge) {
+        els.updaterStatusBadge.textContent = 'Update Available';
+        els.updaterStatusBadge.className = 'status-pill status-warning';
+      }
+      if (els.btnDownloadUpdate) {
+        els.btnDownloadUpdate.classList.remove('hidden');
+        els.btnDownloadUpdate.textContent = `Download ${res.latestVersion} 🚀`;
+      }
+      if (els.updaterReleaseDetails) {
+        els.updaterReleaseDetails.classList.remove('hidden');
+        if (els.updaterReleaseTitle) els.updaterReleaseTitle.textContent = res.name || res.latestVersion;
+        if (els.updaterReleaseSnippet) {
+          els.updaterReleaseSnippet.textContent = (res.releaseNotes || 'No release notes provided.').slice(0, 300) + '...';
+        }
+      }
+      showToast(`⚡ Update ${res.latestVersion} available!`);
+      showUpdateBanner(res);
+    } else {
+      if (els.updaterStatusText) {
+        els.updaterStatusText.textContent = `You are running the latest version (${currentAppVersion}).`;
+      }
+      if (els.updaterStatusBadge) {
+        els.updaterStatusBadge.textContent = 'Up to date';
+        els.updaterStatusBadge.className = 'status-pill status-active';
+      }
+      if (els.btnDownloadUpdate) {
+        els.btnDownloadUpdate.classList.add('hidden');
+      }
+      if (els.updaterReleaseDetails) {
+        els.updaterReleaseDetails.classList.add('hidden');
+      }
+      showToast('Digital Bestie is up to date ✨');
+    }
+  }
+
+  function showUpdateBanner(info) {
+    if (!els.updateNotificationBanner) return;
+    if (els.updateBannerVersion) els.updateBannerVersion.textContent = info.latestVersion;
+    if (els.updateBannerTitle) {
+      els.updateBannerTitle.textContent = info.name || 'New features and improvements are ready.';
+    }
+    els.updateNotificationBanner.classList.remove('hidden');
+  }
+}
 
 // ============================================================
 // BOOT

@@ -14,6 +14,13 @@ module.exports = {
       platforms: ['darwin'],
     },
     {
+      name: '@electron-forge/maker-dmg',
+      config: {
+        name: 'Digital Bestie',
+        format: 'ULFO',
+      },
+    },
+    {
       name: '@electron-forge/maker-squirrel',
       config: {},
     },
@@ -24,6 +31,19 @@ module.exports = {
     {
       name: '@electron-forge/maker-rpm',
       config: {},
+    },
+  ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'hawkeyeip',
+          name: 'digital-bestie',
+        },
+        prerelease: false,
+        draft: false,
+      },
     },
   ],
   plugins: [

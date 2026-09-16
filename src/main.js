@@ -31,6 +31,7 @@ import {
   addResourceItem,
   deleteResourceItem
 } from './services/superbrain.js';
+import { checkForUpdates } from './services/updater.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -395,6 +396,30 @@ function registerIPC() {
     }
     return { canceled: true };
   });
+
+  // --- Auto-Updater ---
+  ipcMain.handle('updater:check', async () => {
+    return checkForUpdates(app.getVersion());
+  });
+
+  ipcMain.handle('updater:getVersion', () => {
+    return app.getVersion();
+  });
+
+  ipcMain.handle('updater:openRelease', async (event, releaseUrl) => {
+    if (releaseUrl) {
+      try {
+        const parsed = new URL(releaseUrl);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+          shell.openExternal(releaseUrl);
+          return { success: true };
+        }
+      } catch {
+        // invalid url
+      }
+    }
+    return { success: false, error: 'Invalid URL' };
+  });
 }
 
 // ============================================================
@@ -405,6 +430,18 @@ app.whenReady().then(() => {
   registerIPC();
   createWindow();
   createTray();
+
+  // Background update check after app initialization
+  setTimeout(async () => {
+    try {
+      const update = await checkForUpdates(app.getVersion());
+      if (update && update.updateAvailable && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updater:available', update);
+      }
+    } catch {
+      // Silent catch for background update check
+    }
+  }, 5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

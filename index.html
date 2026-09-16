@@ -187,6 +187,63 @@
                   </div>
                 </div>
 
+                <div class="chat-topbar-center">
+                  <!-- In-Chat Persona Switcher Pill -->
+                  <div class="persona-switcher-wrapper">
+                    <button id="btn-persona-selector" class="persona-switcher-btn" title="Switch Persona / Operational Mode (⌘P)">
+                      <span id="persona-btn-icon" class="persona-btn-icon">✨</span>
+                      <div class="persona-btn-text">
+                        <span id="persona-btn-label" class="persona-btn-label">Digital Bestie</span>
+                        <span id="persona-btn-badge" class="persona-btn-badge">Default Confidante</span>
+                      </div>
+                      <svg class="persona-btn-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+
+                    <!-- Floating In-Chat Persona Dropdown Menu -->
+                    <div id="persona-dropdown-menu" class="persona-dropdown-menu hidden" role="menu" aria-label="Persona Selector">
+                      <div class="persona-dropdown-header">
+                        <div class="persona-search-wrap">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                          <input type="text" id="persona-search-input" class="persona-search-input" placeholder="Search personas, skills, or triggers..." autocomplete="off" />
+                          <button id="btn-clear-persona-search" class="btn-clear-search hidden" title="Clear search">✕</button>
+                        </div>
+                        <div id="persona-category-filters" class="persona-category-filters">
+                          <!-- Rendered dynamically or via JS -->
+                        </div>
+                      </div>
+
+                      <div class="persona-dropdown-body">
+                        <!-- Default Confidante Option -->
+                        <div class="persona-dropdown-item default-item active" data-module="default">
+                          <div class="persona-item-main">
+                            <span class="persona-item-icon">✨</span>
+                            <div class="persona-item-info">
+                              <div class="persona-item-title-row">
+                                <span class="persona-item-name">Digital Bestie</span>
+                                <span class="persona-item-badge default-badge">General Mode</span>
+                              </div>
+                              <p class="persona-item-desc">Ride-or-die confidante, non-judgmental sanctuary & personal strategist.</p>
+                            </div>
+                          </div>
+                          <span class="persona-active-check">✓</span>
+                        </div>
+
+                        <div class="persona-dropdown-section-label">
+                          <span>SPECIALIZED TACTICAL PERSONAS</span>
+                        </div>
+
+                        <!-- Dynamic list of personas with starter prompts -->
+                        <div id="persona-dropdown-list" class="persona-dropdown-list"></div>
+
+                        <!-- Empty state when searching -->
+                        <div id="persona-dropdown-empty" class="persona-dropdown-empty hidden">
+                          <p>No personas match "<span id="persona-empty-query"></span>"</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="chat-topbar-actions">
                   <button id="btn-rename-active-chat" class="chat-action-btn" title="Rename conversation">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
@@ -262,109 +319,24 @@
 
         <!-- Modules View -->
         <div id="view-modules" class="view">
-          <div class="panel-header">
-            <h2 class="panel-title">Operational Modules</h2>
-            <p class="panel-subtitle">Activate a module to focus the conversation</p>
+          <div class="panel-header modules-hub-header">
+            <div class="panel-header-flex">
+              <div>
+                <h2 class="panel-title">Operational Personas & Modules</h2>
+                <p class="panel-subtitle">Activate a specialized persona to focus your conversation & second-brain guidance</p>
+              </div>
+              <div class="modules-search-wrap">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="modules-search-input" class="modules-search-input" placeholder="Search personas or keywords (e.g. money, code)..." autocomplete="off" />
+                <button id="btn-clear-modules-search" class="btn-clear-search hidden" title="Clear search">✕</button>
+              </div>
+            </div>
+            <!-- Category Filter Tabs -->
+            <div id="modules-category-filters" class="modules-category-filters"></div>
           </div>
-          <div class="modules-grid">
-            <button class="module-card" data-module="sanity-scout">
-              <div class="module-icon" style="--module-color: #00f0ff">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              </div>
-              <h3>Sanity Scout</h3>
-              <p>Find free & low-cost sanctuaries near you</p>
-            </button>
-            <button class="module-card" data-module="venture-incubator">
-              <div class="module-icon" style="--module-color: #b347ff">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              </div>
-              <h3>Venture Incubator</h3>
-              <p>Build your independent business in micro-sprints</p>
-            </button>
-            <button class="module-card" data-module="ghostwriter">
-              <div class="module-icon" style="--module-color: #ff2d9b">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              </div>
-              <h3>Ghostwriter</h3>
-              <p>Zero-effort responses & boundary defense</p>
-            </button>
-            <button class="module-card" data-module="capital-guardian">
-              <div class="module-icon" style="--module-color: #00ff88">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              </div>
-              <h3>Capital Guardian</h3>
-              <p>Protect your cash & intercept impulse buys</p>
-            </button>
-            <button class="module-card" data-module="priority-sorter">
-              <div class="module-icon" style="--module-color: #ff9500">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M21 3v6h-6"/></svg>
-              </div>
-              <h3>Priority Sorter</h3>
-              <p>Ruthlessly rank & cut your to-do list</p>
-            </button>
-            <button class="module-card" data-module="pre-mortem">
-              <div class="module-icon" style="--module-color: #ff4444">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-              </div>
-              <h3>Pre-Mortem</h3>
-              <p>Find failure points before they find you</p>
-            </button>
-            <button class="module-card" data-module="mess-converter">
-              <div class="module-icon" style="--module-color: #00ccff">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>
-              </div>
-              <h3>Mess → Execution</h3>
-              <p>Turn chaos into structured action plans</p>
-            </button>
-            <button class="module-card" data-module="assumptions-breaker">
-              <div class="module-icon" style="--module-color: #ffd700">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-              </div>
-              <h3>Assumptions Breaker</h3>
-              <p>Red-team your hidden assumptions</p>
-            </button>
-            <button class="module-card" data-module="learning-engine">
-              <div class="module-icon" style="--module-color: #9b59b6">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              </div>
-              <h3>80/20 Learning</h3>
-              <p>Learn any skill with the vital 20%</p>
-            </button>
-            <button class="module-card" data-module="troubleshooter">
-              <div class="module-icon" style="--module-color: #e74c3c">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              </div>
-              <h3>Troubleshooter</h3>
-              <p>Systematic debugging & root cause analysis</p>
-            </button>
-            <button class="module-card" data-module="ship-it">
-              <div class="module-icon" style="--module-color: #2ecc71">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg>
-              </div>
-              <h3>Ship It</h3>
-              <p>Beat perfectionism — get to "shippable"</p>
-            </button>
-            <button class="module-card" data-module="ceo-review">
-              <div class="module-icon" style="--module-color: #3498db">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-              </div>
-              <h3>Weekly CEO Review</h3>
-              <p>Retrospective + next-week priorities</p>
-            </button>
-            <button class="module-card" data-module="compressor">
-              <div class="module-icon" style="--module-color: #1abc9c">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 6h16M4 18h10"/></svg>
-              </div>
-              <h3>Communication Compressor</h3>
-              <p>Rewrite messages for maximum impact</p>
-            </button>
-            <button class="module-card" data-module="automation-scanner">
-              <div class="module-icon" style="--module-color: #e67e22">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
-              </div>
-              <h3>Automation Scanner</h3>
-              <p>Find workflows to automate</p>
-            </button>
+          <div id="modules-grid" class="modules-grid"></div>
+          <div id="modules-empty-search" class="modules-empty-search hidden">
+            <p>No personas match "<span id="modules-empty-query"></span>"</p>
           </div>
 
           <!-- Floating Module Tooltip Popover -->
@@ -651,10 +623,54 @@
                 <input type="number" id="setting-context-window" class="setting-input" value="50" min="10" max="200" />
               </label>
             </div>
+
+            <div class="setting-group">
+              <h3>Application & Updates</h3>
+              <div class="setting-item updater-status-row">
+                <div class="updater-info">
+                  <div class="updater-title-line">
+                    <span class="updater-app-name">Digital Bestie</span>
+                    <span id="app-version-badge" class="version-tag">v2.1.0</span>
+                    <span id="updater-status-badge" class="status-pill status-active">Up to date</span>
+                  </div>
+                  <p id="updater-status-text" class="updater-status-text">Click below to check for the latest release.</p>
+                  <div id="updater-release-details" class="updater-release-details hidden">
+                    <h4 id="updater-release-title" class="updater-release-title"></h4>
+                    <p id="updater-release-snippet" class="updater-release-snippet"></p>
+                  </div>
+                </div>
+                <div class="updater-actions">
+                  <button type="button" id="btn-check-updates" class="btn-glass btn-sm">Check for Updates</button>
+                  <button type="button" id="btn-download-update" class="btn-neon btn-sm hidden">Download Update 🚀</button>
+                </div>
+              </div>
+
+              <label class="setting-item">
+                <span>GitHub Personal Access Token <small style="color: var(--text-muted); font-size: 11px;">(Optional — for private repo updates)</small></span>
+                <input type="password" id="setting-github-token" class="setting-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+              </label>
+            </div>
+
             <button id="btn-save-settings" class="btn-neon">Save Settings</button>
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Floating In-App Update Notification Banner -->
+    <div id="update-notification-banner" class="update-notification-banner hidden">
+      <div class="update-banner-content">
+        <span class="update-banner-icon">🚀</span>
+        <div class="update-banner-text">
+          <strong>Update Available:</strong>
+          <span id="update-banner-version">v2.1.0</span>
+          <p id="update-banner-title" class="update-banner-sub">A new release is available for download.</p>
+        </div>
+      </div>
+      <div class="update-banner-actions">
+        <button type="button" id="btn-update-banner-download" class="btn-neon btn-sm">Get Update 🚀</button>
+        <button type="button" id="btn-update-banner-dismiss" class="btn-icon-close" title="Dismiss">✕</button>
+      </div>
     </div>
 
     <!-- Persistent Floating Feedback Button (Quick Access) -->
