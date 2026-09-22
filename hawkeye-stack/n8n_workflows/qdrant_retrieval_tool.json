@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "instanceId": "hawkeye-qdrant-retrieval-tool",
+    "description": "Qdrant Vector Store Tool configured in retrieve-as-tool mode for the Digital Bestie AI Agent. Connects to the local Qdrant instance and uses Ollama nomic-embed-text for query embedding."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "name": "query_workspace_memory",
+        "description": "Use this tool to search through files, PDFs, and data previously downloaded by the browser agent. Pass a specific search query.",
+        "qdrantCollection": "hawkeye_workspace",
+        "limit": 5
+      },
+      "id": "qdrant-vector-tool",
+      "name": "Qdrant Vector Store Tool",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [400, 450],
+      "credentials": {
+        "qdrantApi": {
+          "id": "REPLACE_WITH_YOUR_QDRANT_CREDENTIAL_ID",
+          "name": "Local Qdrant API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text",
+        "options": {
+          "baseUrl": "http://host.docker.internal:11434"
+        }
+      },
+      "id": "ollama-embeddings",
+      "name": "Ollama Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [400, 650]
+    }
+  ],
+  "connections": {
+    "Ollama Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store Tool",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+
+
+services:
+  # ─────────────────────────────────────────────
+  # n8n Workflow Orchestration Engine
+  # ─────────────────────────────────────────────
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n_local
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      # Explicitly authorize n8n to execute file operations
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      # Overrides the v2.0+ default security policy to restore the Local File Trigger node
+      - NODES_EXCLUDE=[]
+    volumes:
+      # Persistent n8n system data (workflows, credentials, execution history)
+      - n8n_data:/home/node/.n8n
+      # Map the macOS host workspace to the container's internal path
+      # This allows n8n's Local File Trigger to watch FastMCP downloads
+      - ~/Downloads/Hawkeye_Agent_Workspace:/data/workspace
+
+  # ─────────────────────────────────────────────
+  # Qdrant Vector Database (Local RAG Store)
+  # ─────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant_local
+    restart: always
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC API
+    volumes:
+      # Persistent vector storage on Apple Silicon local disk
+      - qdrant_storage:/qdrant/storage
+
+volumes:
+  n8n_data:
+  qdrant_storage:

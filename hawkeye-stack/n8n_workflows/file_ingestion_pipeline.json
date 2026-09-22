@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "instanceId": "hawkeye-file-ingestion-pipeline",
+    "description": "Automated file ingestion pipeline that watches the FastMCP download workspace for new files, extracts text, splits into chunks, generates embeddings via Ollama nomic-embed-text, and inserts vectors into the local Qdrant collection."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "path": "/data/workspace",
+        "events": [
+          "add"
+        ],
+        "options": {
+          "ignore": "**/telemetry/**"
+        }
+      },
+      "id": "local-file-trigger",
+      "name": "Workspace File Trigger",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.path }}",
+        "dataPropertyName": "data"
+      },
+      "id": "read-disk",
+      "name": "Read Workspace File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": "hawkeye_workspace",
+        "options": {}
+      },
+      "id": "qdrant-insert",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [450, 0],
+      "credentials": {
+        "qdrantApi": {
+          "id": "REPLACE_WITH_YOUR_QDRANT_CREDENTIAL_ID",
+          "name": "Local Qdrant API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textSplitter": "simple",
+        "dataType": "binary",
+        "binaryPropertyName": "data",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source",
+                "value": "={{ $('Workspace File Trigger').item.json.name }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "default-data-loader",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text",
+        "options": {
+          "baseUrl": "http://host.docker.internal:11434"
+        }
+      },
+      "id": "ollama-embeddings",
+      "name": "Ollama Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [550, 200]
+    }
+  ],
+  "connections": {
+    "Workspace File Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Workspace File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Workspace File": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
