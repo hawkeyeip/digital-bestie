@@ -102,6 +102,9 @@ contextBridge.exposeInMainWorld('bestie', {
     deleteResource: (id) => ipcRenderer.invoke('superbrain:deleteResource', id),
     importNeonBrainDialog: () => ipcRenderer.invoke('superbrain:importNeonBrainDialog'),
     exportToNeonBrainDialog: (payload) => ipcRenderer.invoke('superbrain:exportToNeonBrainDialog', payload),
+    addNeonBrainItem: (itemType, itemData) => ipcRenderer.invoke('superbrain:addNeonBrainItem', { itemType, itemData }),
+    deleteNeonBrainItem: (itemType, itemId) => ipcRenderer.invoke('superbrain:deleteNeonBrainItem', { itemType, itemId }),
+    toggleNeonBrainTask: (taskId) => ipcRenderer.invoke('superbrain:toggleNeonBrainTask', taskId),
   },
 
   // --- Auto-Updater ---
@@ -114,6 +117,37 @@ contextBridge.exposeInMainWorld('bestie', {
       ipcRenderer.on('updater:available', handler);
       return () => ipcRenderer.removeListener('updater:available', handler);
     },
+  },
+
+  // --- Prompts Vault & Directives ---
+  prompts: {
+    load: () => ipcRenderer.invoke('prompts:load'),
+    save: (prompts) => ipcRenderer.invoke('prompts:save', prompts),
+    add: (prompt) => ipcRenderer.invoke('prompts:add', prompt),
+    update: (id, updates) => ipcRenderer.invoke('prompts:update', { id, updates }),
+    delete: (id) => ipcRenderer.invoke('prompts:delete', id),
+    toggleFavorite: (id, favorite, reason) => ipcRenderer.invoke('prompts:toggleFavorite', { id, favorite, reason }),
+  },
+
+  // --- Credentials, Certificates & Merit Vault ---
+  credentials: {
+    load: () => ipcRenderer.invoke('credentials:load'),
+    save: (creds) => ipcRenderer.invoke('credentials:save', creds),
+    add: (cred) => ipcRenderer.invoke('credentials:add', cred),
+    update: (id, updates) => ipcRenderer.invoke('credentials:update', { id, updates }),
+    delete: (id) => ipcRenderer.invoke('credentials:delete', id),
+    toggleHighlight: (id) => ipcRenderer.invoke('credentials:toggleHighlight', id),
+  },
+
+  // --- System Telemetry & Memory Optimization ---
+  system: {
+    getMemoryUsage: () => ipcRenderer.invoke('system:getMemoryUsage'),
+    clearMemoryCache: () => ipcRenderer.invoke('system:clearMemoryCache'),
+    onBackgroundState: (callback) => {
+      const handler = (_event, state) => callback(state);
+      ipcRenderer.on('app:background-state', handler);
+      return () => ipcRenderer.removeListener('app:background-state', handler);
+    }
   },
 });
 

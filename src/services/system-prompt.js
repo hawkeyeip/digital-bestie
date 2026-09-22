@@ -4,7 +4,7 @@
  * with injected profile state and module instructions
  */
 
-import { loadProfile } from './memory.js';
+import { loadProfile, getCredentialsSnippet } from './memory.js';
 import { getSuperbrainPromptSnippet } from './superbrain.js';
 
 /**
@@ -39,6 +39,11 @@ ${profileJSON}
 ## ACTIVE TONE CALIBRATION
 Tone: ${tonePreference} | Execution style: ${executionStyle}
 `;
+
+  const credentialsSnippet = getCredentialsSnippet();
+  if (credentialsSnippet) {
+    prompt += credentialsSnippet;
+  }
 
   const superbrainSnippet = getSuperbrainPromptSnippet();
   if (superbrainSnippet) {

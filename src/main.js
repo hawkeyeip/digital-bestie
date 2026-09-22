@@ -20,7 +20,9 @@ import {
   createFolder, renameFolder, deleteFolder,
   loadSettings, saveSettings, updateSetting,
   exportProfile, importProfile,
-  loadFeedback, addFeedbackItem, deleteFeedbackItem, updateFeedbackStatus
+  loadFeedback, addFeedbackItem, deleteFeedbackItem, updateFeedbackStatus,
+  loadPromptsVault, savePromptsVault, addPrompt, updatePrompt, deletePrompt, togglePromptFavorite,
+  loadCredentialsVault, saveCredentialsVault, addCredential, updateCredential, deleteCredential, toggleCredentialHighlight
 } from './services/memory.js';
 import { buildSystemPrompt, getOnboardingPrompt, getExtractionPrompt } from './services/system-prompt.js';
 import {
@@ -29,7 +31,10 @@ import {
   importNeonBrainBackup,
   detectResourceTrackerPath,
   addResourceItem,
-  deleteResourceItem
+  deleteResourceItem,
+  addNeonBrainItem,
+  deleteNeonBrainItem,
+  toggleNeonBrainTask
 } from './services/superbrain.js';
 import { checkForUpdates } from './services/updater.js';
 
@@ -57,8 +62,23 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      backgroundThrottling: true
     },
+  });
+
+  // Power efficiency: notify renderer when window is backgrounded/restored to pause heavy animations and polling
+  mainWindow.on('minimize', () => {
+    mainWindow?.webContents.send('app:background-state', { isBackground: true });
+  });
+  mainWindow.on('restore', () => {
+    mainWindow?.webContents.send('app:background-state', { isBackground: false });
+  });
+  mainWindow.on('hide', () => {
+    mainWindow?.webContents.send('app:background-state', { isBackground: true });
+  });
+  mainWindow.on('show', () => {
+    mainWindow?.webContents.send('app:background-state', { isBackground: false });
   });
 
   // Secure external navigation: intercept window.open and markdown links, open in system browser
@@ -156,7 +176,8 @@ function registerIPC() {
     const settings = loadSettings();
     const messages = getMessageWindow(settings.context_window || 50);
     const modelToUse = settings.model_name || 'bestie-light';
-    const numCtxToUse = settings.num_ctx || 8192;
+    const numCtxToUse = settings.power_saver ? Math.min(settings.num_ctx || 4096, 4096) : (settings.num_ctx || 8192);
+    const keepAliveToUse = settings.power_saver ? '1m' : (settings.ollama_keep_alive || '5m');
 
     return new Promise((resolve, reject) => {
       streamChat(
@@ -184,7 +205,8 @@ function registerIPC() {
         activeAbortController.signal,
         {
           model: modelToUse,
-          num_ctx: numCtxToUse
+          num_ctx: numCtxToUse,
+          keep_alive: keepAliveToUse
         }
       );
     });
@@ -419,6 +441,57 @@ function registerIPC() {
       }
     }
     return { success: false, error: 'Invalid URL' };
+  });
+
+  // --- Prompts Vault & Directives ---
+  ipcMain.handle('prompts:load', () => loadPromptsVault());
+  ipcMain.handle('prompts:save', (event, data) => savePromptsVault(data));
+  ipcMain.handle('prompts:add', (event, prompt) => addPrompt(prompt));
+  ipcMain.handle('prompts:update', (event, { id, updates }) => updatePrompt(id, updates));
+  ipcMain.handle('prompts:delete', (event, id) => deletePrompt(id));
+  ipcMain.handle('prompts:toggleFavorite', (event, { id, favorite, reason }) => togglePromptFavorite(id, favorite, reason));
+
+  // --- Credentials, Certificates & Merit Vault ---
+  ipcMain.handle('credentials:load', () => loadCredentialsVault());
+  ipcMain.handle('credentials:save', (event, data) => saveCredentialsVault(data));
+  ipcMain.handle('credentials:add', (event, cred) => addCredential(cred));
+  ipcMain.handle('credentials:update', (event, { id, updates }) => updateCredential(id, updates));
+  ipcMain.handle('credentials:delete', (event, id) => deleteCredential(id));
+  ipcMain.handle('credentials:toggleHighlight', (event, id) => toggleCredentialHighlight(id));
+
+  // --- Neon Brain Direct Bank Management ---
+  ipcMain.handle('superbrain:addNeonBrainItem', async (event, { itemType, itemData }) => {
+    return addNeonBrainItem(itemType, itemData);
+  });
+  ipcMain.handle('superbrain:deleteNeonBrainItem', async (event, { itemType, itemId }) => {
+    return deleteNeonBrainItem(itemType, itemId);
+  });
+  ipcMain.handle('superbrain:toggleNeonBrainTask', async (event, taskId) => {
+    return toggleNeonBrainTask(taskId);
+  });
+
+  // --- System Diagnostics & Memory Efficiency ---
+  ipcMain.handle('system:getMemoryUsage', () => {
+    const mem = process.memoryUsage();
+    return {
+      heapUsedMB: Math.round((mem.heapUsed / 1024 / 1024) * 10) / 10,
+      heapTotalMB: Math.round((mem.heapTotal / 1024 / 1024) * 10) / 10,
+      rssMB: Math.round((mem.rss / 1024 / 1024) * 10) / 10,
+      externalMB: Math.round((mem.external / 1024 / 1024) * 10) / 10,
+      systemFreeMB: Math.round((os.freemem() / 1024 / 1024) * 10) / 10,
+      systemTotalMB: Math.round((os.totalmem() / 1024 / 1024) * 10) / 10
+    };
+  });
+
+  ipcMain.handle('system:clearMemoryCache', async () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.clearHistory();
+      await mainWindow.webContents.session.clearCache();
+    }
+    if (typeof global.gc === 'function') {
+      global.gc();
+    }
+    return true;
   });
 }
 

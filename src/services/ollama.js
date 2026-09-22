@@ -62,7 +62,7 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
     ];
 
     const modelName = customOptions.model || MODEL_NAME;
-    const { model: _, ...ollamaOptions } = customOptions;
+    const { model: _, keep_alive, ...ollamaOptions } = customOptions;
 
     const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
       method: 'POST',
@@ -71,6 +71,7 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
         model: modelName,
         messages: fullMessages,
         stream: true,
+        keep_alive: keep_alive !== undefined ? keep_alive : '5m',
         options: {
           temperature: 0.7,
           top_p: 0.9,

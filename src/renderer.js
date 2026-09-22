@@ -5,6 +5,7 @@
 
 import { CALIBRATION_PACKS, getDossierValue } from './services/calibration.js';
 import { MODULES_METADATA, PERSONA_CATEGORIES } from './services/modules-data.js';
+import { PROMPT_CATEGORIES } from './services/prompts-data.js';
 
 // ============================================================
 // MARKDOWN PARSER (lightweight, no dependencies)
@@ -102,6 +103,13 @@ let state = {
   personaSearchQuery: '',
   modulesCategoryFilter: 'all',
   modulesSearchQuery: '',
+  prompts: [],
+  promptsCategoryFilter: 'all',
+  promptsSearchQuery: '',
+  credentials: [],
+  credentialsCategoryFilter: 'all',
+  credentialsSearchQuery: '',
+  activeNbBank: 'tasks',
 };
 
 // ============================================================
@@ -199,6 +207,59 @@ const els = {
   ttCaps: $('#tt-caps'),
   ttExample: $('#tt-example'),
 
+  // Prompt Vault & Directives
+  navBtnPrompts: $('[data-view="prompts"]'),
+  viewPrompts: $('#view-prompts'),
+  btnChatPromptVault: $('#btn-chat-prompt-vault'),
+  promptsSearchInput: $('#prompts-search-input'),
+  btnClearPromptsSearch: $('#btn-clear-prompts-search'),
+  promptsCategoryFilters: $('#prompts-category-filters'),
+  promptsGrid: $('#prompts-grid'),
+  promptsEmptySearch: $('#prompts-empty-search'),
+  promptsEmptyQuery: $('#prompts-empty-query'),
+  btnCreatePrompt: $('#btn-create-prompt'),
+  promptModal: $('#prompt-modal'),
+  btnClosePromptModal: $('#btn-close-prompt-modal'),
+  promptModalTitle: $('#prompt-modal-title'),
+  promptFormId: $('#prompt-form-id'),
+  promptFormTitle: $('#prompt-form-title'),
+  promptFormCategory: $('#prompt-form-category'),
+  promptFormPersona: $('#prompt-form-persona'),
+  promptFormContent: $('#prompt-form-content'),
+  promptFormReason: $('#prompt-form-reason'),
+  promptFormFavorite: $('#prompt-form-favorite'),
+  btnDeletePromptModal: $('#btn-delete-prompt-modal'),
+  btnSavePromptModal: $('#btn-save-prompt-modal'),
+
+  // Credentials & Merit Vault
+  navBtnCredentials: $('[data-view="credentials"]'),
+  viewCredentials: $('#view-credentials'),
+  credentialsSearchInput: $('#credentials-search-input'),
+  btnClearCredentialsSearch: $('#btn-clear-credentials-search'),
+  btnCreateCredential: $('#btn-create-credential'),
+  credentialsCategoryFilters: $('#credentials-category-filters'),
+  credentialsGrid: $('#credentials-grid'),
+  credentialsEmptySearch: $('#credentials-empty-search'),
+  credCountAll: $('#cred-count-all'),
+  credCountHighlight: $('#cred-count-highlight'),
+  tabMemoryCredentials: $('#tab-memory-credentials'),
+  credentialModal: $('#credential-modal'),
+  btnCloseCredentialModal: $('#btn-close-credential-modal'),
+  credentialModalTitle: $('#credential-modal-title'),
+  credModalIconPreview: $('#cred-modal-icon-preview'),
+  credFormId: $('#cred-form-id'),
+  credFormTitle: $('#cred-form-title'),
+  credFormIssuer: $('#cred-form-issuer'),
+  credFormCategory: $('#cred-form-category'),
+  credFormIssueDate: $('#cred-form-issue-date'),
+  credFormExpiryDate: $('#cred-form-expiry-date'),
+  credFormIdUrl: $('#cred-form-id-url'),
+  credFormSkills: $('#cred-form-skills'),
+  credFormDesc: $('#cred-form-desc'),
+  credFormHighlight: $('#cred-form-highlight'),
+  btnDeleteCredentialModal: $('#btn-delete-credential-modal'),
+  btnSaveCredentialModal: $('#btn-save-credential-modal'),
+
   // Memory & Calibration Lab
   memoryContent: $('#memory-content'),
   tabMemoryDossier: $('#tab-memory-dossier'),
@@ -221,6 +282,13 @@ const els = {
   settingNumCtx: $('#setting-num-ctx'),
   settingContextWindow: $('#setting-context-window'),
   settingGithubToken: $('#setting-github-token'),
+  settingPowerSaver: $('#setting-power-saver'),
+  settingKeepAlive: $('#setting-keep-alive'),
+  btnRefreshMemory: $('#btn-refresh-memory'),
+  btnClearMemCache: $('#btn-clear-mem-cache'),
+  memHeapUsed: $('#mem-heap-used'),
+  memRss: $('#mem-rss'),
+  memSysFree: $('#mem-sys-free'),
   btnSaveSettings: $('#btn-save-settings'),
 
   // Updater
@@ -309,6 +377,27 @@ const els = {
   nbNotesCount: $('#nb-notes-count'),
   nbPromptsCount: $('#nb-prompts-count'),
   nbTasksList: $('#nb-tasks-list'),
+  btnAddNbItem: $('#btn-add-nb-item'),
+  nbBankTabs: $$('.nb-bank-tab'),
+  nbTabTasksCount: $('#nb-tab-tasks-count'),
+  nbTabNotesCount: $('#nb-tab-notes-count'),
+  nbTabPromptsCount: $('#nb-tab-prompts-count'),
+  nbBankItemsContainer: $('#nb-bank-items-container'),
+  neonBrainModal: $('#neon-brain-modal'),
+  btnCloseNbModal: $('#btn-close-nb-modal'),
+  btnCancelNb: $('#btn-cancel-nb'),
+  btnSubmitNb: $('#btn-submit-nb'),
+  nbTypeBtns: $$('#neon-brain-modal .type-btn'),
+  nbTypeTask: $('#nb-type-task'),
+  nbTypeNote: $('#nb-type-note'),
+  nbTypePrompt: $('#nb-type-prompt'),
+  nbInputTitle: $('#nb-input-title'),
+  nbLabelTitle: $('#nb-label-title'),
+  nbGroupPriority: $('#nb-group-priority'),
+  nbInputPriority: $('#nb-input-priority'),
+  nbInputContent: $('#nb-input-content'),
+  nbLabelContent: $('#nb-label-content'),
+  nbInputTags: $('#nb-input-tags'),
   superbrainTelemetryPreview: $('#superbrain-telemetry-preview'),
 };
 
@@ -325,15 +414,20 @@ async function init() {
   if (state.settings) {
     els.settingOllamaUrl.value = state.settings.ollama_url || 'http://localhost:11434';
     if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-light';
-    els.settingNumCtx.value = state.settings.num_ctx || 16384;
+    els.settingNumCtx.value = state.settings.num_ctx || 8192;
     els.settingContextWindow.value = state.settings.context_window || 50;
     if (els.settingGithubToken) els.settingGithubToken.value = state.settings.github_token || '';
     if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-light';
+    if (els.settingPowerSaver) els.settingPowerSaver.checked = !!state.settings.power_saver;
+    if (els.settingKeepAlive) els.settingKeepAlive.value = state.settings.ollama_keep_alive || '5m';
+    if (state.settings.power_saver) {
+      document.body.classList.add('power-saver');
+    }
   }
 
-  // Check Ollama connection
+  // Check Ollama connection and initialize smart polling
   checkConnection();
-  setInterval(checkConnection, 30000); // Check every 30s
+  setupConnectionPolling();
 
   // Register event listeners
   registerEventListeners();
@@ -363,6 +457,15 @@ async function init() {
   // Initialize Application Updater
   setupUpdater();
   updatePersonaSwitcherUI();
+
+  // Initialize Prompt Vault & Operator Directives
+  await setupPromptsVault();
+
+  // Initialize Credentials & Merit Vault
+  await setupCredentialsVault();
+
+  // Initialize Performance & Power Monitoring
+  setupPerformanceControls();
 
   // Check if onboarding is needed
   if (!state.profile?.onboarding_state?.completed) {
@@ -485,9 +588,15 @@ function registerEventListeners() {
       e.preventDefault();
       togglePersonaDropdown();
     }
-    // Escape: Close persona menu if open
+    // Cmd+L / Ctrl+L: Toggle Prompt Vault
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      switchView(state.currentView === 'prompts' ? 'chat' : 'prompts');
+    }
+    // Escape: Close persona menu & prompt modal if open
     if (e.key === 'Escape') {
       closePersonaDropdown();
+      closePromptModal();
     }
   });
 
@@ -694,18 +803,27 @@ function registerEventListeners() {
 
   // Settings
   els.btnSaveSettings.addEventListener('click', async () => {
+    const powerSaver = !!(els.settingPowerSaver && els.settingPowerSaver.checked);
+    const keepAlive = (els.settingKeepAlive && els.settingKeepAlive.value) || '5m';
     const settings = {
       ollama_url: els.settingOllamaUrl.value,
       model_name: els.settingModelName.value,
-      num_ctx: parseInt(els.settingNumCtx.value) || 8192,
+      num_ctx: parseInt(els.settingNumCtx.value) || (powerSaver ? 4096 : 8192),
       context_window: parseInt(els.settingContextWindow.value) || 50,
       github_token: els.settingGithubToken ? els.settingGithubToken.value.trim() : '',
+      power_saver: powerSaver,
+      ollama_keep_alive: keepAlive,
       theme: 'neon-dark'
     };
     await window.bestie.settings.save(settings);
     state.settings = settings;
+    if (powerSaver) {
+      document.body.classList.add('power-saver');
+    } else {
+      document.body.classList.remove('power-saver');
+    }
     if (els.headerModelSelect) els.headerModelSelect.value = settings.model_name;
-    showToast('Settings saved');
+    showToast('Settings saved 🚀');
     checkConnection();
   });
 
@@ -936,6 +1054,162 @@ function registerEventListeners() {
       showToast(`Exported plan to: ${res.path} 🚀`);
     }
   });
+
+  // Neon Brain Bank Tab Switching
+  els.nbBankTabs?.forEach(tab => {
+    tab.addEventListener('click', async () => {
+      state.activeNbBank = tab.dataset.bank || 'tasks';
+      els.nbBankTabs.forEach(t => t.classList.toggle('active', t === tab));
+      const sbData = await window.bestie.superbrain.getData();
+      renderNeonBrainBank(sbData.neon_brain || {});
+    });
+  });
+
+  // Neon Brain Modal Handlers
+  els.btnAddNbItem?.addEventListener('click', () => {
+    if (els.nbInputTitle) els.nbInputTitle.value = '';
+    if (els.nbInputContent) els.nbInputContent.value = '';
+    if (els.nbInputTags) els.nbInputTags.value = '';
+    if (els.nbInputPriority) els.nbInputPriority.value = 'high';
+    setNbModalType('task');
+    els.neonBrainModal?.classList.remove('hidden');
+    els.nbInputTitle?.focus();
+  });
+
+  const closeNeonBrainModal = () => {
+    els.neonBrainModal?.classList.add('hidden');
+  };
+
+  els.btnCloseNbModal?.addEventListener('click', closeNeonBrainModal);
+  els.btnCancelNb?.addEventListener('click', closeNeonBrainModal);
+  els.neonBrainModal?.addEventListener('click', (e) => {
+    if (e.target === els.neonBrainModal) closeNeonBrainModal();
+  });
+
+  let activeNbModalType = 'task';
+  const setNbModalType = (type) => {
+    activeNbModalType = type;
+    els.nbTypeBtns?.forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    if (type === 'task') {
+      if (els.nbLabelTitle) els.nbLabelTitle.textContent = 'Task Title *';
+      if (els.nbInputTitle) els.nbInputTitle.placeholder = 'e.g. Audit API rate limits before launch';
+      if (els.nbGroupPriority) els.nbGroupPriority.classList.remove('hidden');
+      if (els.nbLabelContent) els.nbLabelContent.textContent = 'Task Description / Notes';
+    } else if (type === 'note') {
+      if (els.nbLabelTitle) els.nbLabelTitle.textContent = 'Note Title *';
+      if (els.nbInputTitle) els.nbInputTitle.placeholder = 'e.g. Architectural decision on Redis cache';
+      if (els.nbGroupPriority) els.nbGroupPriority.classList.add('hidden');
+      if (els.nbLabelContent) els.nbLabelContent.textContent = 'Thought Note Content *';
+    } else if (type === 'prompt') {
+      if (els.nbLabelTitle) els.nbLabelTitle.textContent = 'Prompt Template Title *';
+      if (els.nbInputTitle) els.nbInputTitle.placeholder = 'e.g. Executive Strategy Reviewer';
+      if (els.nbGroupPriority) els.nbGroupPriority.classList.add('hidden');
+      if (els.nbLabelContent) els.nbLabelContent.textContent = 'Prompt Template Body *';
+    }
+  };
+
+  els.nbTypeTask?.addEventListener('click', () => setNbModalType('task'));
+  els.nbTypeNote?.addEventListener('click', () => setNbModalType('note'));
+  els.nbTypePrompt?.addEventListener('click', () => setNbModalType('prompt'));
+
+  els.btnSubmitNb?.addEventListener('click', async () => {
+    const title = els.nbInputTitle?.value?.trim();
+    const content = els.nbInputContent?.value?.trim();
+    const priority = els.nbInputPriority?.value || 'high';
+    const rawTags = els.nbInputTags?.value?.trim() || '';
+    const tags = rawTags.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (!title) {
+      showToast('Please enter a title');
+      els.nbInputTitle?.focus();
+      return;
+    }
+    if (activeNbModalType !== 'task' && !content) {
+      showToast('Please enter content');
+      els.nbInputContent?.focus();
+      return;
+    }
+
+    try {
+      showToast('Adding to Neon Brain bank...');
+      let payload = { title, tags };
+      if (activeNbModalType === 'task') {
+        payload.description = content;
+        payload.priority = priority;
+      } else if (activeNbModalType === 'note') {
+        payload.content = content;
+      } else if (activeNbModalType === 'prompt') {
+        payload.content = content;
+        payload.prompt = content;
+        payload.category = 'Bank Template';
+      }
+
+      const res = await window.bestie.superbrain.addNeonBrainItem(activeNbModalType, payload);
+      if (res && res.success) {
+        showToast(`Added ${activeNbModalType} to Neon Brain! ⚡`);
+        closeNeonBrainModal();
+        state.activeNbBank = activeNbModalType === 'task' ? 'tasks' : (activeNbModalType === 'note' ? 'notes' : 'prompts');
+        els.nbBankTabs?.forEach(t => t.classList.toggle('active', t.dataset.bank === state.activeNbBank));
+        await refreshSuperbrainView();
+      } else {
+        showToast('Could not add item to bank');
+      }
+    } catch (err) {
+      console.error('Error adding Neon Brain item:', err);
+      showToast('Error adding item to Neon Brain');
+    }
+  });
+
+  // Delegated events for Neon Brain bank items (toggle task, delete, copy, use in chat)
+  els.nbBankItemsContainer?.addEventListener('click', async (e) => {
+    // Task toggle checkbox
+    const toggle = e.target.closest('.nb-task-toggle');
+    if (toggle) {
+      const taskId = toggle.dataset.taskId;
+      if (taskId) {
+        await window.bestie.superbrain.toggleNeonBrainTask(taskId);
+        await refreshSuperbrainView();
+      }
+      return;
+    }
+
+    // Delete item
+    const delBtn = e.target.closest('.nb-delete-item');
+    if (delBtn) {
+      const type = delBtn.dataset.type;
+      const id = delBtn.dataset.id;
+      if (confirm(`Delete this ${type} from Neon Brain?`)) {
+        await window.bestie.superbrain.deleteNeonBrainItem(type, id);
+        showToast(`Item removed from Neon Brain bank`);
+        await refreshSuperbrainView();
+      }
+      return;
+    }
+
+    // Copy note / prompt
+    const copyBtn = e.target.closest('.nb-copy-note');
+    if (copyBtn) {
+      const content = copyBtn.dataset.content;
+      navigator.clipboard.writeText(content).then(() => {
+        showToast('Copied to clipboard 📋');
+      });
+      return;
+    }
+
+    // Use in Chat button
+    const useBtn = e.target.closest('.nb-use-chat-btn');
+    if (useBtn) {
+      const content = useBtn.dataset.content;
+      switchView('chat');
+      if (els.chatInput) {
+        els.chatInput.value = content;
+        els.chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+        els.chatInput.focus();
+        showToast('Prompt loaded into chat 🚀');
+      }
+      return;
+    }
+  });
 }
 
 // ============================================================
@@ -957,6 +1231,9 @@ function switchView(viewName) {
   if (viewName === 'calibration') refreshCalibrationView();
   if (viewName === 'feedback') refreshFeedbackView();
   if (viewName === 'superbrain') refreshSuperbrainView();
+  if (viewName === 'prompts') renderPromptsGrid();
+  if (viewName === 'credentials') refreshCredentialsList();
+  if (viewName === 'settings') refreshMemoryTelemetry();
 }
 
 // ============================================================
@@ -2644,6 +2921,14 @@ async function refreshSuperbrainView() {
     if (els.nbNotesCount) els.nbNotesCount.textContent = nm.notes_count || 0;
     if (els.nbPromptsCount) els.nbPromptsCount.textContent = nm.prompts_count || 0;
 
+    // Bank tab counters
+    if (els.nbTabTasksCount) els.nbTabTasksCount.textContent = (nb.tasks || []).length;
+    if (els.nbTabNotesCount) els.nbTabNotesCount.textContent = (nb.notes || []).length;
+    if (els.nbTabPromptsCount) els.nbTabPromptsCount.textContent = (nb.prompts || []).length;
+
+    // Render active Neon Brain Bank items
+    renderNeonBrainBank(nb);
+
     if (els.nbTasksList) {
       const highTasks = (nb.tasks || []).filter(t => !t.completed && (t.priority === 'high' || t.priority === 'urgent'));
       if (highTasks.length === 0) {
@@ -2674,6 +2959,96 @@ async function refreshSuperbrainView() {
     }
   } catch (err) {
     console.error('Error refreshing superbrain view:', err);
+  }
+}
+
+function renderNeonBrainBank(nb) {
+  if (!els.nbBankItemsContainer) return;
+  const currentBank = state.activeNbBank || 'tasks';
+
+  if (currentBank === 'tasks') {
+    const tasks = nb.tasks || [];
+    if (tasks.length === 0) {
+      els.nbBankItemsContainer.innerHTML = `<div class="empty-state-sm">No tasks in Neon Brain. Click "+ Add to Bank" to add one!</div>`;
+      return;
+    }
+    els.nbBankItemsContainer.innerHTML = tasks.map(t => {
+      const isDone = !!t.completed;
+      const pri = (t.priority || 'medium').toLowerCase();
+      return `
+        <div class="nb-item-card ${isDone ? 'completed' : ''}" data-task-id="${escapeHtml(t.id)}">
+          <div class="nb-item-left">
+            <input type="checkbox" class="nb-item-checkbox nb-task-toggle" data-task-id="${escapeHtml(t.id)}" ${isDone ? 'checked' : ''} title="Toggle complete" />
+            <div class="nb-item-body">
+              <div class="nb-item-title-row">
+                <span class="nb-item-title">${escapeHtml(t.title)}</span>
+                <span class="nb-priority-tag ${pri}">${pri.toUpperCase()}</span>
+              </div>
+              ${t.description ? `<div class="nb-item-snippet">${escapeHtml(t.description)}</div>` : ''}
+            </div>
+          </div>
+          <div class="nb-item-actions">
+            <button class="nb-btn-mini delete nb-delete-item" data-type="task" data-id="${escapeHtml(t.id)}" title="Delete task">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else if (currentBank === 'notes') {
+    const notes = nb.notes || [];
+    if (notes.length === 0) {
+      els.nbBankItemsContainer.innerHTML = `<div class="empty-state-sm">No thought notes in Neon Brain. Click "+ Add to Bank" to capture ideas!</div>`;
+      return;
+    }
+    els.nbBankItemsContainer.innerHTML = notes.map(n => {
+      const tags = Array.isArray(n.tags) ? n.tags : [];
+      return `
+        <div class="nb-item-card" data-note-id="${escapeHtml(n.id)}">
+          <div class="nb-item-left">
+            <div class="nb-item-body">
+              <div class="nb-item-title-row">
+                <span class="nb-item-title">💡 ${escapeHtml(n.title)}</span>
+              </div>
+              ${n.content ? `<div class="nb-item-snippet">${escapeHtml(n.content)}</div>` : ''}
+              ${tags.length > 0 ? `
+                <div style="margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap;">
+                  ${tags.map(tag => `<span class="badge-tag" style="font-size: 9px;">#${escapeHtml(tag)}</span>`).join('')}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div class="nb-item-actions">
+            <button class="nb-btn-mini nb-copy-note" data-content="${escapeHtml(n.content || n.title)}" title="Copy note">📋</button>
+            <button class="nb-btn-mini delete nb-delete-item" data-type="note" data-id="${escapeHtml(n.id)}" title="Delete note">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else if (currentBank === 'prompts') {
+    const prompts = nb.prompts || [];
+    if (prompts.length === 0) {
+      els.nbBankItemsContainer.innerHTML = `<div class="empty-state-sm">No prompt templates in Neon Brain. Click "+ Add to Bank" to store templates!</div>`;
+      return;
+    }
+    els.nbBankItemsContainer.innerHTML = prompts.map(p => {
+      const pText = p.prompt || p.content || '';
+      return `
+        <div class="nb-item-card" data-prompt-id="${escapeHtml(p.id)}">
+          <div class="nb-item-left">
+            <div class="nb-item-body">
+              <div class="nb-item-title-row">
+                <span class="nb-item-title">📝 ${escapeHtml(p.title)}</span>
+              </div>
+              <div class="nb-item-snippet">${escapeHtml(pText)}</div>
+            </div>
+          </div>
+          <div class="nb-item-actions">
+            <button class="btn-neon btn-sm nb-use-chat-btn" data-content="${escapeHtml(pText)}" style="font-size: 10px; padding: 2px 8px;" title="Send to chat">Use in Chat 🚀</button>
+            <button class="nb-btn-mini nb-copy-note" data-content="${escapeHtml(pText)}" title="Copy prompt">📋</button>
+            <button class="nb-btn-mini delete nb-delete-item" data-type="prompt" data-id="${escapeHtml(p.id)}" title="Delete prompt">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 }
 
@@ -2861,7 +3236,811 @@ function setupUpdater() {
 }
 
 // ============================================================
+// PROMPTS VAULT & OPERATOR DIRECTIVES
+// ============================================================
+
+function setupPromptsVault() {
+  if (!window.bestie || !window.bestie.prompts) return;
+
+  // Populate persona selector in prompt modal
+  if (els.promptFormPersona) {
+    els.promptFormPersona.innerHTML = '<option value="">None (Standard Confidante)</option>' +
+      Object.entries(MODULES_METADATA).map(([key, meta]) => {
+        return `<option value="${key}">${meta.icon} ${meta.title}</option>`;
+      }).join('');
+  }
+
+  // Load prompts
+  refreshPromptsList();
+
+  // Search input
+  els.promptsSearchInput?.addEventListener('input', (e) => {
+    state.promptsSearchQuery = e.target.value.trim().toLowerCase();
+    if (els.btnClearPromptsSearch) {
+      els.btnClearPromptsSearch.classList.toggle('hidden', !state.promptsSearchQuery);
+    }
+    renderPromptsGrid();
+  });
+
+  // Clear search
+  els.btnClearPromptsSearch?.addEventListener('click', () => {
+    if (els.promptsSearchInput) els.promptsSearchInput.value = '';
+    state.promptsSearchQuery = '';
+    els.btnClearPromptsSearch?.classList.add('hidden');
+    renderPromptsGrid();
+  });
+
+  // Category filter tabs click
+  els.promptsCategoryFilters?.addEventListener('click', (e) => {
+    const tab = e.target.closest('.prompt-cat-tab');
+    if (tab) {
+      state.promptsCategoryFilter = tab.dataset.category;
+      renderPromptsCategoryFilters();
+      renderPromptsGrid();
+    }
+  });
+
+  // Chat input quick-access vault button
+  els.btnChatPromptVault?.addEventListener('click', () => {
+    switchView('prompts');
+  });
+
+  // "+ New Directive" button
+  els.btnCreatePrompt?.addEventListener('click', () => {
+    openPromptModal();
+  });
+
+  // Modal close / cancel
+  els.btnClosePromptModal?.addEventListener('click', closePromptModal);
+  els.promptModal?.addEventListener('click', (e) => {
+    if (e.target === els.promptModal) closePromptModal();
+  });
+
+  // Modal save
+  els.btnSavePromptModal?.addEventListener('click', savePromptModal);
+
+  // Modal delete
+  els.btnDeletePromptModal?.addEventListener('click', deletePromptModal);
+}
+
+async function refreshPromptsList() {
+  try {
+    state.prompts = await window.bestie.prompts.load();
+    renderPromptsCategoryFilters();
+    renderPromptsGrid();
+  } catch (err) {
+    console.error('Failed to load prompts vault:', err);
+  }
+}
+
+function renderPromptsCategoryFilters() {
+  if (!els.promptsCategoryFilters) return;
+
+  const counts = { all: state.prompts.length, favorites: 0 };
+  state.prompts.forEach(p => {
+    if (p.favorite) counts.favorites = (counts.favorites || 0) + 1;
+    if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+  });
+
+  els.promptsCategoryFilters.innerHTML = PROMPT_CATEGORIES.map(cat => {
+    const count = counts[cat.id] || 0;
+    const isActive = state.promptsCategoryFilter === cat.id;
+    return `
+      <button type="button" class="prompt-cat-tab ${isActive ? 'active' : ''}" data-category="${cat.id}">
+        <span>${cat.icon}</span>
+        <span>${cat.name}</span>
+        <span class="prompt-cat-count">${count}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderPromptsGrid() {
+  if (!els.promptsGrid) return;
+
+  const query = state.promptsSearchQuery;
+  const category = state.promptsCategoryFilter;
+
+  const filtered = state.prompts.filter(p => {
+    if (category === 'favorites' && !p.favorite) return false;
+    if (category !== 'all' && category !== 'favorites' && p.category !== category) return false;
+
+    if (query) {
+      const matchTitle = (p.title || '').toLowerCase().includes(query);
+      const matchSub = (p.subtitle || '').toLowerCase().includes(query);
+      const matchContent = (p.content || '').toLowerCase().includes(query);
+      const matchReason = (p.favoriteReason || '').toLowerCase().includes(query);
+      const matchTags = Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(query));
+      return matchTitle || matchSub || matchContent || matchReason || matchTags;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    els.promptsGrid.innerHTML = '';
+    if (els.promptsEmptySearch) {
+      els.promptsEmptySearch.classList.remove('hidden');
+      if (els.promptsEmptyQuery) {
+        els.promptsEmptyQuery.textContent = query || (category === 'favorites' ? 'Favorites (Star some directives to see them here)' : category);
+      }
+    }
+    return;
+  }
+
+  if (els.promptsEmptySearch) els.promptsEmptySearch.classList.add('hidden');
+
+  els.promptsGrid.innerHTML = filtered.map(prompt => {
+    const isFav = !!prompt.favorite;
+    const personaMeta = prompt.personaId ? MODULES_METADATA[prompt.personaId] : null;
+    const catMeta = PROMPT_CATEGORIES.find(c => c.id === prompt.category);
+
+    // Highlight [placeholders] in preview
+    const escapedContent = (prompt.content || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const highlightedContent = escapedContent.replace(/\[([^\]]+)\]/g, '<mark>[$1]</mark>');
+
+    return `
+      <div class="prompt-card ${isFav ? 'is-favorite' : ''}" data-prompt-id="${prompt.id}">
+        <div class="prompt-card-header">
+          <div class="prompt-title-wrap">
+            <h3 class="prompt-card-title">${escapeHtml(prompt.title)}</h3>
+            ${prompt.subtitle ? `<p class="prompt-card-subtitle">${escapeHtml(prompt.subtitle)}</p>` : ''}
+          </div>
+          <button type="button" class="prompt-star-btn ${isFav ? 'active' : ''}" data-prompt-id="${prompt.id}" title="${isFav ? 'Favorited' : 'Add to favorites'}">
+            ${isFav ? '★' : '☆'}
+          </button>
+        </div>
+
+        <div class="prompt-badges-row">
+          ${catMeta ? `<span class="prompt-badge-cat">${catMeta.icon} ${catMeta.name}</span>` : ''}
+          ${personaMeta ? `<span class="prompt-badge-persona">${personaMeta.icon} ${personaMeta.title}</span>` : ''}
+        </div>
+
+        ${prompt.favoriteReason ? `
+          <div class="prompt-use-case-box">
+            <strong>Use Case / Why:</strong>
+            ${escapeHtml(prompt.favoriteReason)}
+          </div>
+        ` : ''}
+
+        <div class="prompt-content-preview">${highlightedContent}</div>
+
+        <div class="prompt-card-actions">
+          <div class="prompt-card-actions-left">
+            <button type="button" class="btn-card-action btn-copy-prompt" data-prompt-id="${prompt.id}" title="Copy prompt to clipboard">
+              <span>📋 Copy</span>
+            </button>
+            <button type="button" class="btn-card-action btn-edit-prompt" data-prompt-id="${prompt.id}" title="Edit directive & notes">
+              <span>✏️ Edit</span>
+            </button>
+          </div>
+          <button type="button" class="btn-use-prompt" data-prompt-id="${prompt.id}">
+            <span>Use in Chat 🚀</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Wire card events
+  wirePromptCardEvents();
+}
+
+function wirePromptCardEvents() {
+  if (!els.promptsGrid) return;
+
+  // Star / favorite click
+  els.promptsGrid.querySelectorAll('.prompt-star-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.promptId;
+      const target = state.prompts.find(p => p.id === id);
+      if (!target) return;
+
+      const newFav = !target.favorite;
+      const updated = await window.bestie.prompts.toggleFavorite(id, newFav);
+      if (updated) {
+        target.favorite = updated.favorite;
+        target.favoriteReason = updated.favoriteReason;
+        showToast(target.favorite ? `⭐ Added "${target.title}" to favorites` : `Removed from favorites`);
+        renderPromptsCategoryFilters();
+        renderPromptsGrid();
+      }
+    });
+  });
+
+  // Copy prompt click
+  els.promptsGrid.querySelectorAll('.btn-copy-prompt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.promptId;
+      const target = state.prompts.find(p => p.id === id);
+      if (!target) return;
+
+      navigator.clipboard.writeText(target.content).then(() => {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<span>✔ Copied!</span>';
+        setTimeout(() => { btn.innerHTML = origHtml; }, 1800);
+        showToast('Prompt copied to clipboard 📋');
+      });
+    });
+  });
+
+  // Edit prompt click
+  els.promptsGrid.querySelectorAll('.btn-edit-prompt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.promptId;
+      const target = state.prompts.find(p => p.id === id);
+      if (target) openPromptModal(target);
+    });
+  });
+
+  // Use in Chat click
+  els.promptsGrid.querySelectorAll('.btn-use-prompt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.promptId;
+      usePromptInChat(id);
+    });
+  });
+}
+
+function usePromptInChat(promptId) {
+  const prompt = state.prompts.find(p => p.id === promptId);
+  if (!prompt) return;
+
+  // Switch to chat view
+  switchView('chat');
+
+  // If prompt has an associated persona, activate it seamlessly
+  if (prompt.personaId && MODULES_METADATA[prompt.personaId]) {
+    activateModule(prompt.personaId);
+  }
+
+  // Inject content into chatInput
+  if (els.chatInput) {
+    els.chatInput.value = prompt.content;
+    els.chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Auto-select the first [placeholder] for immediate replacement
+    const firstBracketStart = prompt.content.indexOf('[');
+    const firstBracketEnd = prompt.content.indexOf(']', firstBracketStart);
+
+    els.chatInput.focus();
+    if (firstBracketStart !== -1 && firstBracketEnd !== -1) {
+      els.chatInput.setSelectionRange(firstBracketStart, firstBracketEnd + 1);
+    }
+
+    showToast(`Loaded "${prompt.title}" into chat 🚀`);
+  }
+}
+
+function openPromptModal(prompt = null) {
+  if (!els.promptModal) return;
+
+  if (prompt) {
+    els.promptModalTitle.textContent = 'Edit Directive';
+    els.promptFormId.value = prompt.id;
+    els.promptFormTitle.value = prompt.title || '';
+    els.promptFormCategory.value = prompt.category || 'ops';
+    els.promptFormPersona.value = prompt.personaId || '';
+    els.promptFormContent.value = prompt.content || '';
+    els.promptFormReason.value = prompt.favoriteReason || '';
+    els.promptFormFavorite.checked = !!prompt.favorite;
+    els.btnDeletePromptModal.classList.toggle('hidden', !prompt.isCustom);
+  } else {
+    els.promptModalTitle.textContent = 'Create New Directive';
+    els.promptFormId.value = '';
+    els.promptFormTitle.value = '';
+    els.promptFormCategory.value = 'ops';
+    els.promptFormPersona.value = state.activeModule || '';
+    els.promptFormContent.value = '';
+    els.promptFormReason.value = '';
+    els.promptFormFavorite.checked = false;
+    els.btnDeletePromptModal.classList.add('hidden');
+  }
+
+  els.promptModal.classList.remove('hidden');
+  els.promptFormTitle.focus();
+}
+
+function closePromptModal() {
+  if (els.promptModal) {
+    els.promptModal.classList.add('hidden');
+  }
+}
+
+async function savePromptModal() {
+  const id = els.promptFormId.value;
+  const title = els.promptFormTitle.value.trim();
+  const content = els.promptFormContent.value;
+  const category = els.promptFormCategory.value;
+  const personaId = els.promptFormPersona.value || null;
+  const favoriteReason = els.promptFormReason.value.trim();
+  const favorite = els.promptFormFavorite.checked;
+
+  if (!title) {
+    showToast('Please enter a directive title');
+    els.promptFormTitle.focus();
+    return;
+  }
+
+  if (!content) {
+    showToast('Please enter prompt content');
+    els.promptFormContent.focus();
+    return;
+  }
+
+  try {
+    if (id) {
+      // Update existing
+      await window.bestie.prompts.update(id, {
+        title,
+        content,
+        category,
+        personaId,
+        favorite,
+        favoriteReason,
+      });
+      showToast('Directive updated ✨');
+    } else {
+      // Create new
+      await window.bestie.prompts.add({
+        title,
+        content,
+        category,
+        personaId,
+        favorite,
+        favoriteReason,
+      });
+      showToast('New directive created 🚀');
+    }
+
+    closePromptModal();
+    await refreshPromptsList();
+  } catch (err) {
+    console.error('Failed to save prompt:', err);
+    showToast('Error saving directive');
+  }
+}
+
+async function deletePromptModal() {
+  const id = els.promptFormId.value;
+  if (!id) return;
+
+  if (confirm('Are you sure you want to delete this custom directive?')) {
+    try {
+      await window.bestie.prompts.delete(id);
+      showToast('Directive deleted');
+      closePromptModal();
+      await refreshPromptsList();
+    } catch (err) {
+      console.error('Failed to delete prompt:', err);
+      showToast('Error deleting directive');
+    }
+  }
+}
+
+// ============================================================
+// CREDENTIALS, CERTIFICATES & MERIT VAULT
+// ============================================================
+
+const CREDENTIAL_ICONS = {
+  certification: '🎖️',
+  degree: '🎓',
+  license: '📜',
+  award: '🏆',
+  patent: '💡',
+  publication: '📑',
+  merit: '⭐'
+};
+
+const CREDENTIAL_LABELS = {
+  certification: 'Certification',
+  degree: 'Degree',
+  license: 'License',
+  award: 'Award / Honor',
+  patent: 'Patent / IP',
+  publication: 'Publication',
+  merit: 'Merit'
+};
+
+function setupCredentialsVault() {
+  if (!window.bestie || !window.bestie.credentials) return;
+
+  // Search input
+  els.credentialsSearchInput?.addEventListener('input', (e) => {
+    state.credentialsSearchQuery = e.target.value.trim().toLowerCase();
+    if (els.btnClearCredentialsSearch) {
+      els.btnClearCredentialsSearch.classList.toggle('hidden', !state.credentialsSearchQuery);
+    }
+    renderCredentialsGrid();
+  });
+
+  // Clear search
+  els.btnClearCredentialsSearch?.addEventListener('click', () => {
+    if (els.credentialsSearchInput) els.credentialsSearchInput.value = '';
+    state.credentialsSearchQuery = '';
+    els.btnClearCredentialsSearch?.classList.add('hidden');
+    renderCredentialsGrid();
+  });
+
+  // Category filter tabs
+  els.credentialsCategoryFilters?.addEventListener('click', (e) => {
+    const tab = e.target.closest('.cred-filter-tab');
+    if (tab) {
+      state.credentialsCategoryFilter = tab.dataset.category || 'all';
+      $$('.cred-filter-tab', els.credentialsCategoryFilters).forEach(t => {
+        t.classList.toggle('active', t === tab);
+      });
+      renderCredentialsGrid();
+    }
+  });
+
+  // "+ Add Credential / Merit" button
+  els.btnCreateCredential?.addEventListener('click', () => {
+    openCredentialModal();
+  });
+
+  // Category change in modal -> update icon preview
+  els.credFormCategory?.addEventListener('change', (e) => {
+    const icon = CREDENTIAL_ICONS[e.target.value] || '🎖️';
+    if (els.credModalIconPreview) els.credModalIconPreview.textContent = icon;
+  });
+
+  // Modal close / cancel
+  els.btnCloseCredentialModal?.addEventListener('click', closeCredentialModal);
+  els.credentialModal?.addEventListener('click', (e) => {
+    if (e.target === els.credentialModal) closeCredentialModal();
+  });
+
+  // Modal save & delete
+  els.btnSaveCredentialModal?.addEventListener('click', saveCredentialModal);
+  els.btnDeleteCredentialModal?.addEventListener('click', deleteCredentialModal);
+
+  // Tab in living dossier view
+  els.tabMemoryCredentials?.addEventListener('click', () => {
+    switchView('credentials');
+  });
+
+  // Load initial credentials
+  refreshCredentialsList();
+}
+
+async function refreshCredentialsList() {
+  try {
+    state.credentials = await window.bestie.credentials.load();
+    updateCredentialsCategoryCounts();
+    renderCredentialsGrid();
+  } catch (err) {
+    console.error('Failed to load credentials vault:', err);
+  }
+}
+
+function updateCredentialsCategoryCounts() {
+  const total = state.credentials.length;
+  const highlighted = state.credentials.filter(c => c.highlight).length;
+  if (els.credCountAll) els.credCountAll.textContent = total;
+  if (els.credCountHighlight) els.credCountHighlight.textContent = highlighted;
+}
+
+function renderCredentialsGrid() {
+  if (!els.credentialsGrid) return;
+
+  const query = state.credentialsSearchQuery;
+  const category = state.credentialsCategoryFilter;
+
+  const filtered = state.credentials.filter(c => {
+    if (category === 'highlighted' && !c.highlight) return false;
+    if (category !== 'all' && category !== 'highlighted' && c.category !== category) return false;
+
+    if (query) {
+      const matchTitle = (c.title || '').toLowerCase().includes(query);
+      const matchIssuer = (c.issuer || '').toLowerCase().includes(query);
+      const matchDesc = (c.description || '').toLowerCase().includes(query);
+      const matchId = (c.credentialId || '').toLowerCase().includes(query);
+      const matchSkills = Array.isArray(c.skills) && c.skills.some(s => s.toLowerCase().includes(query));
+      return matchTitle || matchIssuer || matchDesc || matchId || matchSkills;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    els.credentialsGrid.innerHTML = '';
+    if (els.credentialsEmptySearch) {
+      els.credentialsEmptySearch.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (els.credentialsEmptySearch) els.credentialsEmptySearch.classList.add('hidden');
+
+  els.credentialsGrid.innerHTML = filtered.map(item => {
+    const isHigh = !!item.highlight;
+    const icon = CREDENTIAL_ICONS[item.category] || '🎖️';
+    const catLabel = CREDENTIAL_LABELS[item.category] || item.category || 'Credential';
+    const isUrl = /^https?:\/\//i.test(item.credentialId || '');
+
+    return `
+      <div class="credential-card ${isHigh ? 'highlighted' : ''}" data-cred-id="${escapeHtml(item.id)}">
+        <div class="credential-header">
+          <div class="credential-icon-title">
+            <div class="credential-icon-badge">${icon}</div>
+            <div class="credential-info">
+              <h4 class="credential-title">${escapeHtml(item.title)}</h4>
+              ${item.issuer ? `<div class="credential-issuer">${escapeHtml(item.issuer)}</div>` : ''}
+            </div>
+          </div>
+          <button type="button" class="btn-cred-star ${isHigh ? 'active' : ''}" data-cred-id="${escapeHtml(item.id)}" title="${isHigh ? 'Highlighted in AI Dossier' : 'Highlight in AI Dossier'}">
+            ${isHigh ? '⭐' : '☆'}
+          </button>
+        </div>
+
+        <div class="credential-meta-row">
+          <span class="credential-category-badge">${escapeHtml(catLabel)}</span>
+          ${item.issueDate ? `<span>📅 ${escapeHtml(item.issueDate)}</span>` : ''}
+          ${item.expiryDate ? `<span>⌛ Exp: ${escapeHtml(item.expiryDate)}</span>` : ''}
+        </div>
+
+        ${item.skills && item.skills.length > 0 ? `
+          <div class="credential-skills-row">
+            ${item.skills.map(s => `<span class="cred-skill-pill">${escapeHtml(s)}</span>`).join('')}
+          </div>
+        ` : ''}
+
+        ${item.description ? `
+          <div class="credential-desc">${escapeHtml(item.description)}</div>
+        ` : ''}
+
+        <div class="credential-footer">
+          <div>
+            ${item.credentialId ? (
+              isUrl
+                ? `<a href="${escapeHtml(item.credentialId)}" target="_blank" rel="noopener noreferrer" class="credential-id-link">🔗 Verify Link</a>`
+                : `<span class="credential-id-link" title="Credential ID: ${escapeHtml(item.credentialId)}">🆔 ${escapeHtml(item.credentialId)}</span>`
+            ) : `<span style="font-size: 11px; color: var(--text-dim);">${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''}</span>`}
+          </div>
+          <div class="credential-actions">
+            <button type="button" class="btn-card-action btn-copy-cred" data-cred-id="${escapeHtml(item.id)}" title="Copy summary">📋</button>
+            <button type="button" class="btn-card-action btn-edit-cred" data-cred-id="${escapeHtml(item.id)}" title="Edit credential">✏️</button>
+            <button type="button" class="btn-card-action btn-delete-cred" data-cred-id="${escapeHtml(item.id)}" title="Delete credential">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  wireCredentialCardEvents();
+}
+
+function wireCredentialCardEvents() {
+  if (!els.credentialsGrid) return;
+
+  // Star / highlight click
+  els.credentialsGrid.querySelectorAll('.btn-cred-star').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.credId;
+      const updated = await window.bestie.credentials.toggleHighlight(id);
+      if (updated) {
+        showToast(updated.highlight ? '⭐ Added to AI Operator Dossier highlight' : 'Removed from Dossier highlight');
+        await refreshCredentialsList();
+      }
+    });
+  });
+
+  // Copy summary click
+  els.credentialsGrid.querySelectorAll('.btn-copy-cred').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.credId;
+      const target = state.credentials.find(c => c.id === id);
+      if (!target) return;
+      const skillsStr = (target.skills || []).join(', ');
+      const summary = `${target.title} — ${target.issuer || ''} (${target.category})\nSkills: ${skillsStr}\n${target.description || ''}`.trim();
+      navigator.clipboard.writeText(summary).then(() => {
+        showToast('Credential details copied to clipboard 📋');
+      });
+    });
+  });
+
+  // Edit credential click
+  els.credentialsGrid.querySelectorAll('.btn-edit-cred').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.credId;
+      const target = state.credentials.find(c => c.id === id);
+      if (target) openCredentialModal(target);
+    });
+  });
+
+  // Delete credential click
+  els.credentialsGrid.querySelectorAll('.btn-delete-cred').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.credId;
+      const target = state.credentials.find(c => c.id === id);
+      if (!target) return;
+      if (confirm(`Are you sure you want to delete "${target.title}"?`)) {
+        await window.bestie.credentials.delete(id);
+        showToast('Credential removed from vault');
+        await refreshCredentialsList();
+      }
+    });
+  });
+}
+
+function openCredentialModal(item = null) {
+  if (!els.credentialModal) return;
+
+  if (item) {
+    els.credentialModalTitle.textContent = 'Edit Credential / Merit';
+    els.credFormId.value = item.id;
+    els.credFormTitle.value = item.title || '';
+    els.credFormIssuer.value = item.issuer || '';
+    els.credFormCategory.value = item.category || 'certification';
+    els.credFormIssueDate.value = item.issueDate || '';
+    els.credFormExpiryDate.value = item.expiryDate || '';
+    els.credFormIdUrl.value = item.credentialId || '';
+    els.credFormSkills.value = (item.skills || []).join(', ');
+    els.credFormDesc.value = item.description || '';
+    els.credFormHighlight.checked = !!item.highlight;
+    els.btnDeleteCredentialModal?.classList.remove('hidden');
+    if (els.credModalIconPreview) els.credModalIconPreview.textContent = CREDENTIAL_ICONS[item.category] || '🎖️';
+  } else {
+    els.credentialModalTitle.textContent = 'Log Credential or Merit';
+    els.credFormId.value = '';
+    els.credFormTitle.value = '';
+    els.credFormIssuer.value = '';
+    els.credFormCategory.value = 'certification';
+    els.credFormIssueDate.value = '';
+    els.credFormExpiryDate.value = '';
+    els.credFormIdUrl.value = '';
+    els.credFormSkills.value = '';
+    els.credFormDesc.value = '';
+    els.credFormHighlight.checked = true;
+    els.btnDeleteCredentialModal?.classList.add('hidden');
+    if (els.credModalIconPreview) els.credModalIconPreview.textContent = '🎖️';
+  }
+
+  els.credentialModal.classList.remove('hidden');
+  els.credFormTitle.focus();
+}
+
+function closeCredentialModal() {
+  if (els.credentialModal) {
+    els.credentialModal.classList.add('hidden');
+  }
+}
+
+async function saveCredentialModal() {
+  const id = els.credFormId.value;
+  const title = els.credFormTitle.value.trim();
+  const issuer = els.credFormIssuer.value.trim();
+  const category = els.credFormCategory.value;
+  const issueDate = els.credFormIssueDate.value.trim();
+  const expiryDate = els.credFormExpiryDate.value.trim();
+  const credentialId = els.credFormIdUrl.value.trim();
+  const skills = els.credFormSkills.value.split(',').map(s => s.trim()).filter(Boolean);
+  const description = els.credFormDesc.value.trim();
+  const highlight = els.credFormHighlight.checked;
+
+  if (!title) {
+    showToast('Please enter a credential title');
+    els.credFormTitle.focus();
+    return;
+  }
+
+  try {
+    if (id) {
+      await window.bestie.credentials.update(id, {
+        title, issuer, category, issueDate, expiryDate, credentialId, skills, description, highlight
+      });
+      showToast('Credential updated ✨');
+    } else {
+      await window.bestie.credentials.add({
+        title, issuer, category, issueDate, expiryDate, credentialId, skills, description, highlight
+      });
+      showToast('Credential saved to vault 🚀');
+    }
+    closeCredentialModal();
+    await refreshCredentialsList();
+  } catch (err) {
+    console.error('Failed to save credential:', err);
+    showToast('Error saving credential');
+  }
+}
+
+async function deleteCredentialModal() {
+  const id = els.credFormId.value;
+  if (!id) return;
+  if (confirm('Are you sure you want to delete this credential?')) {
+    try {
+      await window.bestie.credentials.delete(id);
+      showToast('Credential deleted');
+      closeCredentialModal();
+      await refreshCredentialsList();
+    } catch (err) {
+      console.error('Failed to delete credential:', err);
+      showToast('Error deleting credential');
+    }
+  }
+}
+
+// ============================================================
+// PERFORMANCE, POWER & MEMORY OPTIMIZATIONS
+// ============================================================
+
+let connectionPollInterval = null;
+
+function setupConnectionPolling() {
+  if (connectionPollInterval) clearInterval(connectionPollInterval);
+  // Throttle polling to 120s when hidden or minimized; 30s when active
+  const pollDelay = document.hidden ? 120000 : 30000;
+  connectionPollInterval = setInterval(checkConnection, pollDelay);
+}
+
+function setupPerformanceControls() {
+  // Live toggle for power saver mode
+  els.settingPowerSaver?.addEventListener('change', (e) => {
+    const enabled = e.target.checked;
+    document.body.classList.toggle('power-saver', enabled);
+    showToast(enabled ? '🍃 Power Saver activated (heavy blurs and continuous GPU draws disabled)' : '✨ Visual effects restored');
+  });
+
+  // Memory telemetry controls
+  els.btnRefreshMemory?.addEventListener('click', refreshMemoryTelemetry);
+  els.btnClearMemCache?.addEventListener('click', async () => {
+    try {
+      showToast('Purging memory cache and forcing garbage collection...');
+      const res = await window.bestie.system.clearMemoryCache();
+      if (res && res.success) {
+        showToast(`Memory reclaimed: ~${res.freedMB || 0} MB freed ⚡`);
+      } else {
+        showToast('Memory cache cleared.');
+      }
+      await refreshMemoryTelemetry();
+    } catch (err) {
+      console.error('Error clearing memory cache:', err);
+    }
+  });
+
+  // Window visibility & background state listeners for battery conservation
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkConnection();
+    }
+    setupConnectionPolling();
+  });
+
+  if (window.bestie?.system?.onBackgroundState) {
+    window.bestie.system.onBackgroundState((bgState) => {
+      if (bgState === 'visible') {
+        checkConnection();
+      }
+      setupConnectionPolling();
+    });
+  }
+}
+
+async function refreshMemoryTelemetry() {
+  if (!window.bestie?.system?.getMemoryUsage) return;
+  try {
+    const mem = await window.bestie.system.getMemoryUsage();
+    if (els.memHeapUsed) els.memHeapUsed.textContent = `${mem.process.heapUsedMB} MB / ${mem.process.heapTotalMB} MB`;
+    if (els.memRss) els.memRss.textContent = `${mem.process.rssMB} MB`;
+    if (els.memSysFree) els.memSysFree.textContent = `${mem.system.freeMemGB} GB free (${mem.system.totalMemGB} GB total)`;
+  } catch (err) {
+    console.warn('Error fetching memory telemetry:', err);
+  }
+}
+
+// ============================================================
 // BOOT
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', init);
+

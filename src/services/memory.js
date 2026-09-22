@@ -8,12 +8,16 @@ import path from 'node:path';
 import os from 'node:os';
 import { safeStorage } from 'electron';
 
+import { DEFAULT_OPERATOR_PROMPTS } from './prompts-data.js';
+
 const DATA_DIR = path.join(os.homedir(), '.digital-bestie');
 const PROFILE_PATH = path.join(DATA_DIR, 'user_profile.json');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 const CONVERSATION_PATH = path.join(DATA_DIR, 'conversation.json');
 const CONVERSATIONS_PATH = path.join(DATA_DIR, 'conversations.json');
 const FEEDBACK_PATH = path.join(DATA_DIR, 'feedback_and_bugs.json');
+const PROMPTS_PATH = path.join(DATA_DIR, 'prompts_vault.json');
+const CREDENTIALS_PATH = path.join(DATA_DIR, 'credentials_vault.json');
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -74,7 +78,9 @@ const DEFAULT_SETTINGS = {
   model_name: 'bestie-light',
   context_window: 50,
   theme: 'neon-dark',
-  num_ctx: 16384
+  num_ctx: 8192,
+  ollama_keep_alive: '5m',
+  power_saver: false
 };
 
 function ensureDataDir() {
@@ -579,6 +585,8 @@ export function exportProfile() {
     settings: loadSettings(),
     conversation: loadConversation(),
     conversationsStore: loadConversationsStore(),
+    promptsVault: loadPromptsVault(),
+    credentialsVault: loadCredentialsVault(),
     exportedAt: new Date().toISOString()
   };
 }
@@ -588,6 +596,8 @@ export function importProfile(data) {
   if (data.settings) saveSettings(data.settings);
   if (data.conversationsStore) saveConversationsStore(data.conversationsStore);
   else if (data.conversation) saveConversation(data.conversation);
+  if (data.promptsVault) savePromptsVault(data.promptsVault);
+  if (data.credentialsVault) saveCredentialsVault(data.credentialsVault);
 }
 
 // --- Feedback & Bug Logging ---
@@ -634,11 +644,213 @@ export function updateFeedbackStatus(id, status) {
   return items;
 }
 
+// ============================================================
+// PROMPTS VAULT & OPERATOR DIRECTIVES
+// ============================================================
+
+export function loadPromptsVault() {
+  const stored = loadJSON(PROMPTS_PATH, []);
+  if (!Array.isArray(stored) || stored.length === 0) {
+    saveJSON(PROMPTS_PATH, DEFAULT_OPERATOR_PROMPTS);
+    return JSON.parse(JSON.stringify(DEFAULT_OPERATOR_PROMPTS));
+  }
+
+  // Merge any system defaults that may not exist in the stored list
+  const storedIds = new Set(stored.map(p => p.id));
+  let modified = false;
+  const merged = [...stored];
+
+  for (const def of DEFAULT_OPERATOR_PROMPTS) {
+    if (!storedIds.has(def.id)) {
+      merged.push(def);
+      modified = true;
+    }
+  }
+
+  if (modified) {
+    saveJSON(PROMPTS_PATH, merged);
+  }
+
+  return merged;
+}
+
+export function savePromptsVault(prompts) {
+  if (Array.isArray(prompts)) {
+    saveJSON(PROMPTS_PATH, prompts);
+  }
+}
+
+export function addPrompt(promptData) {
+  const prompts = loadPromptsVault();
+  const newPrompt = {
+    id: `prompt_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    title: promptData.title?.trim() || 'Untitled Directive',
+    subtitle: promptData.subtitle?.trim() || '',
+    category: promptData.category || 'ops',
+    personaId: promptData.personaId || null,
+    favorite: !!promptData.favorite,
+    favoriteReason: promptData.favoriteReason?.trim() || '',
+    tags: Array.isArray(promptData.tags) ? promptData.tags : (promptData.tags ? String(promptData.tags).split(',').map(t => t.trim()).filter(Boolean) : []),
+    content: promptData.content || '',
+    isCustom: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  prompts.unshift(newPrompt);
+  savePromptsVault(prompts);
+  return newPrompt;
+}
+
+export function updatePrompt(id, updates) {
+  const prompts = loadPromptsVault();
+  const target = prompts.find(p => p.id === id);
+  if (!target) return null;
+
+  if (updates.title !== undefined) target.title = updates.title.trim();
+  if (updates.subtitle !== undefined) target.subtitle = updates.subtitle.trim();
+  if (updates.content !== undefined) target.content = updates.content;
+  if (updates.category !== undefined) target.category = updates.category;
+  if (updates.personaId !== undefined) target.personaId = updates.personaId;
+  if (updates.favorite !== undefined) target.favorite = !!updates.favorite;
+  if (updates.favoriteReason !== undefined) target.favoriteReason = updates.favoriteReason.trim();
+  if (updates.tags !== undefined) {
+    target.tags = Array.isArray(updates.tags)
+      ? updates.tags
+      : String(updates.tags).split(',').map(t => t.trim()).filter(Boolean);
+  }
+  target.updatedAt = new Date().toISOString();
+
+  savePromptsVault(prompts);
+  return target;
+}
+
+export function deletePrompt(id) {
+  const prompts = loadPromptsVault();
+  const filtered = prompts.filter(p => p.id !== id);
+  savePromptsVault(filtered);
+  return filtered;
+}
+
+export function togglePromptFavorite(id, favorite, reason = null) {
+  const prompts = loadPromptsVault();
+  const target = prompts.find(p => p.id === id);
+  if (!target) return null;
+
+  target.favorite = typeof favorite === 'boolean' ? favorite : !target.favorite;
+  if (reason !== null && reason !== undefined) {
+    target.favoriteReason = String(reason).trim();
+  }
+  target.updatedAt = new Date().toISOString();
+
+  savePromptsVault(prompts);
+  return target;
+}
+
+// ============================================================
+// CREDENTIALS, CERTIFICATES & MERIT VAULT
+// ============================================================
+
+export function loadCredentialsVault() {
+  return loadJSON(CREDENTIALS_PATH, []);
+}
+
+export function saveCredentialsVault(credentials) {
+  if (Array.isArray(credentials)) {
+    saveJSON(CREDENTIALS_PATH, credentials);
+  }
+}
+
+export function addCredential(credData) {
+  const list = loadCredentialsVault();
+  const newCred = {
+    id: `cred_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    title: credData.title?.trim() || 'Untitled Credential',
+    issuer: credData.issuer?.trim() || '',
+    category: credData.category || 'certification', // certification | degree | license | award | patent | publication | merit
+    issueDate: credData.issueDate || '',
+    expiryDate: credData.expiryDate || '',
+    credentialId: credData.credentialId?.trim() || '',
+    skills: Array.isArray(credData.skills)
+      ? credData.skills
+      : (credData.skills ? String(credData.skills).split(',').map(s => s.trim()).filter(Boolean) : []),
+    description: credData.description?.trim() || '',
+    highlight: !!credData.highlight,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  list.unshift(newCred);
+  saveCredentialsVault(list);
+  return newCred;
+}
+
+export function updateCredential(id, updates) {
+  const list = loadCredentialsVault();
+  const target = list.find(c => c.id === id);
+  if (!target) return null;
+
+  if (updates.title !== undefined) target.title = updates.title.trim();
+  if (updates.issuer !== undefined) target.issuer = updates.issuer.trim();
+  if (updates.category !== undefined) target.category = updates.category;
+  if (updates.issueDate !== undefined) target.issueDate = updates.issueDate;
+  if (updates.expiryDate !== undefined) target.expiryDate = updates.expiryDate;
+  if (updates.credentialId !== undefined) target.credentialId = updates.credentialId.trim();
+  if (updates.description !== undefined) target.description = updates.description.trim();
+  if (updates.highlight !== undefined) target.highlight = !!updates.highlight;
+  if (updates.skills !== undefined) {
+    target.skills = Array.isArray(updates.skills)
+      ? updates.skills
+      : String(updates.skills).split(',').map(s => s.trim()).filter(Boolean);
+  }
+  target.updatedAt = new Date().toISOString();
+
+  saveCredentialsVault(list);
+  return target;
+}
+
+export function deleteCredential(id) {
+  const list = loadCredentialsVault();
+  const filtered = list.filter(c => c.id !== id);
+  saveCredentialsVault(filtered);
+  return filtered;
+}
+
+export function toggleCredentialHighlight(id) {
+  const list = loadCredentialsVault();
+  const target = list.find(c => c.id === id);
+  if (!target) return null;
+
+  target.highlight = !target.highlight;
+  target.updatedAt = new Date().toISOString();
+  saveCredentialsVault(list);
+  return target;
+}
+
+export function getCredentialsSnippet() {
+  const list = loadCredentialsVault();
+  if (!list || list.length === 0) return '';
+  const highlights = list.filter(c => c.highlight);
+  const itemsToShow = highlights.length > 0 ? highlights : list.slice(0, 10);
+
+  let sec = `\n\n## USER CREDENTIALS, CERTIFICATIONS & MERIT\n`;
+  sec += `The user has the following verified credentials, degrees, and honors. Ground answers in their proven competencies:\n`;
+  for (const c of itemsToShow) {
+    let line = `- [${(c.category || 'MERIT').toUpperCase()}] **${c.title}**`;
+    if (c.issuer) line += ` from ${c.issuer}`;
+    if (c.issueDate) line += ` (${c.issueDate})`;
+    if (c.skills && c.skills.length > 0) line += ` | Core Competencies: ${c.skills.join(', ')}`;
+    if (c.description) line += ` | Impact: ${c.description}`;
+    sec += `${line}\n`;
+  }
+  return sec;
+}
+
 export {
   DATA_DIR,
   DEFAULT_PROFILE,
   DEFAULT_SETTINGS,
   FEEDBACK_PATH,
+  PROMPTS_PATH,
+  CREDENTIALS_PATH,
   loadJSON as loadSecureJSON,
   saveJSON as saveSecureJSON
 };

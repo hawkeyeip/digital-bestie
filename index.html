@@ -80,6 +80,19 @@
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </button>
+          <button class="nav-btn" data-view="prompts" title="Prompt Vault & Operator Directives (⌘L)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="M9 10h6"/>
+              <path d="M9 14h4"/>
+            </svg>
+          </button>
+          <button class="nav-btn" data-view="credentials" title="Credentials, Certificates & Merits Vault">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="6"/>
+              <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+            </svg>
+          </button>
           <button class="nav-btn" data-view="memory" title="Memory Bank & Living Dossier">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
@@ -298,6 +311,13 @@
                     rows="1"
                     maxlength="16000"
                   ></textarea>
+                  <button id="btn-chat-prompt-vault" class="btn-chat-prompt-vault" title="Prompt Vault & Directives (⌘L)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                      <path d="M9 10h6"/>
+                      <path d="M9 14h4"/>
+                    </svg>
+                  </button>
                   <button id="btn-send" class="btn-send" title="Send message" disabled>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
@@ -366,6 +386,75 @@
           </div>
         </div>
 
+        <!-- Prompts View (Prompt Vault) -->
+        <div id="view-prompts" class="view">
+          <div class="panel-header prompts-hub-header">
+            <div class="panel-header-flex">
+              <div>
+                <h2 class="panel-title">Prompt Vault &amp; Operator Directives</h2>
+                <p class="panel-subtitle">Curated high-leverage prompts, custom templates, and annotated battle-tested directives</p>
+              </div>
+              <div class="prompts-header-actions">
+                <div class="prompts-search-wrap">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input type="text" id="prompts-search-input" class="prompts-search-input" placeholder="Search directives, keywords, use-cases..." autocomplete="off" />
+                  <button id="btn-clear-prompts-search" class="btn-clear-search hidden" title="Clear search">✕</button>
+                </div>
+                <button type="button" id="btn-create-prompt" class="btn-neon btn-sm">
+                  <span>+ New Directive</span>
+                </button>
+              </div>
+            </div>
+            <!-- Category Filter Tabs -->
+            <div id="prompts-category-filters" class="prompts-category-filters"></div>
+          </div>
+
+          <div id="prompts-grid" class="prompts-grid"></div>
+
+          <div id="prompts-empty-search" class="prompts-empty-search hidden">
+            <p>No prompts match "<span id="prompts-empty-query"></span>"</p>
+          </div>
+        </div>
+
+        <!-- Credentials, Certificates & Merit Vault View -->
+        <div id="view-credentials" class="view">
+          <div class="panel-header credentials-hub-header">
+            <div class="panel-header-flex">
+              <div>
+                <h2 class="panel-title">🎖️ Credentials &amp; Merit Vault</h2>
+                <p class="panel-subtitle">Your verified degrees, certifications, licenses, honors, and patents — informing and backing your AI operator</p>
+              </div>
+              <div class="prompts-header-actions">
+                <div class="prompts-search-wrap">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input type="text" id="credentials-search-input" class="prompts-search-input" placeholder="Search certifications, degrees, skills..." autocomplete="off" />
+                  <button id="btn-clear-credentials-search" class="btn-clear-search hidden" title="Clear search">✕</button>
+                </div>
+                <button type="button" id="btn-create-credential" class="btn-neon btn-sm">
+                  <span>+ Add Credential / Merit</span>
+                </button>
+              </div>
+            </div>
+            <!-- Category Filter Tabs -->
+            <div id="credentials-category-filters" class="credentials-category-filters">
+              <button class="cred-filter-tab active" data-category="all">All Entries (<span id="cred-count-all">0</span>)</button>
+              <button class="cred-filter-tab" data-category="highlighted">⭐ Highlighted (<span id="cred-count-highlight">0</span>)</button>
+              <button class="cred-filter-tab" data-category="certification">🎖️ Certifications</button>
+              <button class="cred-filter-tab" data-category="degree">🎓 Degrees &amp; Academics</button>
+              <button class="cred-filter-tab" data-category="license">📜 Licenses</button>
+              <button class="cred-filter-tab" data-category="award">🏆 Awards &amp; Honors</button>
+              <button class="cred-filter-tab" data-category="patent">💡 Patents &amp; IP</button>
+              <button class="cred-filter-tab" data-category="publication">📑 Publications</button>
+            </div>
+          </div>
+
+          <div id="credentials-grid" class="credentials-grid"></div>
+
+          <div id="credentials-empty-search" class="prompts-empty-search hidden">
+            <p>No credentials or honors logged yet. Click "+ Add Credential / Merit" to store your achievements.</p>
+          </div>
+        </div>
+
         <!-- Memory View -->
         <div id="view-memory" class="view">
           <div class="panel-header">
@@ -376,6 +465,7 @@
               </div>
               <div class="memory-tab-switch">
                 <button id="tab-memory-dossier" class="memory-tab-btn active">📋 Living Dossier</button>
+                <button id="tab-memory-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
                 <button id="tab-memory-calibration" class="memory-tab-btn">🧪 Calibration Lab</button>
               </div>
             </div>
@@ -545,8 +635,9 @@
                     </div>
                   </div>
                   <div style="display: flex; gap: 6px;">
-                    <button id="btn-import-nb" class="btn-glass btn-sm">📥 Import Backup</button>
-                    <button id="btn-export-nb" class="btn-glass btn-sm">📤 Export Plan</button>
+                    <button id="btn-add-nb-item" class="btn-neon btn-sm">+ Add to Bank</button>
+                    <button id="btn-import-nb" class="btn-glass btn-sm">📥 Import</button>
+                    <button id="btn-export-nb" class="btn-glass btn-sm">📤 Export</button>
                   </div>
                 </div>
                 <div class="superbrain-source-row">
@@ -572,9 +663,13 @@
                   </div>
                 </div>
                 <div class="superbrain-sub-section">
-                  <h4>Active Urgent Tasks</h4>
-                  <div id="nb-tasks-list" class="renewals-list">
-                    <div class="empty-state-sm">No active tasks imported</div>
+                  <div class="nb-bank-tabs">
+                    <button class="nb-bank-tab active" data-bank="tasks">⚡ Urgent Tasks (<span id="nb-tab-tasks-count">0</span>)</button>
+                    <button class="nb-bank-tab" data-bank="notes">💡 Thought Vault (<span id="nb-tab-notes-count">0</span>)</button>
+                    <button class="nb-bank-tab" data-bank="prompts">📝 Prompts Bank (<span id="nb-tab-prompts-count">0</span>)</button>
+                  </div>
+                  <div id="nb-bank-items-container" class="nb-bank-items-container">
+                    <div class="empty-state-sm">No items in this bank yet. Click "+ Add to Bank" above.</div>
                   </div>
                 </div>
               </div>
@@ -649,6 +744,52 @@
                 <span>GitHub Personal Access Token <small style="color: var(--text-muted); font-size: 11px;">(Optional — for private repo updates)</small></span>
                 <input type="password" id="setting-github-token" class="setting-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
               </label>
+            </div>
+
+            <div class="setting-group">
+              <h3>Performance, Memory &amp; Power Optimization</h3>
+              <label class="setting-item">
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-weight: 600;">Power Saver Mode</span>
+                  <small style="color: var(--text-muted); font-size: 11px;">Disables background GPU canvas re-draws, strips heavy blurs, and bounds context window for maximum battery and low CPU.</small>
+                </div>
+                <input type="checkbox" id="setting-power-saver" style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;" />
+              </label>
+
+              <label class="setting-item">
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-weight: 600;">Ollama Model Retention (keep_alive)</span>
+                  <small style="color: var(--text-muted); font-size: 11px;">Controls how long Ollama holds large LLMs (14B/70B) in VRAM/RAM after generation before unloading.</small>
+                </div>
+                <select id="setting-keep-alive" class="setting-input" style="max-width: 260px;">
+                  <option value="5m">5 Minutes (Standard balance)</option>
+                  <option value="1m">1 Minute (Aggressive RAM recovery)</option>
+                  <option value="0">Unload Immediately (Zero idle RAM footprint)</option>
+                  <option value="15m">15 Minutes (High responsiveness)</option>
+                </select>
+              </label>
+
+              <div class="memory-monitor-box">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">In-Process Memory Telemetry</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button type="button" id="btn-refresh-memory" class="btn-glass btn-sm">Refresh</button>
+                    <button type="button" id="btn-clear-mem-cache" class="btn-glass btn-sm">Clear Cache ⚡</button>
+                  </div>
+                </div>
+                <div class="memory-stat-row">
+                  <span>Renderer &amp; Node Heap Used:</span>
+                  <span id="mem-heap-used" class="memory-stat-val">-- MB</span>
+                </div>
+                <div class="memory-stat-row">
+                  <span>Resident Set Size (RSS):</span>
+                  <span id="mem-rss" class="memory-stat-val">-- MB</span>
+                </div>
+                <div class="memory-stat-row" style="margin-bottom: 0;">
+                  <span>System Free Memory:</span>
+                  <span id="mem-sys-free" class="memory-stat-val">-- GB</span>
+                </div>
+              </div>
             </div>
 
             <button id="btn-save-settings" class="btn-neon">Save Settings</button>
@@ -942,6 +1083,223 @@
           <div class="feedback-actions" style="margin-top: 14px;">
             <button type="button" id="btn-cancel-move" class="btn-glass">Cancel</button>
             <button type="button" id="btn-confirm-move" class="btn-neon">Move Chat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Editor / Use Case Modal -->
+    <div id="prompt-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 640px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap">
+              <span>⚡</span>
+            </div>
+            <div>
+              <h3 id="prompt-modal-title">Directive Editor</h3>
+              <p class="feedback-subtitle">Customize instructions, assign operational categories, and record use-case notes.</p>
+            </div>
+          </div>
+          <button id="btn-close-prompt-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <input type="hidden" id="prompt-form-id" value="" />
+          
+          <div class="form-group">
+            <label for="prompt-form-title">Directive Title</label>
+            <input type="text" id="prompt-form-title" class="feedback-input" placeholder="e.g. Executive Task Priority &amp; Time-Blocking" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="prompt-form-category">Category</label>
+              <select id="prompt-form-category" class="feedback-select">
+                <option value="ops">Executive &amp; Ops</option>
+                <option value="strategy">Strategy &amp; Red-Team</option>
+                <option value="engineering">Diagnostics &amp; Code</option>
+                <option value="learning">Growth &amp; Mastery</option>
+                <option value="production">Shipping &amp; Delivery</option>
+                <option value="communication">Writing &amp; Compression</option>
+                <option value="automation">Systems &amp; Workflows</option>
+                <option value="meta">Meta-Directives</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="prompt-form-persona">Associated Persona Module</label>
+              <select id="prompt-form-persona" class="feedback-select">
+                <option value="">None (Standard Confidante)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-form-content">Prompt Template (use [brackets] for placeholders)</label>
+            <textarea id="prompt-form-content" class="feedback-textarea" rows="7" placeholder="Paste your prompt template here..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="prompt-form-reason">Why I Use This / Use Case Notes (Optional)</label>
+            <input type="text" id="prompt-form-reason" class="feedback-input" placeholder="e.g. Run every Monday morning or before signing new contracts" />
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label" style="margin-top: 4px;">
+              <input type="checkbox" id="prompt-form-favorite" />
+              <span>⭐ Mark as Favorite (Pin to quick-favorites filter)</span>
+            </label>
+          </div>
+
+          <div class="feedback-actions">
+            <button type="button" id="btn-delete-prompt-modal" class="btn-glass btn-danger hidden">Delete Directive</button>
+            <button type="button" id="btn-save-prompt-modal" class="btn-neon">Save Directive 🚀</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Credentials & Merit Modal -->
+    <div id="credential-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 600px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(179, 71, 255, 0.15); color: var(--neon-purple);">
+              <span id="cred-modal-icon-preview">🎖️</span>
+            </div>
+            <div>
+              <h3 id="credential-modal-title">Log Credential or Merit</h3>
+              <p class="feedback-subtitle">Document certificates, degrees, awards, and licenses to calibrate your AI operator.</p>
+            </div>
+          </div>
+          <button id="btn-close-credential-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <input type="hidden" id="cred-form-id" value="" />
+
+          <div class="form-group">
+            <label for="cred-form-title">Credential / Degree / Honor Title *</label>
+            <input type="text" id="cred-form-title" class="feedback-input" placeholder="e.g. AWS Solutions Architect Professional, B.S. Computer Science, US Patent" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cred-form-issuer">Issuer / Institution / Organization</label>
+              <input type="text" id="cred-form-issuer" class="feedback-input" placeholder="e.g. Amazon Web Services, Stanford University, USPTO" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cred-form-category">Category</label>
+              <select id="cred-form-category" class="feedback-select">
+                <option value="certification" selected>🎖️ Professional Certification</option>
+                <option value="degree">🎓 Degree / Academic Degree</option>
+                <option value="license">📜 Professional License</option>
+                <option value="award">🏆 Award / Honor / Fellowship</option>
+                <option value="patent">💡 Patent / Intellectual Property</option>
+                <option value="publication">📑 Publication / Whitepaper</option>
+                <option value="merit">⭐ Other Distinction / Merit</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cred-form-issue-date">Issue Date</label>
+              <input type="text" id="cred-form-issue-date" class="feedback-input" placeholder="e.g. May 2024 or 2024-05" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cred-form-expiry-date">Expiration Date (Optional)</label>
+              <input type="text" id="cred-form-expiry-date" class="feedback-input" placeholder="e.g. May 2027 or Never" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cred-form-id-url">Credential ID or Verification URL</label>
+            <input type="text" id="cred-form-id-url" class="feedback-input" placeholder="e.g. AWS-PSA-108249 or https://credly.com/..." />
+          </div>
+
+          <div class="form-group">
+            <label for="cred-form-skills">Demonstrated Skills &amp; Competencies (comma-separated)</label>
+            <input type="text" id="cred-form-skills" class="feedback-input" placeholder="e.g. Cloud Architecture, Distributed Systems, Python, Security" />
+          </div>
+
+          <div class="form-group">
+            <label for="cred-form-desc">Key Impact / Specialization / Score</label>
+            <textarea id="cred-form-desc" class="feedback-textarea" rows="3" placeholder="Briefly describe what this represents, honors received, or practical applications..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label" style="margin-top: 4px;">
+              <input type="checkbox" id="cred-form-highlight" />
+              <span>⭐ Highlight in AI Operator System Prompt &amp; Living Dossier summary</span>
+            </label>
+          </div>
+
+          <div class="feedback-actions">
+            <button type="button" id="btn-delete-credential-modal" class="btn-glass btn-danger hidden">Delete Entry</button>
+            <button type="button" id="btn-save-credential-modal" class="btn-neon">Save Credential 🚀</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Neon Brain Direct Add Item Modal -->
+    <div id="neon-brain-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 520px;">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan);">
+              <span>⚡</span>
+            </div>
+            <div>
+              <h3>Add to Neon Brain Bank</h3>
+              <p class="feedback-subtitle">Store urgent tasks, thought notes, or prompt templates directly into your second brain.</p>
+            </div>
+          </div>
+          <button id="btn-close-nb-modal" class="btn-icon-close" title="Close">✕</button>
+        </div>
+
+        <div class="feedback-form" style="padding: 20px 24px;">
+          <div class="feedback-type-toggle" style="margin-bottom: 14px;">
+            <button type="button" class="type-btn active" id="nb-type-task" data-type="task">
+              <span>⚡ Task</span>
+            </button>
+            <button type="button" class="type-btn" id="nb-type-note" data-type="note">
+              <span>💡 Thought Note</span>
+            </button>
+            <button type="button" class="type-btn" id="nb-type-prompt" data-type="prompt">
+              <span>📝 Prompt</span>
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="nb-input-title" id="nb-label-title">Task Title *</label>
+            <input type="text" id="nb-input-title" class="feedback-input" placeholder="e.g. Audit API rate limits before launch" required />
+          </div>
+
+          <div class="form-group" id="nb-group-priority">
+            <label for="nb-input-priority">Priority</label>
+            <select id="nb-input-priority" class="feedback-select">
+              <option value="urgent">🚨 Urgent (Blocker)</option>
+              <option value="high" selected>⚡ High Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="low">Low (Backlog)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="nb-input-content" id="nb-label-content">Description / Content *</label>
+            <textarea id="nb-input-content" class="feedback-textarea" rows="5" placeholder="Details, next steps, or template prompt..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="nb-input-tags">Tags (comma-separated)</label>
+            <input type="text" id="nb-input-tags" class="feedback-input" placeholder="e.g. launch, engineering, ops" />
+          </div>
+
+          <div class="feedback-actions" style="margin-top: 14px;">
+            <button type="button" id="btn-cancel-nb" class="btn-glass">Cancel</button>
+            <button type="button" id="btn-submit-nb" class="btn-neon">Add to Bank 🚀</button>
           </div>
         </div>
       </div>

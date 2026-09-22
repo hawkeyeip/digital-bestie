@@ -465,3 +465,132 @@ export async function deleteResourceItem(itemId) {
   await updateProfileField('user_profile.identity_and_baseline.burn_rate_weekly', computed.weekly_burn_rate);
   return { success: true, metrics: computed };
 }
+
+/**
+ * Add an item (prompt, note, or task) directly to Neon Brain banks
+ * @param {'prompt' | 'note' | 'task'} itemType
+ * @param {Object} itemData
+ */
+export async function addNeonBrainItem(itemType, itemData) {
+  const state = loadSuperbrainData();
+  if (!state.neon_brain) {
+    state.neon_brain = {
+      connected: true,
+      source_type: 'manual',
+      source_path: 'Manual Entry',
+      last_synced: new Date().toISOString(),
+      metrics: { open_tasks_count: 0, high_priority_tasks_count: 0, notes_count: 0, prompts_count: 0 },
+      tasks: [],
+      notes: [],
+      prompts: []
+    };
+  }
+
+  const id = `nb_${itemType}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  let created = null;
+
+  if (itemType === 'prompt') {
+    created = {
+      id,
+      title: itemData.title?.trim() || 'Untitled Prompt',
+      prompt: itemData.content || itemData.prompt || '',
+      category: itemData.category || 'General',
+      tags: itemData.tags || [],
+      createdAt: new Date().toISOString()
+    };
+    if (!Array.isArray(state.neon_brain.prompts)) state.neon_brain.prompts = [];
+    state.neon_brain.prompts.unshift(created);
+  } else if (itemType === 'note') {
+    created = {
+      id,
+      title: itemData.title?.trim() || 'Untitled Note',
+      content: itemData.content || '',
+      tags: itemData.tags || [],
+      createdAt: new Date().toISOString()
+    };
+    if (!Array.isArray(state.neon_brain.notes)) state.neon_brain.notes = [];
+    state.neon_brain.notes.unshift(created);
+  } else if (itemType === 'task') {
+    created = {
+      id,
+      title: itemData.title?.trim() || 'Untitled Task',
+      description: itemData.description || '',
+      priority: itemData.priority || 'medium', // low | medium | high | urgent
+      completed: false,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    if (!Array.isArray(state.neon_brain.tasks)) state.neon_brain.tasks = [];
+    state.neon_brain.tasks.unshift(created);
+  }
+
+  // Recalculate metrics
+  const openTasks = (state.neon_brain.tasks || []).filter(t => !t.completed && t.status !== 'done');
+  const highPri = openTasks.filter(t => t.priority === 'high' || t.priority === 'urgent');
+
+  state.neon_brain.connected = true;
+  state.neon_brain.last_synced = new Date().toISOString();
+  state.neon_brain.metrics = {
+    open_tasks_count: openTasks.length,
+    high_priority_tasks_count: highPri.length,
+    notes_count: (state.neon_brain.notes || []).length,
+    prompts_count: (state.neon_brain.prompts || []).length
+  };
+
+  saveSuperbrainData(state);
+  return { success: true, item: created, state: state.neon_brain };
+}
+
+/**
+ * Delete an item from Neon Brain
+ */
+export async function deleteNeonBrainItem(itemType, itemId) {
+  const state = loadSuperbrainData();
+  if (!state.neon_brain) return { success: false };
+
+  if (itemType === 'prompt' && Array.isArray(state.neon_brain.prompts)) {
+    state.neon_brain.prompts = state.neon_brain.prompts.filter(p => p.id !== itemId);
+  } else if (itemType === 'note' && Array.isArray(state.neon_brain.notes)) {
+    state.neon_brain.notes = state.neon_brain.notes.filter(n => n.id !== itemId);
+  } else if (itemType === 'task' && Array.isArray(state.neon_brain.tasks)) {
+    state.neon_brain.tasks = state.neon_brain.tasks.filter(t => t.id !== itemId);
+  }
+
+  // Recalculate metrics
+  const openTasks = (state.neon_brain.tasks || []).filter(t => !t.completed && t.status !== 'done');
+  const highPri = openTasks.filter(t => t.priority === 'high' || t.priority === 'urgent');
+
+  state.neon_brain.metrics = {
+    open_tasks_count: openTasks.length,
+    high_priority_tasks_count: highPri.length,
+    notes_count: (state.neon_brain.notes || []).length,
+    prompts_count: (state.neon_brain.prompts || []).length
+  };
+
+  saveSuperbrainData(state);
+  return { success: true, state: state.neon_brain };
+}
+
+/**
+ * Toggle task completion in Neon Brain
+ */
+export async function toggleNeonBrainTask(taskId) {
+  const state = loadSuperbrainData();
+  if (!state.neon_brain || !Array.isArray(state.neon_brain.tasks)) return { success: false };
+
+  const task = state.neon_brain.tasks.find(t => t.id === taskId);
+  if (task) {
+    task.completed = !task.completed;
+    task.status = task.completed ? 'done' : 'pending';
+    task.updatedAt = new Date().toISOString();
+
+    const openTasks = state.neon_brain.tasks.filter(t => !t.completed && t.status !== 'done');
+    const highPri = openTasks.filter(t => t.priority === 'high' || t.priority === 'urgent');
+    state.neon_brain.metrics.open_tasks_count = openTasks.length;
+    state.neon_brain.metrics.high_priority_tasks_count = highPri.length;
+
+    saveSuperbrainData(state);
+    return { success: true, task, state: state.neon_brain };
+  }
+  return { success: false };
+}
