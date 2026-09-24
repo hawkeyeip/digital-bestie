@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('bestie', {
   // --- Ollama ---
   ollama: {
     checkStatus: () => ipcRenderer.invoke('ollama:status'),
+    getHealth: () => ipcRenderer.invoke('ollama:health'),
+    pull: (modelName) => ipcRenderer.invoke('ollama:pull', modelName),
+    restoreModel: (variant) => ipcRenderer.invoke('ollama:restoreModel', variant),
     chat: (message, activeModule = null) => ipcRenderer.invoke('ollama:chat', { message, activeModule }),
     abort: () => ipcRenderer.send('ollama:abort'),
     onToken: (callback) => {

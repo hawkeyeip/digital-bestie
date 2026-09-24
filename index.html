@@ -706,6 +706,62 @@
             <p class="panel-subtitle">Configure your Digital Bestie</p>
           </div>
           <div class="settings-form">
+            <div class="setting-group" id="group-ollama-health">
+              <div class="setting-group-header-flex">
+                <div>
+                  <h3 style="margin-bottom: 2px;">🛡️ Ollama &amp; Model System Health</h3>
+                  <p class="setting-desc" style="margin: 0; font-size: 12px; color: var(--text-muted);">
+                    Self-healing fallback keeps Digital Bestie online even if models are deleted or missing.
+                  </p>
+                </div>
+                <button type="button" id="btn-refresh-health" class="btn-glass btn-sm">↻ Check Health</button>
+              </div>
+
+              <!-- Self-Healing Banner (shown if fallback is engaged) -->
+              <div id="self-healing-banner" class="self-healing-banner hidden">
+                <span class="sh-icon">🛡️</span>
+                <div class="sh-content">
+                  <strong>Self-Healing Active:</strong>
+                  <span id="self-healing-msg">Defaulted to fallback model because original model was missing.</span>
+                </div>
+              </div>
+
+              <div class="health-cards-grid">
+                <!-- Ollama Service -->
+                <div class="health-card" id="health-card-ollama">
+                  <div class="health-card-header">
+                    <span class="health-card-title">Ollama Engine</span>
+                    <span id="health-status-ollama" class="health-badge healthy">Online</span>
+                  </div>
+                  <div class="health-card-desc" id="health-desc-ollama">localhost:11434</div>
+                </div>
+
+                <!-- Bestie Persona Core -->
+                <div class="health-card" id="health-card-persona">
+                  <div class="health-card-header">
+                    <span class="health-card-title">Persona Core (Bestie)</span>
+                    <span id="health-status-persona" class="health-badge healthy">Installed</span>
+                  </div>
+                  <div class="health-card-desc" id="health-desc-persona">bestie-light (14B)</div>
+                  <div class="health-card-actions">
+                    <button type="button" id="btn-restore-persona" class="btn-glass btn-xs hidden">⚡ Recreate Model</button>
+                  </div>
+                </div>
+
+                <!-- Vector Memory Embeddings -->
+                <div class="health-card" id="health-card-embeddings">
+                  <div class="health-card-header">
+                    <span class="health-card-title">Vector Memory (RAG)</span>
+                    <span id="health-status-embeddings" class="health-badge healthy">Installed</span>
+                  </div>
+                  <div class="health-card-desc" id="health-desc-embeddings">nomic-embed-text (274 MB)</div>
+                  <div class="health-card-actions">
+                    <button type="button" id="btn-pull-embeddings" class="btn-glass btn-xs hidden">📥 Download nomic-embed-text</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="setting-group">
               <h3>Ollama Connection</h3>
               <label class="setting-item">
@@ -715,8 +771,8 @@
               <label class="setting-item">
                 <span>Model Name</span>
                 <select id="setting-model-name" class="setting-input">
-                  <option value="bestie-light">bestie-light (14B • Fast & Responsive)</option>
-                  <option value="bestie">bestie (Hermes 3 70B • Deep)</option>
+                  <option value="bestie-light">bestie-light (14B • 🛡️ System Core)</option>
+                  <option value="bestie">bestie (Hermes 3 70B • 🛡️ System Core)</option>
                 </select>
               </label>
               <label class="setting-item">

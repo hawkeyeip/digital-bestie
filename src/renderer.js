@@ -279,7 +279,7 @@ const els = {
   // Titlebar / Header Model Selector
   headerModelSelect: $('#header-model-select'),
 
-  // Settings
+  // Settings & System Health
   settingOllamaUrl: $('#setting-ollama-url'),
   settingModelName: $('#setting-model-name'),
   settingNumCtx: $('#setting-num-ctx'),
@@ -293,6 +293,22 @@ const els = {
   memRss: $('#mem-rss'),
   memSysFree: $('#mem-sys-free'),
   btnSaveSettings: $('#btn-save-settings'),
+
+  // Ollama Health & Self-Healing Elements
+  btnRefreshHealth: $('#btn-refresh-health'),
+  healthCardOllama: $('#health-card-ollama'),
+  healthStatusOllama: $('#health-status-ollama'),
+  healthDescOllama: $('#health-desc-ollama'),
+  healthCardPersona: $('#health-card-persona'),
+  healthStatusPersona: $('#health-status-persona'),
+  healthDescPersona: $('#health-desc-persona'),
+  btnRestorePersona: $('#btn-restore-persona'),
+  healthCardEmbeddings: $('#health-card-embeddings'),
+  healthStatusEmbeddings: $('#health-status-embeddings'),
+  healthDescEmbeddings: $('#health-desc-embeddings'),
+  btnPullEmbeddings: $('#btn-pull-embeddings'),
+  selfHealingBanner: $('#self-healing-banner'),
+  selfHealingMsg: $('#self-healing-msg'),
 
   // Updater
   appVersionBadge: $('#app-version-badge'),
@@ -491,8 +507,19 @@ function updateModelDropdowns(models, activeModel) {
   const optionsHtml = sorted.map(m => {
     const isSelected = m.name === current || m.name.startsWith(`${current}:`);
     const sizeGb = (m.size / (1024 * 1024 * 1024)).toFixed(1);
-    const speedTag = m.size < 12 * 1024 * 1024 * 1024 ? '⚡ Fast' : '🧠 Deep';
-    return `<option value="${m.name}" ${isSelected ? 'selected' : ''}>${m.name} (${sizeGb} GB • ${speedTag})</option>`;
+    
+    // Protected and informative tags
+    let tag = '';
+    if (m.name.startsWith('bestie') || m.name.startsWith('bestie-light')) {
+      tag = '🛡️ System Core';
+    } else if (m.name.includes('nomic-embed-text') || m.name.includes('embed')) {
+      tag = '🛡️ Vector Memory';
+    } else if (m.name.startsWith('qwen2.5')) {
+      tag = '⚡ Recommended';
+    } else {
+      tag = m.size < 12 * 1024 * 1024 * 1024 ? 'Fast' : 'Deep';
+    }
+    return `<option value="${m.name}" ${isSelected ? 'selected' : ''}>${m.name} (${sizeGb} GB • ${tag})</option>`;
   }).join('');
 
   if (els.headerModelSelect) {
@@ -516,12 +543,87 @@ async function checkConnection() {
       : (status.error || 'Disconnected');
 
     if (status.models && status.models.length > 0) {
-      updateModelDropdowns(status.models, state.settings?.model_name || status.activeModel);
+      updateModelDropdowns(status.models, status.activeModel || state.settings?.model_name);
+    }
+
+    // Update Ollama & Model System Health UI in Settings
+    updateHealthStatusUI(status);
+
+    // Self-healing notification & banner
+    if (status.isFallback && status.fallbackReason && state.lastReportedFallback !== status.activeModel) {
+      state.lastReportedFallback = status.activeModel;
+      showToast(`🛡️ Self-Healing Active: Model "${status.targetModel}" not found. Auto-connected using "${status.activeModel}".`);
+      if (els.selfHealingBanner && els.selfHealingMsg) {
+        els.selfHealingBanner.classList.remove('hidden');
+        els.selfHealingMsg.textContent = status.fallbackReason;
+      }
+    } else if (!status.isFallback && els.selfHealingBanner) {
+      els.selfHealingBanner.classList.add('hidden');
     }
   } catch (e) {
     state.isConnected = false;
     els.statusDot.className = 'status-dot disconnected';
     els.statusText.textContent = 'Disconnected';
+  }
+}
+
+function updateHealthStatusUI(status) {
+  if (!status) return;
+  const health = status.systemHealth || {};
+
+  // 1. Ollama Engine
+  if (els.healthStatusOllama) {
+    if (health.ollamaRunning) {
+      els.healthStatusOllama.textContent = 'Online';
+      els.healthStatusOllama.className = 'health-badge healthy';
+      if (els.healthDescOllama) els.healthDescOllama.textContent = `localhost:11434 (${health.totalModels || 0} models loaded)`;
+      els.healthCardOllama?.classList.remove('error');
+    } else {
+      els.healthStatusOllama.textContent = 'Offline';
+      els.healthStatusOllama.className = 'health-badge error';
+      if (els.healthDescOllama) els.healthDescOllama.textContent = 'Ollama service is not responding';
+      els.healthCardOllama?.classList.add('error');
+    }
+  }
+
+  // 2. Persona Core
+  if (els.healthStatusPersona) {
+    if (health.hasBestieCore) {
+      els.healthStatusPersona.textContent = 'Installed';
+      els.healthStatusPersona.className = 'health-badge healthy';
+      if (els.healthDescPersona) els.healthDescPersona.textContent = `${status.activeModel || 'bestie-light'} (Active)`;
+      els.btnRestorePersona?.classList.add('hidden');
+      els.healthCardPersona?.classList.remove('warning', 'error');
+    } else if (health.activeChatModel) {
+      els.healthStatusPersona.textContent = 'Fallback Active';
+      els.healthStatusPersona.className = 'health-badge warning';
+      if (els.healthDescPersona) els.healthDescPersona.textContent = `Using ${health.activeChatModel} (Bestie core missing)`;
+      els.btnRestorePersona?.classList.remove('hidden');
+      els.healthCardPersona?.classList.add('warning');
+    } else {
+      els.healthStatusPersona.textContent = 'Missing';
+      els.healthStatusPersona.className = 'health-badge error';
+      if (els.healthDescPersona) els.healthDescPersona.textContent = 'No persona model installed';
+      els.btnRestorePersona?.classList.remove('hidden');
+      els.healthCardPersona?.classList.add('error');
+    }
+  }
+
+  // 3. Vector Embeddings
+  if (els.healthStatusEmbeddings) {
+    if (health.hasEmbeddingModel) {
+      els.healthStatusEmbeddings.textContent = 'Installed';
+      els.healthStatusEmbeddings.className = 'health-badge healthy';
+      if (els.healthDescEmbeddings) els.healthDescEmbeddings.textContent = 'nomic-embed-text (Ready for RAG)';
+      els.btnPullEmbeddings?.classList.add('hidden');
+      els.healthCardEmbeddings?.classList.remove('warning');
+    } else {
+      els.healthStatusEmbeddings.textContent = 'Missing';
+      els.healthStatusEmbeddings.className = 'health-badge warning';
+      if (els.healthDescEmbeddings) els.healthDescEmbeddings.textContent = 'Vector retrieval offline (nomic-embed-text needed)';
+      els.btnPullEmbeddings?.classList.remove('hidden');
+      els.healthCardEmbeddings?.classList.add('warning');
+    }
   }
 }
 
@@ -828,6 +930,46 @@ function registerEventListeners() {
     if (els.headerModelSelect) els.headerModelSelect.value = settings.model_name;
     showToast('Settings saved 🚀');
     checkConnection();
+  });
+
+  // Ollama Health & Model Restoration Listeners
+  els.btnRefreshHealth?.addEventListener('click', async () => {
+    els.btnRefreshHealth.textContent = 'Checking...';
+    await checkConnection();
+    showToast('Ollama system health verified ✨');
+    els.btnRefreshHealth.textContent = '↻ Check Health';
+  });
+
+  els.btnRestorePersona?.addEventListener('click', async () => {
+    try {
+      els.btnRestorePersona.disabled = true;
+      els.btnRestorePersona.textContent = 'Recreating...';
+      showToast('Rebuilding Bestie model from bundled template... ⏳');
+      await window.bestie.ollama.restoreModel('light');
+      showToast('Successfully restored bestie-light model! ✨');
+      await checkConnection();
+    } catch (err) {
+      showToast(`Failed to restore model: ${err.message}`);
+    } finally {
+      els.btnRestorePersona.disabled = false;
+      els.btnRestorePersona.textContent = '⚡ Recreate Model';
+    }
+  });
+
+  els.btnPullEmbeddings?.addEventListener('click', async () => {
+    try {
+      els.btnPullEmbeddings.disabled = true;
+      els.btnPullEmbeddings.textContent = 'Downloading...';
+      showToast('Pulling nomic-embed-text from Ollama library... ⏳');
+      await window.bestie.ollama.pull('nomic-embed-text');
+      showToast('Successfully installed nomic-embed-text! ✨');
+      await checkConnection();
+    } catch (err) {
+      showToast(`Failed to pull embeddings: ${err.message}`);
+    } finally {
+      els.btnPullEmbeddings.disabled = false;
+      els.btnPullEmbeddings.textContent = '📥 Download nomic-embed-text';
+    }
   });
 
   // Onboarding

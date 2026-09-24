@@ -11,7 +11,7 @@ import { execFile } from 'node:child_process';
 import started from 'electron-squirrel-startup';
 
 // Services (ESM imports — bundled by Vite)
-import { checkOllamaStatus, streamChat } from './services/ollama.js';
+import { checkOllamaStatus, streamChat, pullOllamaModel, createOllamaModel, restoreBestieModel } from './services/ollama.js';
 import {
   loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
   loadConversation, saveConversation, appendMessage, getMessageWindow, clearConversation,
@@ -159,6 +159,19 @@ function registerIPC() {
     return checkOllamaStatus(settings.model_name || 'bestie-light');
   });
 
+  ipcMain.handle('ollama:health', async () => {
+    const settings = loadSettings();
+    return checkOllamaStatus(settings.model_name || 'bestie-light');
+  });
+
+  ipcMain.handle('ollama:pull', async (_event, modelName) => {
+    return pullOllamaModel(modelName);
+  });
+
+  ipcMain.handle('ollama:restoreModel', async (_event, variant) => {
+    return restoreBestieModel(variant);
+  });
+
   ipcMain.handle('ollama:chat', async (event, { message, activeModule }) => {
     // Cancel any in-progress generation
     if (activeAbortController) {
@@ -175,7 +188,10 @@ function registerIPC() {
     // Get windowed message history and model settings
     const settings = loadSettings();
     const messages = getMessageWindow(settings.context_window || 50);
-    const modelToUse = settings.model_name || 'bestie-light';
+
+    // Self-healing model resolution: verify model is present or fallback to active installed alternative
+    const status = await checkOllamaStatus(settings.model_name || 'bestie-light');
+    const modelToUse = status.activeModel || settings.model_name || 'bestie-light';
     const numCtxToUse = settings.power_saver ? Math.min(settings.num_ctx || 4096, 4096) : (settings.num_ctx || 8192);
     const keepAliveToUse = settings.power_saver ? '1m' : (settings.ollama_keep_alive || '5m');
 
