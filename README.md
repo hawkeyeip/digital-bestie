@@ -24,7 +24,11 @@ An autonomous, local-first second-brain desktop application built on **Electron*
 - **Apple Keychain Hardware Encryption (`safeStorage`) (v2.0)**: Hardware-backed data-at-rest encryption protecting user profiles, chat vaults, and financial assets at rest with strict POSIX `0700`/`0600` file permissions.
 - **Hardened Electron Security (v2.0)**: Chromium sandbox enforcement, strict Content Security Policy (CSP), link protocol sanitization (XSS defense), and safe external navigation handling.
 - **Superbrain Hub & Resource Tracker**: Track SaaS subscriptions, physical hardware assets, and travel credits with real-time runway/burn-rate calculations synced into your Living Dossier.
-- **Calibration Lab**: Deepen psychological profiles, review mental models, and calibrate tone/execution preferences interactively.
+- **20 Core Operational Personas & In-Chat Switcher (v2.1)**: 20 specialized personas across 5 categories with mid-chat switcher (`⌘P`), 60 curated one-click starter prompts, and zero context loss.
+- **Native Electron Auto-Updater (v2.1)**: In-app GitHub release notifications, update banner, and seamless private/public repository asset downloads.
+- **Memory Calibration Lab Overhaul & A La Carte Answering (v2.2)**: Scrollable container architecture, jump-to-question navigation bar, targeted single-question 1-on-1 interviews, quick-saving (`⌘+Enter`), and dynamic status badges (`✓ Calibrated` / `○ Needs Calibration`).
+- **Ollama Self-Healing Fallback & System Health Diagnostics (v2.2)**: Automatic graceful fallback when configured models are absent, real-time Ollama connectivity diagnostics in Settings, bundled canonical Modelfile templates, and 1-click model pull and recreation.
+- **Hawkeye Intelligence Agentic Stack (v2.2)**: FastMCP browser automation, SQLite episodic memory, Qdrant semantic vector memory, and n8n orchestration.
 - **Markdown Streaming & Code Highlighting**: Real-time response streaming with formatted code blocks, tables, lists, and quotes.
 - **Data Export & Import**: Easy single-click JSON backup and restore for your entire profile and conversation history.
 
