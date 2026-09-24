@@ -93,3 +93,8 @@ out/
 
 # Gemini / IDE
 .gemini/
+
+# Private Operator Guides & Local Secrets (Never commit or push to remote)
+*.private.md
+OPERATOR_GUIDE_PRIVATE.md
+private/
