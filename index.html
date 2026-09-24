@@ -490,8 +490,10 @@
                 <h2 class="panel-title">🧪 Memory Calibration Lab</h2>
                 <p class="panel-subtitle">Deepen Bestie's understanding of your psychology, blind spots, financial runway, and boundaries through guided drills or an interactive 1-on-1 interview</p>
               </div>
-              <div class="header-action-group">
-                <button id="btn-switch-to-dossier" class="btn-glass">📋 View Living Dossier</button>
+              <div class="memory-tab-switch">
+                <button id="tab-calib-dossier" class="memory-tab-btn">📋 Living Dossier</button>
+                <button id="tab-calib-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
+                <button id="tab-calib-lab" class="memory-tab-btn active">🧪 Calibration Lab</button>
               </div>
             </div>
           </div>
@@ -499,29 +501,40 @@
           <div class="calibration-container">
             <!-- Category Filter Pills -->
             <div class="calibration-categories" id="calibration-categories">
+              <button class="cal-cat-pill" data-category="all" title="View and scroll all 17 calibration questions a la carte">
+                <span class="cat-emoji">⚡</span>
+                <span class="cat-label">All Questions (A La Carte)</span>
+                <span class="cal-cat-count" id="cal-count-all">0/17</span>
+              </button>
               <button class="cal-cat-pill active" data-category="intentions">
                 <span class="cat-emoji">🎯</span>
                 <span class="cat-label">90-Day North Star</span>
+                <span class="cal-cat-count" id="cal-count-intentions">0/3</span>
               </button>
               <button class="cal-cat-pill" data-category="triggers">
                 <span class="cat-emoji">⚡</span>
                 <span class="cat-label">Avoidance &amp; Freeze</span>
+                <span class="cal-cat-count" id="cal-count-triggers">0/3</span>
               </button>
               <button class="cal-cat-pill" data-category="financials">
                 <span class="cat-emoji">💰</span>
                 <span class="cat-label">Runway &amp; Capital Floors</span>
+                <span class="cal-cat-count" id="cal-count-financials">0/4</span>
               </button>
               <button class="cal-cat-pill" data-category="boundaries">
                 <span class="cat-emoji">🛡️</span>
                 <span class="cat-label">Red Flags &amp; Boundaries</span>
+                <span class="cal-cat-count" id="cal-count-boundaries">0/2</span>
               </button>
               <button class="cal-cat-pill" data-category="ventures">
                 <span class="cat-emoji">🚀</span>
                 <span class="cat-label">Ventures &amp; Superpowers</span>
+                <span class="cal-cat-count" id="cal-count-ventures">0/3</span>
               </button>
               <button class="cal-cat-pill" data-category="tone">
                 <span class="cat-emoji">🎙️</span>
                 <span class="cat-label">Tone &amp; Accountability</span>
+                <span class="cal-cat-count" id="cal-count-tone">0/2</span>
               </button>
             </div>
 

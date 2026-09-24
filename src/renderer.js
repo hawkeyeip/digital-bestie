@@ -264,6 +264,9 @@ const els = {
   memoryContent: $('#memory-content'),
   tabMemoryDossier: $('#tab-memory-dossier'),
   tabMemoryCalibration: $('#tab-memory-calibration'),
+  tabCalibDossier: $('#tab-calib-dossier'),
+  tabCalibCredentials: $('#tab-calib-credentials'),
+  tabCalibCalibration: $('#tab-calib-lab'),
   btnOpenCalibrationFromMemory: $('#btn-open-calibration-from-memory'),
   btnSwitchToDossier: $('#btn-switch-to-dossier'),
   calibrationCategories: $('#calibration-categories'),
@@ -876,6 +879,9 @@ function registerEventListeners() {
   // --- Calibration Lab & Dossier Deepening ---
   els.tabMemoryDossier?.addEventListener('click', () => switchView('memory'));
   els.tabMemoryCalibration?.addEventListener('click', () => switchView('calibration'));
+  els.tabCalibDossier?.addEventListener('click', () => switchView('memory'));
+  els.tabCalibCredentials?.addEventListener('click', () => switchView('credentials'));
+  els.tabCalibCalibration?.addEventListener('click', () => switchView('calibration'));
   els.btnOpenCalibrationFromMemory?.addEventListener('click', () => switchView('calibration'));
   els.btnSwitchToDossier?.addEventListener('click', () => switchView('memory'));
 
@@ -2275,12 +2281,53 @@ function openInlineFieldEdit(fieldEl) {
 // CALIBRATION LAB (DEEPENING HUB)
 // ============================================================
 
+function getCalibrationStats(profile) {
+  let totalCount = 0;
+  let totalAnswered = 0;
+  const packStats = {};
+
+  Object.entries(CALIBRATION_PACKS).forEach(([key, pack]) => {
+    let packAnswered = 0;
+    pack.questions.forEach(q => {
+      totalCount++;
+      const val = getDossierValue(profile, q.path);
+      const isAnswered = Array.isArray(val) ? val.length > 0 : (val != null && String(val).trim() !== '');
+      if (isAnswered) {
+        packAnswered++;
+        totalAnswered++;
+      }
+    });
+    packStats[key] = {
+      answered: packAnswered,
+      total: pack.questions.length,
+      isComplete: packAnswered === pack.questions.length
+    };
+  });
+
+  return { totalCount, totalAnswered, packStats };
+}
+
 async function refreshCalibrationView() {
   state.profile = await window.bestie.memory.getProfile();
   const activeCat = state.calibrationCategory || 'intentions';
   
-  // Highlight active pill
+  const stats = getCalibrationStats(state.profile);
+
+  // Update category pill badges and active status
   if (els.calibrationCategories) {
+    const allCountEl = $('#cal-count-all', els.calibrationCategories);
+    if (allCountEl) {
+      allCountEl.textContent = `${stats.totalAnswered}/${stats.totalCount}`;
+      allCountEl.classList.toggle('all-calibrated', stats.totalAnswered === stats.totalCount);
+    }
+    Object.entries(stats.packStats).forEach(([key, pStat]) => {
+      const el = $(`#cal-count-${key}`, els.calibrationCategories);
+      if (el) {
+        el.textContent = `${pStat.answered}/${pStat.total}`;
+        el.classList.toggle('all-calibrated', pStat.isComplete);
+      }
+    });
+
     $$('.cal-cat-pill', els.calibrationCategories).forEach(pill => {
       pill.classList.toggle('active', pill.dataset.category === activeCat);
     });
@@ -2289,101 +2336,318 @@ async function refreshCalibrationView() {
   renderActiveCalibrationCategory(activeCat);
 }
 
-function renderActiveCalibrationCategory(catKey) {
-  const pack = CALIBRATION_PACKS[catKey];
-  if (!pack || !els.calibrationActiveCard) return;
+function renderCalibrationQuestionCard(q, idx, profile, catKey) {
+  const existingVal = getDossierValue(profile, q.path);
+  const isAnswered = Array.isArray(existingVal) ? existingVal.length > 0 : (existingVal != null && String(existingVal).trim() !== '');
+  const displayVal = Array.isArray(existingVal)
+    ? (existingVal.length ? existingVal.join(', ') : '')
+    : (existingVal != null ? String(existingVal) : '');
 
-  const profile = state.profile;
+  const statusBadge = isAnswered
+    ? `<span class="cal-q-status-badge calibrated">✓ Calibrated</span>`
+    : `<span class="cal-q-status-badge pending">○ Needs Calibration</span>`;
 
-  const questionsHtml = pack.questions.map((q, idx) => {
-    const existingVal = getDossierValue(profile, q.path);
-    const displayVal = Array.isArray(existingVal)
-      ? (existingVal.length ? existingVal.join(', ') : '')
-      : (existingVal != null ? String(existingVal) : '');
-
-    return `
-      <div class="cal-q-card" data-q-path="${q.path}" data-q-type="${q.type}">
-        <div class="cal-q-header">
-          <h4 class="cal-q-title">${idx + 1}. ${q.title}</h4>
+  return `
+    <div class="cal-q-card" data-q-path="${q.path}" data-q-type="${q.type}" data-cat-key="${catKey}">
+      <div class="cal-q-header">
+        <h4 class="cal-q-title">${idx + 1}. ${escapeHtml(q.title)}</h4>
+        <div class="cal-q-header-right">
+          ${statusBadge}
           <span class="cal-q-tag">${q.type.toUpperCase()}</span>
         </div>
-        <div class="cal-q-desc">${q.desc}</div>
-        <div class="cal-q-examples">💡 Example: ${q.examples}</div>
-        ${displayVal ? `<div class="cal-q-current">Currently in memory: <strong>${escapeHtml(displayVal)}</strong></div>` : ''}
-        <textarea class="cal-q-textarea" placeholder="Type your answer, reflections, or guidelines here...">${escapeHtml(displayVal)}</textarea>
-        <div class="cal-q-actions">
+      </div>
+      <div class="cal-q-desc">${escapeHtml(q.desc)}</div>
+      <div class="cal-q-examples">💡 Example: ${escapeHtml(q.examples)}</div>
+      ${displayVal ? `<div class="cal-q-current">Currently in memory: <strong>${escapeHtml(displayVal)}</strong></div>` : ''}
+      <textarea class="cal-q-textarea" placeholder="Type your answer, reflections, or guidelines here...">${escapeHtml(displayVal)}</textarea>
+      <div class="cal-q-actions">
+        <div class="cal-q-actions-left">
           <span class="cal-q-status"></span>
+        </div>
+        <div class="cal-q-actions-right">
+          <span class="cal-q-shortcut-hint">⌘+Enter to save</span>
+          <button class="cal-q-ask-btn" title="Ask Digital Bestie to help answer or calibrate just this specific question in chat">
+            <span>🎙️</span>
+            <span>Ask Bestie in Chat</span>
+          </button>
           <button class="cal-q-save-btn">Save to Dossier</button>
         </div>
       </div>
-    `;
-  }).join('');
-
-  els.calibrationActiveCard.innerHTML = `
-    <div class="cal-hero-card">
-      <div class="cal-hero-info">
-        <div class="cal-hero-title">
-          <span>${pack.emoji} ${pack.title}</span>
-          <span class="cal-hero-badge">${pack.badge}</span>
-        </div>
-        <p class="cal-hero-desc">${pack.description}</p>
-      </div>
-      <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
-        <span>🎙️</span>
-        <span>Start 1-on-1 Interview in Chat</span>
-      </button>
-    </div>
-
-    <div class="cal-questions-list">
-      ${questionsHtml}
     </div>
   `;
+}
 
-  // Attach question save handlers
-  $$('.cal-q-card', els.calibrationActiveCard).forEach(card => {
-    const saveBtn = card.querySelector('.cal-q-save-btn');
-    const textarea = card.querySelector('.cal-q-textarea');
-    const statusSpan = card.querySelector('.cal-q-status');
-    const path = card.dataset.qPath;
-    const type = card.dataset.qType;
+function renderActiveCalibrationCategory(catKey) {
+  if (!els.calibrationActiveCard) return;
+  const profile = state.profile;
 
-    saveBtn.addEventListener('click', async () => {
-      const raw = textarea.value.trim();
-      let value = raw;
-      if (type === 'number') {
-        value = raw === '' ? null : Number(raw.replace(/[^0-9.-]+/g, ''));
-      } else if (type === 'array') {
-        value = raw === '' ? [] : raw.split(',').map(s => s.trim()).filter(Boolean);
-      }
+  if (catKey === 'all') {
+    // Render All Questions across every pack sequentially
+    const packsHtml = Object.entries(CALIBRATION_PACKS).map(([key, pack]) => {
+      const qCards = pack.questions.map((q, idx) => renderCalibrationQuestionCard(q, idx, profile, key)).join('');
+      return `
+        <div class="cal-all-section" data-cat-section="${key}">
+          <div class="cal-all-section-header">
+            <div class="cal-all-section-title">
+              <span>${pack.emoji}</span>
+              <span>${pack.title}</span>
+              <span class="cal-hero-badge">${pack.badge}</span>
+            </div>
+            <button class="cal-all-section-btn btn-launch-pack-interview" data-pack-key="${key}" title="Start 1-on-1 interview for this category">
+              <span>🎙️ Interview this Pack</span>
+            </button>
+          </div>
+          <div class="cal-questions-list">
+            ${qCards}
+          </div>
+        </div>
+      `;
+    }).join('');
 
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
+    const jumpChips = Object.entries(CALIBRATION_PACKS).map(([key, pack]) => {
+      return `<button class="cal-jump-chip" data-jump-cat="${key}"><span>${pack.emoji}</span> <span>${pack.title.split('&')[0].trim()}</span></button>`;
+    }).join('');
 
-      await window.bestie.memory.updateField(path, value);
-      state.profile = await window.bestie.memory.getProfile();
+    els.calibrationActiveCard.innerHTML = `
+      <div class="cal-hero-card">
+        <div class="cal-hero-top">
+          <div class="cal-hero-info">
+            <div class="cal-hero-title">
+              <span>⚡ All Questions (A La Carte Hub)</span>
+              <span class="cal-hero-badge">Full Living Dossier Matrix</span>
+            </div>
+            <p class="cal-hero-desc">Browse, scroll, and calibrate all 17 questions across every domain directly. Edit any field below for instant updates, or launch an interactive 1-on-1 interview whenever you want guidance.</p>
+          </div>
+          <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
+            <span>🎙️</span>
+            <span>Start 1-on-1 Interview in Chat</span>
+          </button>
+        </div>
+        <div class="cal-hero-modes">
+          <div class="cal-hero-mode-pill">
+            <span class="cal-hero-mode-icon">⚡</span>
+            <div>
+              <div class="cal-hero-mode-title">A La Carte Fast Edit</div>
+              <div class="cal-hero-mode-text">Type in any question box below and press <strong>⌘+Enter</strong> or click "Save to Dossier".</div>
+            </div>
+          </div>
+          <div class="cal-hero-mode-pill">
+            <span class="cal-hero-mode-icon">🎙️</span>
+            <div>
+              <div class="cal-hero-mode-title">Targeted Chat Consultations</div>
+              <div class="cal-hero-mode-text">Click "Ask Bestie in Chat" on any single question or start a full interview.</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      statusSpan.textContent = '✓ Saved to Living Dossier';
-      statusSpan.className = 'cal-q-status saved';
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Saved!';
-      showToast(`Updated Living Dossier ✨`);
+      <div class="cal-jump-bar">
+        <span class="cal-jump-label">Jump to Section:</span>
+        <div class="cal-jump-chips">
+          ${jumpChips}
+        </div>
+      </div>
 
-      setTimeout(() => {
-        saveBtn.textContent = 'Save to Dossier';
-        statusSpan.textContent = '';
-      }, 2500);
+      <div class="cal-all-sections-wrapper">
+        ${packsHtml}
+      </div>
+    `;
+
+    // Jump handlers
+    $$('.cal-jump-chip', els.calibrationActiveCard).forEach(chip => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.jumpCat;
+        const section = els.calibrationActiveCard.querySelector(`[data-cat-section="${cat}"]`);
+        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
+
+    // Per-pack interview buttons
+    $$('.btn-launch-pack-interview', els.calibrationActiveCard).forEach(btn => {
+      btn.addEventListener('click', () => {
+        const packKey = btn.dataset.packKey;
+        startCalibrationInterview(packKey);
+      });
+    });
+
+  } else {
+    // Render specific category
+    const pack = CALIBRATION_PACKS[catKey] || CALIBRATION_PACKS.intentions;
+    if (!pack) return;
+
+    const questionsHtml = pack.questions.map((q, idx) => renderCalibrationQuestionCard(q, idx, profile, catKey)).join('');
+
+    const jumpChips = pack.questions.map((q, idx) => {
+      const existingVal = getDossierValue(profile, q.path);
+      const isAnswered = Array.isArray(existingVal) ? existingVal.length > 0 : (existingVal != null && String(existingVal).trim() !== '');
+      return `
+        <button class="cal-jump-chip ${isAnswered ? 'calibrated' : 'uncalibrated'}" data-jump-path="${q.path}">
+          <span>${isAnswered ? '✓' : '○'}</span>
+          <span>Q${idx + 1}: ${escapeHtml(q.title)}</span>
+        </button>
+      `;
+    }).join('');
+
+    els.calibrationActiveCard.innerHTML = `
+      <div class="cal-hero-card">
+        <div class="cal-hero-top">
+          <div class="cal-hero-info">
+            <div class="cal-hero-title">
+              <span>${pack.emoji} ${pack.title}</span>
+              <span class="cal-hero-badge">${pack.badge}</span>
+            </div>
+            <p class="cal-hero-desc">${pack.description}</p>
+          </div>
+          <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
+            <span>🎙️</span>
+            <span>Start 1-on-1 Interview in Chat</span>
+          </button>
+        </div>
+        <div class="cal-hero-modes">
+          <div class="cal-hero-mode-pill">
+            <span class="cal-hero-mode-icon">⚡</span>
+            <div>
+              <div class="cal-hero-mode-title">A La Carte Fast Edit</div>
+              <div class="cal-hero-mode-text">Complete any question below on your own time. Press <strong>⌘+Enter</strong> to save.</div>
+            </div>
+          </div>
+          <div class="cal-hero-mode-pill">
+            <span class="cal-hero-mode-icon">🎙️</span>
+            <div>
+              <div class="cal-hero-mode-title">Interactive 1-on-1 Interview</div>
+              <div class="cal-hero-mode-text">Click the interview button to have Bestie question, challenge, and calibrate you in chat.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cal-jump-bar">
+        <span class="cal-jump-label">Jump to Question:</span>
+        <div class="cal-jump-chips">
+          ${jumpChips}
+        </div>
+      </div>
+
+      <div class="cal-questions-list">
+        ${questionsHtml}
+      </div>
+    `;
+
+    // Jump handlers
+    $$('.cal-jump-chip', els.calibrationActiveCard).forEach(chip => {
+      chip.addEventListener('click', () => {
+        const path = chip.dataset.jumpPath;
+        const card = els.calibrationActiveCard.querySelector(`[data-q-path="${path}"]`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.querySelector('.cal-q-textarea')?.focus();
+        }
+      });
+    });
+  }
+
+  // Attach card action handlers (Save, Cmd+Enter, Ask Bestie)
+  $$('.cal-q-card', els.calibrationActiveCard).forEach(card => {
+    bindCalibrationCardActions(card);
   });
 
-  // Attach interview launcher
+  // Attach top interview launcher
   const interviewBtn = $('#btn-launch-interview', els.calibrationActiveCard);
   interviewBtn?.addEventListener('click', () => {
-    startCalibrationInterview(catKey);
+    startCalibrationInterview(catKey === 'all' ? 'intentions' : catKey);
   });
 }
 
+function bindCalibrationCardActions(card) {
+  const saveBtn = card.querySelector('.cal-q-save-btn');
+  const textarea = card.querySelector('.cal-q-textarea');
+  const statusSpan = card.querySelector('.cal-q-status');
+  const askBtn = card.querySelector('.cal-q-ask-btn');
+  const path = card.dataset.qPath;
+  const type = card.dataset.qType;
+  const catKey = card.dataset.catKey;
+
+  const saveAction = async () => {
+    const raw = textarea.value.trim();
+    let value = raw;
+    if (type === 'number') {
+      value = raw === '' ? null : Number(raw.replace(/[^0-9.-]+/g, ''));
+    } else if (type === 'array') {
+      value = raw === '' ? [] : raw.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    await window.bestie.memory.updateField(path, value);
+    state.profile = await window.bestie.memory.getProfile();
+
+    statusSpan.textContent = '✓ Saved to Living Dossier';
+    statusSpan.className = 'cal-q-status saved';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Saved!';
+    showToast(`Updated Living Dossier ✨`);
+
+    // Dynamically update status badge on card
+    const headerRight = card.querySelector('.cal-q-header-right');
+    if (headerRight) {
+      const isNowAnswered = Array.isArray(value) ? value.length > 0 : (value != null && String(value).trim() !== '');
+      const badge = headerRight.querySelector('.cal-q-status-badge');
+      if (badge) {
+        badge.className = `cal-q-status-badge ${isNowAnswered ? 'calibrated' : 'pending'}`;
+        badge.textContent = isNowAnswered ? '✓ Calibrated' : '○ Needs Calibration';
+      }
+    }
+
+    // Refresh count badges on category pills
+    const stats = getCalibrationStats(state.profile);
+    const allCountEl = $('#cal-count-all', els.calibrationCategories);
+    if (allCountEl) {
+      allCountEl.textContent = `${stats.totalAnswered}/${stats.totalCount}`;
+      allCountEl.classList.toggle('all-calibrated', stats.totalAnswered === stats.totalCount);
+    }
+    Object.entries(stats.packStats).forEach(([key, pStat]) => {
+      const el = $(`#cal-count-${key}`, els.calibrationCategories);
+      if (el) {
+        el.textContent = `${pStat.answered}/${pStat.total}`;
+        el.classList.toggle('all-calibrated', pStat.isComplete);
+      }
+    });
+
+    setTimeout(() => {
+      saveBtn.textContent = 'Save to Dossier';
+      statusSpan.textContent = '';
+    }, 2500);
+  };
+
+  saveBtn?.addEventListener('click', saveAction);
+
+  // Keyboard shortcut: Cmd+Enter or Ctrl+Enter to save immediately
+  textarea?.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      saveAction();
+    }
+  });
+
+  // Ask Bestie targeted question
+  askBtn?.addEventListener('click', () => {
+    const qTitle = card.querySelector('.cal-q-title')?.textContent?.replace(/^[0-9]+\.\s*/, '') || path;
+    const qDesc = card.querySelector('.cal-q-desc')?.textContent || '';
+    startSingleQuestionInterview(qTitle, qDesc, path);
+  });
+}
+
+async function startSingleQuestionInterview(title, desc, path) {
+  activateModule('dossier-interviewer');
+  switchView('chat');
+  const promptText = `Let's do a targeted calibration on one specific topic: "${title}".\nContext: ${desc}\nHelp me think through this, challenge my assumptions, and format it for my Living Dossier.`;
+  els.chatInput.value = promptText;
+  sendMessage();
+}
+
 async function startCalibrationInterview(catKey) {
-  const pack = CALIBRATION_PACKS[catKey];
+  const pack = CALIBRATION_PACKS[catKey] || CALIBRATION_PACKS.intentions;
   if (!pack) return;
 
   // Activate the dossier-interviewer module
