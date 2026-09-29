@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-09-29
+
+### Added
+- **Multi-Provider Memory Import Hub**:
+  - Direct 1-click memory extraction prompt generator for Claude, ChatGPT, Venice AI, Superbrain, and custom LLM providers.
+  - Interactive memory staging area with categorization (Identity, Cognitive, Goals, Sanity Scout, Ventures, Methods).
+  - Individual approve/dismiss toggles and batch consolidation into the Living Dossier (`user_profile`).
+- **Model Alteration Warning Interceptor**:
+  - Modal alert (`#model-warning-modal`) intercepting model alterations in titlebar and settings.
+  - Clear alerts on potential performance impact, persona alignment, and moralizing refusal risks.
+  - Custom model tag support (`__custom__`) to enter any local Ollama registry tag.
+- **Base Model Infusion Engine**:
+  - 1-click Modelfile compilation tool in Settings to forge any local base model into the `bestie` architecture.
+  - Automatically bakes in 16k context window (`num_ctx 16384`), optimal temperature/repetition parameters, and core anti-moralizing tenets.
+- **Curated Uncensored Model Foundation & Version Upgrade Telemetry**:
+  - Curated model catalog (`src/services/model-registry.js`) featuring vetted uncensored and high-logic models: Nous Hermes 3 (8B & 70B), Cognitive Computations Dolphin 2.9 (8B), and Qwen 2.5 Coder (32B & 14B).
+  - Automated upgrade detection engine that alerts users when running degraded abliterated models and provides a 1-click upgrade and re-infusion path.
+  - In-app notification banner (`#model-upgrade-banner`) and visual catalog browser in Settings.
+
+### Changed
+- Decoupled Living Dossier memory ingestion from static model weights: runtime prompt injection dynamically wraps any selected or upgraded base model with 100% of user memory and personas with zero data migration.
+- Updated self-healing model resolution cascade to prioritize curated uncensored and coder models.
+- Updated application versioning to 2.3.0 across package configuration, UI headers, and updater telemetry.
+
+---
+
 ## [2.2.0] - 2026-09-24
 
 ### Added
