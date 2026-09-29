@@ -432,5 +432,26 @@ export const MODULES_METADATA = {
       'Role-play a tough prospect pushing back on my price. Test my responses.',
       'Build me a 1-page negotiation cheat sheet with anchor, concession trade-offs, and closing line.'
     ]
+  },
+  'dossier-interviewer': {
+    name: 'Dossier Calibration Lab',
+    badge: 'Memory Deepening',
+    category: 'strategy',
+    color: '#a855f7',
+    icon: '🎙️',
+    purpose: 'Deeply calibrate intentions, boundaries, financials, and second-brain memory one pathway at a time.',
+    whenToUse: 'When calibrating your Living Dossier, refining 90-day goals, or establishing crisp boundaries.',
+    keywords: ['calibration', 'interview', 'dossier', 'memory', 'goals', 'boundaries', 'anti-goals', 'stressors'],
+    whatItDoes: [
+      'Focuses strictly on one topic at a time without cognitive overload',
+      'Asks penetrating clarifying and supplementary questions to drill into ground truth',
+      'Automatically commits concrete boundaries and goals into your Living Dossier'
+    ],
+    examplePrompt: 'Let us calibrate my 90-Day North Star and immediate relief goals one topic at a time.',
+    starterPrompts: [
+      'Let us calibrate my 90-Day North Star and immediate relief goals one topic at a time.',
+      'Help me map my acute avoidance triggers and escape traps without overwhelming me.',
+      'Audit and calibrate my non-negotiable rate floor and emergency cash reserve.'
+    ]
   }
 };

@@ -8,10 +8,11 @@ setGlobalDispatcher(new Agent({
   keepAliveTimeout: 60000,
 }));
 
-import { getBundledModelfile } from './modelfile-templates.js';
+import { getBundledModelfile, generateModelfileForBaseModel } from './modelfile-templates.js';
+import { checkForModelUpdates, getCuratedCatalog } from './model-registry.js';
 
 export const OLLAMA_BASE_URL = 'http://localhost:11434';
-export const MODEL_NAME = 'bestie-light';
+export const MODEL_NAME = 'bestie-abliterated';
 
 /**
  * Intelligent self-healing model resolver.
@@ -35,17 +36,26 @@ export function resolveBestAvailableModel(requestedModel, modelsList = []) {
     return { model: null, isFallback: false, reason: 'Only embedding models detected; no generative chat LLM installed.' };
   }
 
-  // 3. Digital Bestie priority fallback cascade
+  // 3. Digital Bestie priority fallback cascade (Curated Uncensored & High-Logic Cores prioritized)
   const priorities = [
-    'bestie-light',
     'bestie',
-    'qwen2.5:14b',
-    'qwen2.5:32b',
+    'hermes3:70b',
+    'hermes3:8b',
+    'hermes3',
+    'dolphin-llama3:8b',
+    'dolphin-llama3',
+    'qwen2.5-coder:32b-instruct-q6_K',
+    'qwen2.5-coder:32b',
+    'qwen2.5-coder:14b',
     'qwen2.5-coder',
+    'bestie-abliterated',
+    'huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K',
+    'huihui_ai/qwen3.5-abliterated:27b-q4_K',
+    'bestie-light',
+    'qwen2.5:32b',
+    'qwen2.5:14b',
     'qwen2.5:7b',
     'qwen2.5',
-    'hermes3:70b',
-    'hermes3',
     'llama3',
     'mistral'
   ];
@@ -104,7 +114,10 @@ export async function checkOllamaStatus(targetModel = MODEL_NAME) {
 
     const resolution = resolveBestAvailableModel(targetModel, modelsList);
     const hasEmbeddingModel = modelsList.some(m => m.name.includes('nomic-embed-text') || m.name.includes('embed'));
-    const hasBestieCore = modelsList.some(m => m.name.startsWith('bestie') || m.name.startsWith('bestie-light'));
+    const hasBestieCore = modelsList.some(m => m.name.startsWith('bestie') || m.name.includes('abliterated'));
+
+    const activeResolved = resolution.model ? resolution.model.name : targetModel;
+    const modelUpdates = checkForModelUpdates(modelsList, activeResolved);
 
     if (resolution.model) {
       return {
@@ -116,6 +129,7 @@ export async function checkOllamaStatus(targetModel = MODEL_NAME) {
         isFallback: resolution.isFallback,
         fallbackReason: resolution.fallbackReason || null,
         modelDetails: resolution.model.details || null,
+        modelUpdates,
         systemHealth: {
           ollamaRunning: true,
           activeChatModel: resolution.model.name,
@@ -133,6 +147,7 @@ export async function checkOllamaStatus(targetModel = MODEL_NAME) {
       activeModel: targetModel,
       modelAvailable: false,
       isFallback: false,
+      modelUpdates,
       systemHealth: {
         ollamaRunning: true,
         activeChatModel: null,
@@ -193,10 +208,24 @@ export async function createOllamaModel(modelName, modelfileContent) {
 /**
  * Recreate the canonical Digital Bestie persona model using bundled templates
  */
-export async function restoreBestieModel(variant = 'light') {
-  const modelName = variant === 'hermes' || variant === '70b' || variant === 'bestie' ? 'bestie' : 'bestie-light';
+export async function restoreBestieModel(variant = 'abliterated') {
+  let modelName = 'bestie-abliterated';
+  if (variant === 'light' || variant === '14b') {
+    modelName = 'bestie-light';
+  } else if (variant === 'hermes' || variant === '70b' || variant === 'bestie') {
+    modelName = 'bestie';
+  }
   const template = getBundledModelfile(variant);
   return await createOllamaModel(modelName, template);
+}
+
+/**
+ * Infuse any user-selected base model with Digital Bestie's soul, operating tenets,
+ * and calibrated context window parameters to forge a new dedicated Bestie core.
+ */
+export async function infuseBaseModel(baseModel, targetName = 'bestie', options = {}) {
+  const modelfileContent = generateModelfileForBaseModel(baseModel, options);
+  return await createOllamaModel(targetName, modelfileContent);
 }
 
 /**
@@ -229,10 +258,10 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
         stream: true,
         keep_alive: keep_alive !== undefined ? keep_alive : '5m',
         options: {
-          temperature: 0.7,
-          top_p: 0.9,
-          repeat_penalty: 1.1,
-          num_ctx: 8192,
+          temperature: 0.8,
+          top_p: 0.95,
+          repeat_penalty: 1.08,
+          num_ctx: 16384,
           ...ollamaOptions
         }
       }),
@@ -299,4 +328,27 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
       onError(err);
     }
   }
+}
+
+/**
+ * Retrieve curated model catalog annotated with local installation state
+ */
+export async function getCuratedCatalogWithStatus(targetModel = MODEL_NAME) {
+  const status = await checkOllamaStatus(targetModel);
+  return getCuratedCatalog(status.models, status.activeModel || targetModel);
+}
+
+/**
+ * High-level model upgrade pipeline:
+ * 1. Pulls the model via Ollama if not already installed.
+ * 2. Automatically infuses it into the 'bestie' core.
+ */
+export async function upgradeAndInfuseModel(targetTag, onProgress = null) {
+  if (onProgress) onProgress({ status: 'pulling', model: targetTag });
+  await pullOllamaModel(targetTag);
+
+  if (onProgress) onProgress({ status: 'infusing', model: targetTag });
+  const infuseRes = await infuseBaseModel(targetTag, 'bestie');
+
+  return { success: true, model: targetTag, infuseResult: infuseRes };
 }

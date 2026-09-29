@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('bestie', {
     getHealth: () => ipcRenderer.invoke('ollama:health'),
     pull: (modelName) => ipcRenderer.invoke('ollama:pull', modelName),
     restoreModel: (variant) => ipcRenderer.invoke('ollama:restoreModel', variant),
+    infuseModel: (payload) => ipcRenderer.invoke('ollama:infuseModel', payload),
+    getCatalog: () => ipcRenderer.invoke('ollama:getCatalog'),
+    upgradeModel: (targetTag) => ipcRenderer.invoke('ollama:upgradeModel', targetTag),
     chat: (message, activeModule = null) => ipcRenderer.invoke('ollama:chat', { message, activeModule }),
     abort: () => ipcRenderer.send('ollama:abort'),
     onToken: (callback) => {

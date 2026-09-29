@@ -11,7 +11,16 @@ import { execFile } from 'node:child_process';
 import started from 'electron-squirrel-startup';
 
 // Services (ESM imports — bundled by Vite)
-import { checkOllamaStatus, streamChat, pullOllamaModel, createOllamaModel, restoreBestieModel } from './services/ollama.js';
+import {
+  checkOllamaStatus,
+  streamChat,
+  pullOllamaModel,
+  createOllamaModel,
+  restoreBestieModel,
+  infuseBaseModel,
+  getCuratedCatalogWithStatus,
+  upgradeAndInfuseModel
+} from './services/ollama.js';
 import {
   loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
   loadConversation, saveConversation, appendMessage, getMessageWindow, clearConversation,
@@ -170,6 +179,27 @@ function registerIPC() {
 
   ipcMain.handle('ollama:restoreModel', async (_event, variant) => {
     return restoreBestieModel(variant);
+  });
+
+  ipcMain.handle('ollama:infuseModel', async (_event, { baseModel, targetName, options }) => {
+    return infuseBaseModel(baseModel, targetName, options);
+  });
+
+  ipcMain.handle('ollama:getCatalog', async () => {
+    const settings = loadSettings();
+    return getCuratedCatalogWithStatus(settings.model_name || 'bestie-abliterated');
+  });
+
+  ipcMain.handle('ollama:upgradeModel', async (_event, targetTag) => {
+    try {
+      const res = await upgradeAndInfuseModel(targetTag);
+      const settings = loadSettings();
+      settings.model_name = 'bestie';
+      saveSettings(settings);
+      return { success: true, model: 'bestie', targetBase: targetTag, infuseResult: res };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   });
 
   ipcMain.handle('ollama:chat', async (event, { message, activeModule }) => {

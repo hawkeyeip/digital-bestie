@@ -10,7 +10,7 @@ export const CALIBRATION_PACKS = {
     emoji: '🎯',
     badge: 'Intentions & Focus',
     description: 'Calibrate your immediate 90-day focal point, what tangible relief looks like, and what sacrifices or anti-goals you enforce.',
-    interviewPrompt: "Let's do a deep calibration interview on my 90-Day North Star, acute stressors, and non-negotiable anti-goals.",
+    interviewPrompt: "Let's calibrate my 90-Day North Star & High-Stakes Goals. Stick strictly to one topic at a time so I don't get overloaded—start with just my 90-day concrete North Star, and ask clarifying or supplementary questions to really nail it down before moving on.",
     questions: [
       {
         path: 'user_profile.goal_and_boundary_matrix.north_star_90_day',
@@ -41,7 +41,7 @@ export const CALIBRATION_PACKS = {
     emoji: '⚡',
     badge: 'Psychology & Execution',
     description: 'Map the exact friction points that cause executive freeze, procrastination, or impulsive dopamine escapes.',
-    interviewPrompt: "Let's do a deep calibration interview on my avoidance triggers, executive freeze states, and escape mechanisms.",
+    interviewPrompt: "Let's calibrate my Avoidance Patterns & Freeze Traps. Stick strictly to one topic at a time so I don't get overloaded—start with my acute avoidance triggers, and ask clarifying or supplementary questions to really dial it in before moving on.",
     questions: [
       {
         path: 'user_profile.cognitive_and_behavioral_profile.primary_avoidance_triggers',
@@ -72,7 +72,7 @@ export const CALIBRATION_PACKS = {
     emoji: '💰',
     badge: 'Capital Defense',
     description: 'Define your rock-bottom cash floor, weekly burn, and minimum pricing standards to protect your freedom.',
-    interviewPrompt: "Let's do a deep calibration interview on my financial runway, emergency cash floor, and rate defense.",
+    interviewPrompt: "Let's calibrate my Runway & Capital Floors. Stick strictly to one topic at a time so I don't get overloaded—start with my absolute emergency cash floor, and ask clarifying or supplementary questions to lock it down before moving on.",
     questions: [
       {
         path: 'user_profile.identity_and_baseline.hard_cash_floor',
@@ -110,7 +110,7 @@ export const CALIBRATION_PACKS = {
     emoji: '🛡️',
     badge: 'Boundary Shield',
     description: 'Teach Bestie to detect toxic client requests, scope creep, and disrespectful patterns early.',
-    interviewPrompt: "Let's do a deep calibration interview on my client red flags, dealbreakers, and hard boundaries.",
+    interviewPrompt: "Let's calibrate my Red Flags & Hard Boundaries. Stick strictly to one topic at a time so I don't get overloaded—start with client red flags and warning signs, and ask clarifying or supplementary questions to really get it down before moving on.",
     questions: [
       {
         path: 'user_profile.goal_and_boundary_matrix.client_red_flags',
@@ -134,7 +134,7 @@ export const CALIBRATION_PACKS = {
     emoji: '🚀',
     badge: 'Sovereign Incubator',
     description: 'Document your high-conviction side ventures, core technical advantages, and micro-tasks that need execution.',
-    interviewPrompt: "Let's do a deep calibration interview on my secret ventures, unfair advantages, and high-leverage backlog.",
+    interviewPrompt: "Let's calibrate my Ventures & Superpowers. Stick strictly to one topic at a time so I don't get overloaded—start with my active venture or project name, and ask clarifying or supplementary questions to lock it down before moving on.",
     questions: [
       {
         path: 'user_profile.secret_venture_incubator.active_project_name',
@@ -165,7 +165,7 @@ export const CALIBRATION_PACKS = {
     emoji: '🎙️',
     badge: 'Partnership Dynamic',
     description: 'Calibrate how Bestie speaks, pushes back on excuses, and holds you to your standards.',
-    interviewPrompt: "Let's do a deep calibration interview on how you should speak to me, hold me accountable, and call my bluff.",
+    interviewPrompt: "Let's calibrate our Communication & Accountability dynamic. Stick strictly to one topic at a time so I don't get overloaded—start with operating voice and tone, and ask clarifying or supplementary questions before moving on.",
     questions: [
       {
         path: 'user_profile.cognitive_and_behavioral_profile.tone_preference',

@@ -6,6 +6,7 @@
 import { CALIBRATION_PACKS, getDossierValue } from './services/calibration.js';
 import { MODULES_METADATA, PERSONA_CATEGORIES } from './services/modules-data.js';
 import { PROMPT_CATEGORIES } from './services/prompts-data.js';
+import { IMPORT_PROVIDERS, DOSSIER_TARGET_FIELDS, parseExportedMemory, DEMO_CLAUDE_EXPORT } from './services/memory-import-data.js';
 
 // ============================================================
 // MARKDOWN PARSER (lightweight, no dependencies)
@@ -110,6 +111,10 @@ let state = {
   credentialsCategoryFilter: 'all',
   credentialsSearchQuery: '',
   activeNbBank: 'tasks',
+  activeSettingsPanel: 'panel-settings-memory',
+  selectedImportProvider: 'claude',
+  stagedMemories: [],
+  stagedFilterCategory: 'all',
 };
 
 // ============================================================
@@ -279,6 +284,20 @@ const els = {
   // Titlebar / Header Model Selector
   headerModelSelect: $('#header-model-select'),
 
+  // Model Switch Warning & Custom Selection Modal
+  modelWarningModal: $('#model-warning-modal'),
+  btnCloseModelWarning: $('#btn-close-model-warning'),
+  btnCancelModelWarning: $('#btn-cancel-model-warning'),
+  btnConfirmModelWarning: $('#btn-confirm-model-warning'),
+  modelWarningSelectedPreview: $('#model-warning-selected-preview'),
+  modelWarningCustomField: $('#model-warning-custom-field'),
+  customModelInput: $('#custom-model-input'),
+
+  // Base Model Infusion Tool
+  infuseBaseModelSelect: $('#infuse-base-model-select'),
+  infuseTargetNameInput: $('#infuse-target-name-input'),
+  btnInfuseModel: $('#btn-infuse-model'),
+
   // Settings & System Health
   settingOllamaUrl: $('#setting-ollama-url'),
   settingModelName: $('#setting-model-name'),
@@ -303,12 +322,22 @@ const els = {
   healthStatusPersona: $('#health-status-persona'),
   healthDescPersona: $('#health-desc-persona'),
   btnRestorePersona: $('#btn-restore-persona'),
+  btnRestorePersonaLight: $('#btn-restore-persona-light'),
   healthCardEmbeddings: $('#health-card-embeddings'),
   healthStatusEmbeddings: $('#health-status-embeddings'),
   healthDescEmbeddings: $('#health-desc-embeddings'),
   btnPullEmbeddings: $('#btn-pull-embeddings'),
   selfHealingBanner: $('#self-healing-banner'),
   selfHealingMsg: $('#self-healing-msg'),
+
+  // Model Version Upgrade & Curated Catalog
+  modelUpgradeBanner: $('#model-upgrade-banner'),
+  modelUpgradeBadge: $('#model-upgrade-badge'),
+  modelUpgradeTitle: $('#model-upgrade-title'),
+  modelUpgradeDesc: $('#model-upgrade-desc'),
+  btnApplyModelUpgrade: $('#btn-apply-model-upgrade'),
+  btnRefreshCatalog: $('#btn-refresh-catalog'),
+  curatedModelsList: $('#curated-models-list'),
 
   // Updater
   appVersionBadge: $('#app-version-badge'),
@@ -418,6 +447,57 @@ const els = {
   nbLabelContent: $('#nb-label-content'),
   nbInputTags: $('#nb-input-tags'),
   superbrainTelemetryPreview: $('#superbrain-telemetry-preview'),
+
+  // Topbar User Menu & Location
+  btnUserMenu: $('#btn-user-menu'),
+  userMenuDropdown: $('#user-menu-dropdown'),
+  topbarUserLocation: $('#topbar-user-location'),
+  menuCurrentLocationText: $('#menu-current-location-text'),
+  userMenuLocationPreview: $('#user-menu-location-preview'),
+
+  // Memory View & Import Hub Enhancements
+  btnOpenImportHub: $('#btn-open-import-hub'),
+  btnImportMemoryHeader: $('#btn-import-memory-header'),
+  btnImportMemoryCalib: $('#btn-import-memory-calib'),
+  btnLaunchImportFromSettings: $('#btn-launch-import-from-settings'),
+  importMemoryModal: $('#import-memory-modal'),
+  btnCloseImportModal: $('#btn-close-import-modal'),
+
+  // Settings Hub & Memory Consolidation
+  settingsSearchInput: $('#settings-search-input'),
+  settingsNavSections: $('#settings-nav-sections'),
+  settingsNavBtns: $$('.settings-nav-btn'),
+  settingsPanels: $$('.settings-panel'),
+  importProviderPills: $$('.provider-pill'),
+  importSelectedProviderTitle: $('#import-selected-provider-title'),
+  importPromptDisplay: $('#import-prompt-display'),
+  btnCopyImportPrompt: $('#btn-copy-import-prompt'),
+  importMemoryInput: $('#import-memory-input'),
+  btnParseMemory: $('#btn-parse-memory'),
+  btnLoadSampleMemory: $('#btn-load-sample-memory'),
+  btnClearImportInput: $('#btn-clear-import-input'),
+  importStagingArea: $('#import-staging-area'),
+  stagedSelectedCount: $('#staged-selected-count'),
+  stagedTotalCount: $('#staged-total-count'),
+  stagedFilterChips: $$('#staged-filter-chips .staging-chip'),
+  btnStageSelectAll: $('#btn-stage-select-all'),
+  btnStageDeselectAll: $('#btn-stage-deselect-all'),
+  btnAddStagedCustom: $('#btn-add-staged-custom'),
+  importStagedItems: $('#import-staged-items'),
+  btnCancelStagedMemory: $('#btn-cancel-staged-memory'),
+  btnCommitStagedMemory: $('#btn-commit-staged-memory'),
+  settingInjectDossier: $('#setting-inject-dossier'),
+  settingAutoCommit: $('#setting-auto-commit'),
+  btnSettingsJumpCalibration: $('#btn-settings-jump-calibration'),
+  settingsDossierSummaryGrid: $('#settings-dossier-summary-grid'),
+  settingThemeSelect: $('#setting-theme-select'),
+  btnSettingsClearChat: $('#btn-settings-clear-chat'),
+  settingUserLocation: $('#setting-user-location'),
+  settingLivingSetup: $('#setting-living-setup'),
+  btnSaveLocationSettings: $('#btn-save-location-settings'),
+  settingTonePreference: $('#setting-tone-preference'),
+  settingExecutionStyle: $('#setting-execution-style'),
+  btnSaveToneSettings: $('#btn-save-tone-settings')
 };
 
 // ============================================================
@@ -432,11 +512,11 @@ async function init() {
   // Apply settings to form
   if (state.settings) {
     els.settingOllamaUrl.value = state.settings.ollama_url || 'http://localhost:11434';
-    if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-light';
-    els.settingNumCtx.value = state.settings.num_ctx || 8192;
+    if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-abliterated';
+    els.settingNumCtx.value = state.settings.num_ctx || 16384;
     els.settingContextWindow.value = state.settings.context_window || 50;
     if (els.settingGithubToken) els.settingGithubToken.value = state.settings.github_token || '';
-    if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-light';
+    if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-abliterated';
     if (els.settingPowerSaver) els.settingPowerSaver.checked = !!state.settings.power_saver;
     if (els.settingKeepAlive) els.settingKeepAlive.value = state.settings.ollama_keep_alive || '5m';
     if (state.settings.power_saver) {
@@ -486,6 +566,20 @@ async function init() {
   // Initialize Performance & Power Monitoring
   setupPerformanceControls();
 
+  // Initialize Topbar User Menu & Location
+  setupUserMenuDropdown();
+  updateTopbarUserLocation();
+
+  // Initialize Settings Hub & Memory Consolidation
+  setupSettingsHub();
+  setupMemoryImportHub();
+  syncSettingsFieldsFromState();
+
+  // Apply theme if set
+  if (state.settings?.theme) {
+    document.body.dataset.theme = state.settings.theme;
+  }
+
   // Check if onboarding is needed
   if (!state.profile?.onboarding_state?.completed) {
     startOnboarding();
@@ -495,12 +589,22 @@ async function init() {
 function updateModelDropdowns(models, activeModel) {
   if (!models || models.length === 0) return;
 
-  const current = activeModel || state.settings?.model_name || 'bestie-light';
+  const current = activeModel || state.settings?.model_name || 'bestie-abliterated';
   
-  // Sort with current or bestie models at top
+  // Sort with bestie-abliterated and abliterated models at top
   const sorted = [...models].sort((a, b) => {
-    if (a.name.includes('bestie') && !b.name.includes('bestie')) return -1;
-    if (!a.name.includes('bestie') && b.name.includes('bestie')) return 1;
+    const rank = (name) => {
+      const lower = name.toLowerCase();
+      if (lower.startsWith('bestie-abliterated')) return 0;
+      if (lower.includes('abliterated') && lower.includes('bestie')) return 1;
+      if (lower.includes('abliterated')) return 2;
+      if (lower.startsWith('bestie-light')) return 3;
+      if (lower.startsWith('bestie')) return 4;
+      if (lower.startsWith('qwen2.5') || lower.startsWith('qwen3.5')) return 5;
+      return 10;
+    };
+    const diff = rank(a.name) - rank(b.name);
+    if (diff !== 0) return diff;
     return a.name.localeCompare(b.name);
   });
 
@@ -510,11 +614,16 @@ function updateModelDropdowns(models, activeModel) {
     
     // Protected and informative tags
     let tag = '';
-    if (m.name.startsWith('bestie') || m.name.startsWith('bestie-light')) {
+    const lower = m.name.toLowerCase();
+    if (lower.startsWith('bestie-abliterated')) {
+      tag = '🔥 Abliterated Core';
+    } else if (lower.includes('abliterated')) {
+      tag = '🔥 Abliterated Base';
+    } else if (lower.startsWith('bestie-light') || lower.startsWith('bestie')) {
       tag = '🛡️ System Core';
-    } else if (m.name.includes('nomic-embed-text') || m.name.includes('embed')) {
+    } else if (lower.includes('nomic-embed-text') || lower.includes('embed')) {
       tag = '🛡️ Vector Memory';
-    } else if (m.name.startsWith('qwen2.5')) {
+    } else if (lower.startsWith('qwen2.5') || lower.startsWith('qwen3.5')) {
       tag = '⚡ Recommended';
     } else {
       tag = m.size < 12 * 1024 * 1024 * 1024 ? 'Fast' : 'Deep';
@@ -522,13 +631,33 @@ function updateModelDropdowns(models, activeModel) {
     return `<option value="${m.name}" ${isSelected ? 'selected' : ''}>${m.name} (${sizeGb} GB • ${tag})</option>`;
   }).join('');
 
+  // If current active model is not in the installed list, prepend it so it remains visible
+  const hasCurrent = sorted.some(m => m.name === current || m.name.startsWith(`${current}:`));
+  let extraCurrentOption = '';
+  if (current && !hasCurrent && current !== '__custom__') {
+    extraCurrentOption = `<option value="${current}" selected>${current} (Active Custom Model)</option>`;
+  }
+
+  const customOption = `<option value="__custom__">➕ Use Custom / Other Model...</option>`;
+  const fullHtml = extraCurrentOption + optionsHtml + customOption;
+
   if (els.headerModelSelect) {
-    els.headerModelSelect.innerHTML = optionsHtml;
+    els.headerModelSelect.innerHTML = fullHtml;
     els.headerModelSelect.value = current;
   }
   if (els.settingModelName) {
-    els.settingModelName.innerHTML = optionsHtml;
+    els.settingModelName.innerHTML = fullHtml;
     els.settingModelName.value = current;
+  }
+
+  // Populate Base Model Dropdown for Bestie Core Infusion
+  if (els.infuseBaseModelSelect) {
+    const nonEmbedModels = sorted.filter(m => !m.name.toLowerCase().includes('embed'));
+    const infuseOptions = nonEmbedModels.map(m => {
+      const sizeGb = (m.size / (1024 * 1024 * 1024)).toFixed(1);
+      return `<option value="${m.name}">${m.name} (${sizeGb} GB)</option>`;
+    }).join('');
+    els.infuseBaseModelSelect.innerHTML = infuseOptions;
   }
 }
 
@@ -591,20 +720,27 @@ function updateHealthStatusUI(status) {
     if (health.hasBestieCore) {
       els.healthStatusPersona.textContent = 'Installed';
       els.healthStatusPersona.className = 'health-badge healthy';
-      if (els.healthDescPersona) els.healthDescPersona.textContent = `${status.activeModel || 'bestie-light'} (Active)`;
-      els.btnRestorePersona?.classList.add('hidden');
+      const active = status.activeModel || 'bestie-abliterated';
+      const isAbliterated = active.includes('abliterated');
+      if (els.healthDescPersona) {
+        els.healthDescPersona.textContent = `${active} (${isAbliterated ? '27B • 🔥 Abliterated Active' : 'Active'})`;
+      }
+      els.btnRestorePersona?.classList.remove('hidden');
+      els.btnRestorePersonaLight?.classList.remove('hidden');
       els.healthCardPersona?.classList.remove('warning', 'error');
     } else if (health.activeChatModel) {
       els.healthStatusPersona.textContent = 'Fallback Active';
       els.healthStatusPersona.className = 'health-badge warning';
       if (els.healthDescPersona) els.healthDescPersona.textContent = `Using ${health.activeChatModel} (Bestie core missing)`;
       els.btnRestorePersona?.classList.remove('hidden');
+      els.btnRestorePersonaLight?.classList.remove('hidden');
       els.healthCardPersona?.classList.add('warning');
     } else {
       els.healthStatusPersona.textContent = 'Missing';
       els.healthStatusPersona.className = 'health-badge error';
       if (els.healthDescPersona) els.healthDescPersona.textContent = 'No persona model installed';
       els.btnRestorePersona?.classList.remove('hidden');
+      els.btnRestorePersonaLight?.classList.remove('hidden');
       els.healthCardPersona?.classList.add('error');
     }
   }
@@ -624,6 +760,157 @@ function updateHealthStatusUI(status) {
       els.btnPullEmbeddings?.classList.remove('hidden');
       els.healthCardEmbeddings?.classList.add('warning');
     }
+  }
+
+  // 4. Model Version Upgrade & Recommendation Banner
+  if (status.modelUpdates && status.modelUpdates.hasUpdate) {
+    state.pendingModelUpgrade = status.modelUpdates;
+    if (els.modelUpgradeBanner) {
+      els.modelUpgradeBanner.classList.remove('hidden');
+      if (els.modelUpgradeBadge) els.modelUpgradeBadge.textContent = status.modelUpdates.badge || 'Upgrade Available';
+      if (els.modelUpgradeTitle) els.modelUpgradeTitle.textContent = status.modelUpdates.title;
+      if (els.modelUpgradeDesc) els.modelUpgradeDesc.textContent = status.modelUpdates.description;
+      if (els.btnApplyModelUpgrade) els.btnApplyModelUpgrade.textContent = status.modelUpdates.actionLabel || '📥 Upgrade Core';
+    }
+  } else if (els.modelUpgradeBanner) {
+    state.pendingModelUpgrade = null;
+    els.modelUpgradeBanner.classList.add('hidden');
+  }
+
+  // Refresh curated catalog display
+  renderCuratedCatalog();
+}
+
+async function renderCuratedCatalog() {
+  if (!els.curatedModelsList || !window.bestie.ollama.getCatalog) return;
+  try {
+    const catalog = await window.bestie.ollama.getCatalog();
+    if (!catalog || catalog.length === 0) {
+      els.curatedModelsList.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; grid-column: 1 / -1;">No curated catalog items found.</div>`;
+      return;
+    }
+
+    els.curatedModelsList.innerHTML = catalog.map(item => {
+      let statusBadge = '';
+      let actionBtn = '';
+
+      if (item.isActive) {
+        statusBadge = `<span class="health-badge healthy" style="font-size: 10px;">Active Core</span>`;
+        actionBtn = `<div style="font-size: 11px; color: var(--neon-cyan); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 0;">✓ Currently Active Core</div>`;
+      } else if (item.isInstalled) {
+        statusBadge = `<span class="health-badge healthy" style="font-size: 10px;">Installed</span>`;
+        actionBtn = `
+          <button type="button" class="btn-neon btn-xs btn-infuse-catalog" data-tag="${item.installedName}" style="font-size: 11px; padding: 5px 10px; width: 100%;">
+            ⚡ Infuse as Bestie Core
+          </button>
+        `;
+      } else {
+        statusBadge = `<span class="health-badge" style="font-size: 10px; background: rgba(255,255,255,0.08); color: var(--text-muted);">Registry</span>`;
+        actionBtn = `
+          <button type="button" class="btn-glass btn-xs btn-download-catalog" data-tag="${item.tag}" style="font-size: 11px; padding: 5px 10px; width: 100%;">
+            📥 Download &amp; Infuse (${item.sizeEstimate})
+          </button>
+        `;
+      }
+
+      const strengthTags = (item.strengths || []).map(s => `
+        <span class="curated-tag-pill">${s}</span>
+      `).join('');
+
+      return `
+        <div class="curated-model-item ${item.isActive ? 'active-core' : ''}">
+          <div>
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+              <div>
+                <strong style="color: #fff; font-size: 13px; display: block;">${item.name}</strong>
+                <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${item.tag}</span>
+              </div>
+              ${statusBadge}
+            </div>
+
+            <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4; margin-bottom: 8px;">
+              ${item.description}
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px;">
+              ${strengthTags}
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; margin-top: 6px;">
+            ${actionBtn}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach listeners
+    els.curatedModelsList.querySelectorAll('.btn-infuse-catalog').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tag = e.currentTarget.dataset.tag;
+        handleCuratedInfuse(tag);
+      });
+    });
+
+    els.curatedModelsList.querySelectorAll('.btn-download-catalog').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tag = e.currentTarget.dataset.tag;
+        handleCuratedDownload(tag);
+      });
+    });
+
+  } catch (err) {
+    console.error('Failed to render curated catalog:', err);
+  }
+}
+
+async function handleCuratedInfuse(tag) {
+  const confirmed = confirm(
+    `Infuse "${tag}" into Digital Bestie Core?\n\n` +
+    `This configures the core with 16k context, optimal temperature/repetition penalty, and binds your Living Dossier and all 20 personas to it.`
+  );
+  if (!confirmed) return;
+
+  try {
+    showToast(`⚡ Infusing ${tag} into Bestie Core...`);
+    const res = await window.bestie.ollama.infuseModel({ baseModel: tag, targetName: 'bestie' });
+    if (res && res.success) {
+      showToast(`🎉 Bestie Core successfully infused with ${tag}!`);
+      state.settings = state.settings || {};
+      state.settings.model_name = 'bestie';
+      await window.bestie.settings.save(state.settings);
+      await checkConnection();
+      await renderCuratedCatalog();
+    } else {
+      showToast(`❌ Infusion error: ${res?.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    showToast(`❌ Error: ${err.message}`);
+  }
+}
+
+async function handleCuratedDownload(tag) {
+  const confirmed = confirm(
+    `Download and infuse "${tag}"?\n\n` +
+    `This will pull the weights from Ollama and automatically compile it into your Digital Bestie core.`
+  );
+  if (!confirmed) return;
+
+  try {
+    showToast(`📥 Pulling ${tag} and compiling core... This may take a minute or two.`);
+    const res = await window.bestie.ollama.upgradeModel(tag);
+    if (res && res.success) {
+      showToast(`🎉 Successfully installed and infused ${tag}!`);
+      state.settings = state.settings || {};
+      state.settings.model_name = 'bestie';
+      await window.bestie.settings.save(state.settings);
+      await checkConnection();
+      await renderCuratedCatalog();
+    } else {
+      showToast(`❌ Download failed: ${res?.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    showToast(`❌ Error: ${err.message}`);
   }
 }
 
@@ -698,10 +985,12 @@ function registerEventListeners() {
       e.preventDefault();
       switchView(state.currentView === 'prompts' ? 'chat' : 'prompts');
     }
-    // Escape: Close persona menu & prompt modal if open
+    // Escape: Close persona menu, prompt modal, import modal & model warning modal if open
     if (e.key === 'Escape') {
       closePersonaDropdown();
       closePromptModal();
+      closeImportMemoryModal();
+      closeModelWarningModal(true);
     }
   });
 
@@ -895,21 +1184,171 @@ function registerEventListeners() {
     startOnboarding();
   });
 
-  // Titlebar Model Switcher
-  els.headerModelSelect?.addEventListener('change', async (e) => {
-    const selected = e.target.value;
+  // --- Model Alteration Warning & Switch Interception ---
+  let pendingModelChange = null;
+
+  function openModelWarningModal(targetModel, sourceElement) {
+    const currentModel = state.settings?.model_name || 'bestie-abliterated';
+    const isCustom = (targetModel === '__custom__');
+
+    pendingModelChange = {
+      targetModel,
+      isCustom,
+      sourceElement,
+      previousModel: currentModel
+    };
+
+    if (els.modelWarningSelectedPreview) {
+      els.modelWarningSelectedPreview.textContent = isCustom ? 'Custom User-Specified Model' : targetModel;
+    }
+
+    if (els.modelWarningCustomField) {
+      if (isCustom) {
+        els.modelWarningCustomField.classList.remove('hidden');
+        if (els.customModelInput) {
+          els.customModelInput.value = '';
+          setTimeout(() => els.customModelInput?.focus(), 80);
+        }
+      } else {
+        els.modelWarningCustomField.classList.add('hidden');
+      }
+    }
+
+    els.modelWarningModal?.classList.remove('hidden');
+  }
+
+  function closeModelWarningModal(revert = true) {
+    if (revert && pendingModelChange) {
+      if (pendingModelChange.sourceElement) {
+        pendingModelChange.sourceElement.value = pendingModelChange.previousModel;
+      }
+    }
+    els.modelWarningModal?.classList.add('hidden');
+    pendingModelChange = null;
+  }
+
+  async function confirmModelWarningChange() {
+    if (!pendingModelChange) return;
+
+    let finalModel = pendingModelChange.targetModel;
+    if (pendingModelChange.isCustom) {
+      const typed = els.customModelInput?.value?.trim();
+      if (!typed) {
+        showToast('⚠️ Please enter an Ollama model name/tag');
+        els.customModelInput?.focus();
+        return;
+      }
+      finalModel = typed;
+    }
+
+    const previous = pendingModelChange.previousModel;
+    els.modelWarningModal?.classList.add('hidden');
+    pendingModelChange = null;
+
+    if (finalModel === previous) {
+      return;
+    }
+
+    // Update settings
     state.settings = state.settings || {};
-    state.settings.model_name = selected;
+    state.settings.model_name = finalModel;
     await window.bestie.settings.save(state.settings);
-    if (els.settingModelName) els.settingModelName.value = selected;
-    showToast(`Model switched to ${selected} ⚡`);
-    checkConnection();
+
+    // Sync header & settings dropdowns
+    [els.headerModelSelect, els.settingModelName].forEach(select => {
+      if (!select) return;
+      const exists = Array.from(select.options).some(opt => opt.value === finalModel);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = finalModel;
+        opt.textContent = `${finalModel} (Active Custom Model)`;
+        select.insertBefore(opt, select.lastElementChild);
+      }
+      select.value = finalModel;
+    });
+
+    showToast(`⚠️ Switched model to ${finalModel} (Performance & tone may vary)`);
+    await checkConnection();
+  }
+
+  function handleInitiateModelChange(targetVal, sourceEl) {
+    const currentModel = state.settings?.model_name || 'bestie-abliterated';
+    if (targetVal === currentModel) return;
+    openModelWarningModal(targetVal, sourceEl);
+  }
+
+  // Intercept changes on Header & Settings model selectors
+  els.headerModelSelect?.addEventListener('change', (e) => {
+    handleInitiateModelChange(e.target.value, els.headerModelSelect);
+  });
+
+  els.settingModelName?.addEventListener('change', (e) => {
+    handleInitiateModelChange(e.target.value, els.settingModelName);
+  });
+
+  // Warning Modal Actions
+  els.btnCloseModelWarning?.addEventListener('click', () => closeModelWarningModal(true));
+  els.btnCancelModelWarning?.addEventListener('click', () => closeModelWarningModal(true));
+  els.btnConfirmModelWarning?.addEventListener('click', confirmModelWarningChange);
+  els.modelWarningModal?.addEventListener('click', (e) => {
+    if (e.target === els.modelWarningModal) closeModelWarningModal(true);
+  });
+  els.customModelInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmModelWarningChange();
+    }
+  });
+
+  // Base Model Infusion into Bestie Core
+  els.btnInfuseModel?.addEventListener('click', async () => {
+    const baseModel = els.infuseBaseModelSelect?.value;
+    const targetName = (els.infuseTargetNameInput?.value || 'bestie').trim();
+
+    if (!baseModel) {
+      showToast('⚠️ Please select an installed base model to infuse.');
+      return;
+    }
+    if (!targetName) {
+      showToast('⚠️ Please specify a target name for the infused model.');
+      return;
+    }
+
+    const confirmed = confirm(
+      `Infuse "${baseModel}" as Digital Bestie Core named "${targetName}"?\n\n` +
+      `This compiles a high-context Modelfile (16k context, optimal temperature/repetition penalty) and bakes the Digital Bestie tenets into the core weights.`
+    );
+    if (!confirmed) return;
+
+    try {
+      els.btnInfuseModel.disabled = true;
+      els.btnInfuseModel.textContent = '⏳ Compiling Core...';
+      showToast(`🔥 Infusing ${baseModel} into ${targetName}... Please wait.`);
+
+      const res = await window.bestie.ollama.infuseModel(baseModel, targetName);
+      if (res && res.success) {
+        showToast(`🎉 Successfully infused ${targetName}! Activating as core engine...`);
+        state.settings = state.settings || {};
+        state.settings.model_name = targetName;
+        await window.bestie.settings.save(state.settings);
+        await checkConnection();
+      } else {
+        showToast(`❌ Infusion failed: ${res?.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Infusion error:', err);
+      showToast(`❌ Infusion error: ${err.message}`);
+    } finally {
+      els.btnInfuseModel.disabled = false;
+      els.btnInfuseModel.textContent = '🔥 Infuse & Compile';
+    }
   });
 
   // Settings
-  els.btnSaveSettings.addEventListener('click', async () => {
+  els.btnSaveSettings?.addEventListener('click', async () => {
     const powerSaver = !!(els.settingPowerSaver && els.settingPowerSaver.checked);
     const keepAlive = (els.settingKeepAlive && els.settingKeepAlive.value) || '5m';
+    const theme = (els.settingThemeSelect && els.settingThemeSelect.value) || 'neon-dark';
     const settings = {
       ollama_url: els.settingOllamaUrl.value,
       model_name: els.settingModelName.value,
@@ -918,10 +1357,13 @@ function registerEventListeners() {
       github_token: els.settingGithubToken ? els.settingGithubToken.value.trim() : '',
       power_saver: powerSaver,
       ollama_keep_alive: keepAlive,
-      theme: 'neon-dark'
+      theme: theme,
+      inject_dossier: els.settingInjectDossier ? els.settingInjectDossier.checked : true,
+      auto_commit: els.settingAutoCommit ? els.settingAutoCommit.checked : true
     };
     await window.bestie.settings.save(settings);
     state.settings = settings;
+    document.body.dataset.theme = theme;
     if (powerSaver) {
       document.body.classList.add('power-saver');
     } else {
@@ -940,19 +1382,53 @@ function registerEventListeners() {
     els.btnRefreshHealth.textContent = '↻ Check Health';
   });
 
+  // Curated Model Upgrade & Catalog Listeners
+  els.btnApplyModelUpgrade?.addEventListener('click', async () => {
+    if (!state.pendingModelUpgrade) return;
+    const upgrade = state.pendingModelUpgrade;
+
+    if (upgrade.isInstalled) {
+      await handleCuratedInfuse(upgrade.recommendedTag);
+    } else {
+      await handleCuratedDownload(upgrade.recommendedTag);
+    }
+  });
+
+  els.btnRefreshCatalog?.addEventListener('click', async () => {
+    showToast('Refreshing curated model catalog...');
+    await renderCuratedCatalog();
+    showToast('Catalog refreshed ✨');
+  });
+
   els.btnRestorePersona?.addEventListener('click', async () => {
     try {
       els.btnRestorePersona.disabled = true;
-      els.btnRestorePersona.textContent = 'Recreating...';
-      showToast('Rebuilding Bestie model from bundled template... ⏳');
-      await window.bestie.ollama.restoreModel('light');
-      showToast('Successfully restored bestie-light model! ✨');
+      els.btnRestorePersona.textContent = 'Recreating 27B...';
+      showToast('Rebuilding bestie-abliterated (27B) from bundled template... ⏳');
+      await window.bestie.ollama.restoreModel('abliterated');
+      showToast('Successfully restored bestie-abliterated model! 🔥');
       await checkConnection();
     } catch (err) {
-      showToast(`Failed to restore model: ${err.message}`);
+      showToast(`Failed to restore 27B model: ${err.message}`);
     } finally {
       els.btnRestorePersona.disabled = false;
-      els.btnRestorePersona.textContent = '⚡ Recreate Model';
+      els.btnRestorePersona.textContent = '⚡ Recreate 27B Core';
+    }
+  });
+
+  els.btnRestorePersonaLight?.addEventListener('click', async () => {
+    try {
+      els.btnRestorePersonaLight.disabled = true;
+      els.btnRestorePersonaLight.textContent = 'Recreating 14B...';
+      showToast('Rebuilding bestie-light (14B) from bundled template... ⏳');
+      await window.bestie.ollama.restoreModel('light');
+      showToast('Successfully restored bestie-light model! ⚡');
+      await checkConnection();
+    } catch (err) {
+      showToast(`Failed to restore 14B model: ${err.message}`);
+    } finally {
+      els.btnRestorePersonaLight.disabled = false;
+      els.btnRestorePersonaLight.textContent = 'Recreate 14B Light';
     }
   });
 
@@ -1381,7 +1857,11 @@ function switchView(viewName) {
   if (viewName === 'superbrain') refreshSuperbrainView();
   if (viewName === 'prompts') renderPromptsGrid();
   if (viewName === 'credentials') refreshCredentialsList();
-  if (viewName === 'settings') refreshMemoryTelemetry();
+  if (viewName === 'settings') {
+    refreshMemoryTelemetry();
+    renderDossierSummaryInSettings();
+    syncSettingsFieldsFromState();
+  }
 }
 
 // ============================================================
@@ -2560,10 +3040,16 @@ function renderActiveCalibrationCategory(catKey) {
             </div>
             <p class="cal-hero-desc">Browse, scroll, and calibrate all 17 questions across every domain directly. Edit any field below for instant updates, or launch an interactive 1-on-1 interview whenever you want guidance.</p>
           </div>
-          <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
-            <span>🎙️</span>
-            <span>Start 1-on-1 Interview in Chat</span>
-          </button>
+          <div class="cal-hero-cta-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="cal-interview-cta-btn btn-hero-import-memory" style="background: rgba(0, 240, 255, 0.12); border: 1px solid var(--neon-cyan); color: #fff;" title="Import memories and context from another model to calibrate your Living Dossier">
+              <span>📥</span>
+              <span>Import Memory from Another Model</span>
+            </button>
+            <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
+              <span>🎙️</span>
+              <span>Start 1-on-1 Interview in Chat</span>
+            </button>
+          </div>
         </div>
         <div class="cal-hero-modes">
           <div class="cal-hero-mode-pill">
@@ -2640,10 +3126,16 @@ function renderActiveCalibrationCategory(catKey) {
             </div>
             <p class="cal-hero-desc">${pack.description}</p>
           </div>
-          <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
-            <span>🎙️</span>
-            <span>Start 1-on-1 Interview in Chat</span>
-          </button>
+          <div class="cal-hero-cta-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="cal-interview-cta-btn btn-hero-import-memory" style="background: rgba(0, 240, 255, 0.12); border: 1px solid var(--neon-cyan); color: #fff;" title="Import memories and context from another model to calibrate your Living Dossier">
+              <span>📥</span>
+              <span>Import Memory from Another Model</span>
+            </button>
+            <button id="btn-launch-interview" class="cal-interview-cta-btn" title="Start an interactive 1-on-1 interview with Digital Bestie in chat">
+              <span>🎙️</span>
+              <span>Start 1-on-1 Interview in Chat</span>
+            </button>
+          </div>
         </div>
         <div class="cal-hero-modes">
           <div class="cal-hero-mode-pill">
@@ -2693,10 +3185,13 @@ function renderActiveCalibrationCategory(catKey) {
     bindCalibrationCardActions(card);
   });
 
-  // Attach top interview launcher
+  // Attach top interview & import memory launchers
   const interviewBtn = $('#btn-launch-interview', els.calibrationActiveCard);
   interviewBtn?.addEventListener('click', () => {
     startCalibrationInterview(catKey === 'all' ? 'intentions' : catKey);
+  });
+  $$('.btn-hero-import-memory', els.calibrationActiveCard).forEach(btn => {
+    btn.addEventListener('click', () => openImportMemoryModal());
   });
 }
 
@@ -2783,7 +3278,7 @@ function bindCalibrationCardActions(card) {
 async function startSingleQuestionInterview(title, desc, path) {
   activateModule('dossier-interviewer');
   switchView('chat');
-  const promptText = `Let's do a targeted calibration on one specific topic: "${title}".\nContext: ${desc}\nHelp me think through this, challenge my assumptions, and format it for my Living Dossier.`;
+  const promptText = `Let's calibrate this specific topic: "${title}".\nContext: ${desc}\n\nAsk me your opening question on this, and then ask any clarifying or supplementary questions so we get it completely dialed in before locking it into my Living Dossier.`;
   els.chatInput.value = promptText;
   sendMessage();
 }
@@ -2798,8 +3293,14 @@ async function startCalibrationInterview(catKey) {
   // Switch to chat view
   switchView('chat');
 
+  // Find the first uncalibrated question or default to the first question in the pack
+  const firstUncalibrated = pack.questions.find(q => {
+    const val = getDossierValue(state.profile, q.path);
+    return !(Array.isArray(val) ? val.length > 0 : (val != null && String(val).trim() !== ''));
+  }) || pack.questions[0];
+
   // Add the user trigger message and send
-  const promptText = pack.interviewPrompt;
+  const promptText = `Let's calibrate my ${pack.title}. Please stick strictly to ONE topic at a time so I don't get overloaded.\n\nStart with just "${firstUncalibrated.title}": ${firstUncalibrated.desc}\n\nAsk me your opening question on this, and then ask any clarifying or supplementary questions to really get it down before moving on to the next topic.`;
   els.chatInput.value = promptText;
   sendMessage();
 }
@@ -2808,6 +3309,7 @@ async function startCalibrationInterview(catKey) {
  * Parses machine <DOSSIER_UPDATE> blocks from assistant messages and syncs them directly into memory
  */
 async function handleDossierUpdatesInContent(rawText, messageEl) {
+  if (state.settings?.auto_commit === false) return;
   const regex = /<DOSSIER_UPDATE>([\s\S]*?)<\/DOSSIER_UPDATE>/gi;
   let match;
   let updatedAny = false;
@@ -4373,6 +4875,608 @@ async function deleteCredentialModal() {
       console.error('Failed to delete credential:', err);
       showToast('Error deleting credential');
     }
+  }
+}
+
+// ============================================================
+// SETTINGS HUB & MEMORY CONSOLIDATION
+// ============================================================
+
+function updateTopbarUserLocation(location) {
+  const loc = location || state.profile?.user_profile?.identity_and_baseline?.active_location || 'Austin, TX';
+  if (els.topbarUserLocation) {
+    els.topbarUserLocation.textContent = loc;
+  }
+  if (els.menuCurrentLocationText) {
+    els.menuCurrentLocationText.textContent = loc;
+  }
+  if (els.userMenuLocationPreview) {
+    els.userMenuLocationPreview.textContent = `${loc} • Sovereign Sanctuary`;
+  }
+  if (els.settingUserLocation && !els.settingUserLocation.value) {
+    els.settingUserLocation.value = loc;
+  }
+}
+
+function setupUserMenuDropdown() {
+  if (!els.btnUserMenu || !els.userMenuDropdown) return;
+
+  // Toggle dropdown on pill button click
+  els.btnUserMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    els.userMenuDropdown.classList.toggle('hidden');
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!els.userMenuDropdown.classList.contains('hidden') && 
+        !els.userMenuDropdown.contains(e.target) && 
+        !els.btnUserMenu.contains(e.target)) {
+      els.userMenuDropdown.classList.add('hidden');
+    }
+  });
+
+  // Wire actions inside dropdown
+  els.userMenuDropdown.querySelectorAll('.user-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      els.userMenuDropdown.classList.add('hidden');
+      const action = item.dataset.action;
+      if (action === 'memory') {
+        switchView('memory');
+      } else if (action === 'import-memory') {
+        openImportMemoryModal();
+      } else if (action === 'update-location') {
+        switchView('settings');
+        activateSettingsPanel('panel-settings-location');
+        setTimeout(() => els.settingUserLocation?.focus(), 150);
+      } else if (action === 'calibration') {
+        switchView('calibration');
+      } else if (action === 'settings') {
+        switchView('settings');
+      } else if (action === 'feedback') {
+        if (els.feedbackOverlay) els.feedbackOverlay.classList.remove('hidden');
+      }
+    });
+  });
+}
+
+function setupSettingsHub() {
+  // Navigation tabs in sidebar
+  els.settingsNavBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetPanel = btn.dataset.settingsPanel;
+      activateSettingsPanel(targetPanel);
+    });
+  });
+
+  // Search input filtering
+  els.settingsSearchInput?.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+      activateSettingsPanel(state.activeSettingsPanel || 'panel-settings-memory');
+      return;
+    }
+
+    let firstMatchedPanel = null;
+    els.settingsPanels.forEach(panel => {
+      const searchTerms = (panel.dataset.searchTerms || '').toLowerCase();
+      const textContent = panel.textContent.toLowerCase();
+      const matches = searchTerms.includes(query) || textContent.includes(query);
+      if (matches && !firstMatchedPanel) {
+        firstMatchedPanel = panel.id;
+      }
+    });
+
+    if (firstMatchedPanel) {
+      activateSettingsPanel(firstMatchedPanel);
+    }
+  });
+
+  // Quick navigation buttons within panels
+  els.btnSettingsJumpCalibration?.addEventListener('click', () => {
+    switchView('calibration');
+  });
+
+  els.btnSettingsClearChat?.addEventListener('click', async () => {
+    if (confirm('Clear all chat history across conversations? This cannot be undone.')) {
+      await window.bestie.conversation.clear();
+      els.chatMessages.innerHTML = '';
+      addWelcomeMessage();
+      showToast('All chat history cleared 🗑️');
+    }
+  });
+
+  // Theme switch live preview
+  els.settingThemeSelect?.addEventListener('change', (e) => {
+    const theme = e.target.value;
+    document.body.dataset.theme = theme;
+    showToast(`Theme preset changed to ${theme} ✨`);
+  });
+
+  // Save location & living setup
+  els.btnSaveLocationSettings?.addEventListener('click', async () => {
+    const loc = els.settingUserLocation?.value.trim() || 'Austin, TX';
+    const living = els.settingLivingSetup?.value.trim() || '';
+    await window.bestie.memory.updateField('user_profile.identity_and_baseline.active_location', loc, 'set');
+    if (living) {
+      await window.bestie.memory.updateField('user_profile.identity_and_baseline.current_living_situation', living, 'set');
+    }
+    state.profile = await window.bestie.memory.getProfile();
+    updateTopbarUserLocation(loc);
+    showToast('Sanctuary location saved 📍');
+  });
+
+  // Save voice & tone dynamic
+  els.btnSaveToneSettings?.addEventListener('click', async () => {
+    const tone = els.settingTonePreference?.value || 'digital_bestie';
+    const execStyle = els.settingExecutionStyle?.value || 'execution_first';
+    await window.bestie.memory.updateField('user_profile.cognitive_and_behavioral_profile.tone_preference', tone, 'set');
+    await window.bestie.memory.updateField('user_profile.cognitive_and_behavioral_profile.execution_style', execStyle, 'set');
+    state.profile = await window.bestie.memory.getProfile();
+    showToast('Operating dynamic saved 🎙️');
+  });
+}
+
+function activateSettingsPanel(panelId) {
+  state.activeSettingsPanel = panelId;
+  els.settingsNavBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.settingsPanel === panelId);
+  });
+  els.settingsPanels.forEach(panel => {
+    panel.classList.toggle('active', panel.id === panelId);
+  });
+
+  if (panelId === 'panel-settings-dossier') {
+    renderDossierSummaryInSettings();
+  }
+}
+
+function renderDossierSummaryInSettings() {
+  if (!els.settingsDossierSummaryGrid) return;
+  const p = state.profile?.user_profile || {};
+  const g = p.goal_and_boundary_matrix || {};
+  const id = p.identity_and_baseline || {};
+  const cog = p.cognitive_and_behavioral_profile || {};
+  const vent = p.secret_venture_incubator || {};
+
+  els.settingsDossierSummaryGrid.innerHTML = `
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">🎯 90-Day North Star Goal</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Active Target:</strong>
+          <span>${escapeHtml(g.north_star_90_day || 'Not calibrated yet')}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Pricing Floor:</strong>
+          <span>${escapeHtml(g.rate_floor || '$150/hr minimum')}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">🛡️ Anti-Goals &amp; Boundaries</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Refusals:</strong>
+          <span>${(g.anti_goals && g.anti_goals.length > 0) ? escapeHtml(g.anti_goals.join(' • ')) : 'None defined yet'}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Client Red Flags:</strong>
+          <span>${(g.client_red_flags && g.client_red_flags.length > 0) ? escapeHtml(g.client_red_flags.join(' • ')) : 'None logged yet'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">💰 Capital Runway &amp; Sanctuary</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Hard Cash Floor:</strong>
+          <span>$${id.hard_cash_floor ? Number(id.hard_cash_floor).toLocaleString() : '10,000'}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Weekly Burn:</strong>
+          <span>$${id.burn_rate_weekly ? Number(id.burn_rate_weekly).toLocaleString() : '1,500'}/wk</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Active Location:</strong>
+          <span>${escapeHtml(id.active_location || 'Austin, TX')}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">🛑 Avoidance &amp; Psychology</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Avoidance Triggers:</strong>
+          <span>${(cog.primary_avoidance_triggers && cog.primary_avoidance_triggers.length > 0) ? escapeHtml(cog.primary_avoidance_triggers.join(' • ')) : 'None logged'}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Escape Traps:</strong>
+          <span>${(cog.escape_mechanisms && cog.escape_mechanisms.length > 0) ? escapeHtml(cog.escape_mechanisms.join(' • ')) : 'None logged'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">🚀 Active Venture &amp; Superpowers</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Project:</strong>
+          <span>${escapeHtml(vent.active_project_name || 'Digital Bestie')}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Core Skills Leveraged:</strong>
+          <span>${(vent.core_skills_leveraged && vent.core_skills_leveraged.length > 0) ? escapeHtml(vent.core_skills_leveraged.join(', ')) : 'Full-stack AI systems'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dossier-summary-card">
+      <div class="dossier-summary-card-title">🎙️ Operating Dynamic</div>
+      <div class="dossier-summary-list">
+        <div class="dossier-summary-item">
+          <strong>Tone Preference:</strong>
+          <span>${escapeHtml(cog.tone_preference || 'digital_bestie')}</span>
+        </div>
+        <div class="dossier-summary-item">
+          <strong>Execution Style:</strong>
+          <span>${escapeHtml(cog.execution_style || 'execution_first')}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function syncSettingsFieldsFromState() {
+  if (state.settings) {
+    if (els.settingThemeSelect) els.settingThemeSelect.value = state.settings.theme || 'neon-dark';
+    if (els.settingInjectDossier) els.settingInjectDossier.checked = state.settings.inject_dossier !== false;
+    if (els.settingAutoCommit) els.settingAutoCommit.checked = state.settings.auto_commit !== false;
+    if (els.settingPowerSaver) els.settingPowerSaver.checked = !!state.settings.power_saver;
+  }
+  const idBase = state.profile?.user_profile?.identity_and_baseline;
+  const cogBase = state.profile?.user_profile?.cognitive_and_behavioral_profile;
+  if (els.settingUserLocation && idBase?.active_location) {
+    els.settingUserLocation.value = idBase.active_location;
+  }
+  if (els.settingLivingSetup && idBase?.current_living_situation) {
+    els.settingLivingSetup.value = idBase.current_living_situation;
+  }
+  if (els.settingTonePreference && cogBase?.tone_preference) {
+    els.settingTonePreference.value = cogBase.tone_preference;
+  }
+  if (els.settingExecutionStyle && cogBase?.execution_style) {
+    els.settingExecutionStyle.value = cogBase.execution_style;
+  }
+}
+
+export function openImportMemoryModal(providerId = null) {
+  if (providerId) {
+    state.selectedImportProvider = providerId;
+  }
+  const prov = state.selectedImportProvider || 'claude';
+  els.importProviderPills.forEach(p => p.classList.toggle('active', p.dataset.provider === prov));
+  renderImportPrompt(prov);
+  if (els.importMemoryModal) {
+    els.importMemoryModal.classList.remove('hidden');
+    setTimeout(() => {
+      if (els.importMemoryInput && !els.importMemoryInput.value) {
+        els.btnCopyImportPrompt?.focus();
+      } else {
+        els.importMemoryInput?.focus();
+      }
+    }, 120);
+  }
+}
+
+export function closeImportMemoryModal() {
+  els.importMemoryModal?.classList.add('hidden');
+}
+
+function setupMemoryImportHub() {
+  state.selectedImportProvider = 'claude';
+  state.stagedMemories = [];
+  state.stagedFilterCategory = 'all';
+
+  // Render initial Claude prompt
+  renderImportPrompt('claude');
+
+  // Provider pills click handler
+  els.importProviderPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const providerId = pill.dataset.provider;
+      state.selectedImportProvider = providerId;
+      els.importProviderPills.forEach(p => p.classList.toggle('active', p === pill));
+      renderImportPrompt(providerId);
+    });
+  });
+
+  // Copy prompt button
+  els.btnCopyImportPrompt?.addEventListener('click', async () => {
+    const prov = IMPORT_PROVIDERS[state.selectedImportProvider] || IMPORT_PROVIDERS.claude;
+    try {
+      await navigator.clipboard.writeText(prov.prompt);
+      const copyText = els.btnCopyImportPrompt.querySelector('.copy-text');
+      if (copyText) {
+        const orig = copyText.textContent;
+        copyText.textContent = 'Copied to Clipboard! ✓';
+        els.btnCopyImportPrompt.classList.add('btn-success-glow');
+        setTimeout(() => {
+          copyText.textContent = orig;
+          els.btnCopyImportPrompt.classList.remove('btn-success-glow');
+        }, 2200);
+      }
+      showToast(`Copied ${prov.name} export prompt 📋`);
+    } catch (err) {
+      console.error('Clipboard copy failed:', err);
+      showToast('Could not copy automatically. Please select text manually.');
+    }
+  });
+
+  // Load demo example
+  els.btnLoadSampleMemory?.addEventListener('click', () => {
+    if (els.importMemoryInput) {
+      els.importMemoryInput.value = DEMO_CLAUDE_EXPORT;
+      showToast('Demo Claude export loaded 💡 Click "Analyze & Stage Memories"');
+    }
+  });
+
+  // Clear input
+  els.btnClearImportInput?.addEventListener('click', () => {
+    if (els.importMemoryInput) els.importMemoryInput.value = '';
+  });
+
+  // Parse button
+  els.btnParseMemory?.addEventListener('click', () => {
+    const text = els.importMemoryInput?.value.trim();
+    if (!text) {
+      showToast('Please paste memory export text first.');
+      return;
+    }
+
+    const items = parseExportedMemory(text, state.selectedImportProvider);
+    if (!items || items.length === 0) {
+      showToast('Could not find any distinct facts or bullet items to stage.');
+      return;
+    }
+
+    state.stagedMemories = items;
+    state.stagedFilterCategory = 'all';
+
+    // Show staging area
+    if (els.importStagingArea) {
+      els.importStagingArea.classList.remove('hidden');
+      els.importStagingArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    renderStagedMemories();
+    showToast(`Staged ${items.length} items for review ✨`);
+  });
+
+  // Filter chips in staging area
+  els.stagedFilterChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      els.stagedFilterChips.forEach(c => c.classList.toggle('active', c === chip));
+      state.stagedFilterCategory = chip.dataset.filter;
+      renderStagedMemories();
+    });
+  });
+
+  // Batch Select All
+  els.btnStageSelectAll?.addEventListener('click', () => {
+    state.stagedMemories.forEach(item => { item.checked = true; });
+    renderStagedMemories();
+  });
+
+  // Batch Deselect All
+  els.btnStageDeselectAll?.addEventListener('click', () => {
+    state.stagedMemories.forEach(item => { item.checked = false; });
+    renderStagedMemories();
+  });
+
+  // Add Custom Item manually to staging
+  els.btnAddStagedCustom?.addEventListener('click', () => {
+    const newItem = {
+      id: `item_${Date.now()}_custom`,
+      raw: '',
+      value: 'New custom memory fact...',
+      path: 'user_profile.goal_and_boundary_matrix.anti_goals',
+      label: '🛡️ Anti-Goals & Refusals',
+      action: 'append',
+      category: 'Goals & Boundaries',
+      checked: true,
+      provider: 'custom'
+    };
+    state.stagedMemories.unshift(newItem);
+    renderStagedMemories();
+    showToast('Added custom staging card');
+  });
+
+  // Cancel staging
+  els.btnCancelStagedMemory?.addEventListener('click', () => {
+    if (confirm('Discard staged memories?')) {
+      state.stagedMemories = [];
+      els.importStagingArea?.classList.add('hidden');
+      showToast('Staging discarded');
+    }
+  });
+
+  // Commit approved memories
+  els.btnCommitStagedMemory?.addEventListener('click', commitStagedMemories);
+
+  // Wire Open Import Hub buttons across views
+  els.btnOpenImportHub?.addEventListener('click', () => openImportMemoryModal());
+  els.btnImportMemoryHeader?.addEventListener('click', () => openImportMemoryModal());
+  els.btnImportMemoryCalib?.addEventListener('click', () => openImportMemoryModal());
+  els.btnLaunchImportFromSettings?.addEventListener('click', () => openImportMemoryModal());
+
+  // Modal close handlers
+  els.btnCloseImportModal?.addEventListener('click', closeImportMemoryModal);
+  els.importMemoryModal?.addEventListener('click', (e) => {
+    if (e.target === els.importMemoryModal) closeImportMemoryModal();
+  });
+}
+
+function renderImportPrompt(providerId) {
+  const prov = IMPORT_PROVIDERS[providerId] || IMPORT_PROVIDERS.claude;
+  if (els.importSelectedProviderTitle) {
+    els.importSelectedProviderTitle.textContent = `${prov.icon} ${prov.name} Memory Export Prompt`;
+  }
+  if (els.importPromptDisplay) {
+    els.importPromptDisplay.textContent = prov.prompt;
+  }
+}
+
+function renderStagedMemories() {
+  if (!els.importStagedItems) return;
+
+  const total = state.stagedMemories.length;
+  const checked = state.stagedMemories.filter(i => i.checked).length;
+  if (els.stagedTotalCount) els.stagedTotalCount.textContent = total;
+  if (els.stagedSelectedCount) els.stagedSelectedCount.textContent = checked;
+
+  const filter = state.stagedFilterCategory || 'all';
+  const visibleItems = state.stagedMemories.filter(item => {
+    if (filter === 'all') return true;
+    return item.category === filter;
+  });
+
+  if (visibleItems.length === 0) {
+    els.importStagedItems.innerHTML = `
+      <div class="empty-state-sm">No staged items match filter "${escapeHtml(filter)}".</div>
+    `;
+    return;
+  }
+
+  els.importStagedItems.innerHTML = visibleItems.map(item => {
+    const isChecked = item.checked ? 'checked' : '';
+    const optionsHtml = DOSSIER_TARGET_FIELDS.map(f => {
+      const selected = f.path === item.path ? 'selected' : '';
+      return `<option value="${f.path}" data-action="${f.action}" ${selected}>${escapeHtml(f.label)}</option>`;
+    }).join('');
+
+    return `
+      <div class="staged-item-card ${item.checked ? 'active' : 'inactive'}" data-item-id="${item.id}">
+        <div class="staged-item-top">
+          <label class="staged-checkbox-label">
+            <input type="checkbox" class="staged-item-check" data-item-id="${item.id}" ${isChecked} />
+            <span class="staged-cat-badge">${escapeHtml(item.category)}</span>
+          </label>
+          <div class="staged-item-actions">
+            <select class="staged-path-select" data-item-id="${item.id}">
+              ${optionsHtml}
+            </select>
+            <button type="button" class="btn-trash-staged" data-item-id="${item.id}" title="Remove this item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div class="staged-item-body">
+          <input type="text" class="staged-val-input" data-item-id="${item.id}" value="${escapeHtml(String(item.value))}" placeholder="Memory fact or instruction..." />
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach event listeners to live cards
+  els.importStagedItems.querySelectorAll('.staged-item-check').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const id = e.target.dataset.itemId;
+      const targetItem = state.stagedMemories.find(i => i.id === id);
+      if (targetItem) {
+        targetItem.checked = e.target.checked;
+        const card = els.importStagedItems.querySelector(`.staged-item-card[data-item-id="${id}"]`);
+        if (card) {
+          card.classList.toggle('active', targetItem.checked);
+          card.classList.toggle('inactive', !targetItem.checked);
+        }
+        const updatedChecked = state.stagedMemories.filter(i => i.checked).length;
+        if (els.stagedSelectedCount) els.stagedSelectedCount.textContent = updatedChecked;
+      }
+    });
+  });
+
+  els.importStagedItems.querySelectorAll('.staged-path-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = e.target.dataset.itemId;
+      const targetItem = state.stagedMemories.find(i => i.id === id);
+      if (targetItem) {
+        targetItem.path = e.target.value;
+        const opt = e.target.options[e.target.selectedIndex];
+        targetItem.action = opt.dataset.action || 'set';
+        const fieldMeta = DOSSIER_TARGET_FIELDS.find(f => f.path === targetItem.path);
+        if (fieldMeta) {
+          targetItem.label = fieldMeta.label;
+        }
+      }
+    });
+  });
+
+  els.importStagedItems.querySelectorAll('.staged-val-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const id = e.target.dataset.itemId;
+      const targetItem = state.stagedMemories.find(i => i.id === id);
+      if (targetItem) {
+        targetItem.value = e.target.value;
+      }
+    });
+  });
+
+  els.importStagedItems.querySelectorAll('.btn-trash-staged').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = btn.dataset.itemId;
+      state.stagedMemories = state.stagedMemories.filter(i => i.id !== id);
+      renderStagedMemories();
+    });
+  });
+}
+
+async function commitStagedMemories() {
+  const approved = state.stagedMemories.filter(item => item.checked && String(item.value).trim());
+  if (approved.length === 0) {
+    showToast('No approved items selected to commit.');
+    return;
+  }
+
+  els.btnCommitStagedMemory.disabled = true;
+  els.btnCommitStagedMemory.textContent = 'Committing to Living Dossier... ⏳';
+
+  try {
+    for (const item of approved) {
+      const val = typeof item.value === 'string' ? item.value.trim() : item.value;
+      await window.bestie.memory.updateField(item.path, val, item.action || 'set');
+    }
+
+    // Refresh profile state
+    state.profile = await window.bestie.memory.getProfile();
+
+    // Update location if it was among approved items
+    const locItem = approved.find(i => i.path === 'user_profile.identity_and_baseline.active_location');
+    if (locItem) {
+      updateTopbarUserLocation(locItem.value);
+    }
+
+    // Refresh all views
+    refreshMemoryView();
+    refreshCalibrationView();
+    renderDossierSummaryInSettings();
+
+    // Clean up staging UI & close modal
+    state.stagedMemories = [];
+    if (els.importMemoryInput) els.importMemoryInput.value = '';
+    els.importStagingArea?.classList.add('hidden');
+    closeImportMemoryModal();
+
+    showToast(`Successfully consolidated ${approved.length} memories into Living Dossier & Calibrated Memory! ✨🚀`);
+  } catch (err) {
+    console.error('Failed to commit staged memories:', err);
+    showToast(`Error committing memories: ${err.message}`);
+  } finally {
+    els.btnCommitStagedMemory.disabled = false;
+    els.btnCommitStagedMemory.textContent = 'Commit Approved Items to Living Dossier ✨';
   }
 }
 

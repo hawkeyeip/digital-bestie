@@ -40,10 +40,60 @@
         <div class="model-picker-wrap" title="Active Ollama Model">
           <span class="model-icon">⚡</span>
           <select id="header-model-select" class="header-model-select" aria-label="Active Ollama Model">
+            <option value="bestie-abliterated">bestie-abliterated (27B • 🔥 Abliterated Core)</option>
+            <option value="huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K">qwen3.5-abliterated:27b (Claude Opus)</option>
             <option value="bestie-light">bestie-light (14B • Fast)</option>
             <option value="bestie">bestie (70B • Deep)</option>
           </select>
         </div>
+
+        <!-- Personal Intelligence & Quick Actions Dropdown (Gemini style) -->
+        <div class="user-menu-wrap">
+          <button id="btn-user-menu" class="user-menu-pill-btn" title="Personal Intelligence & Location">
+            <span class="pill-icon">🧠</span>
+            <span id="topbar-user-location" class="pill-text">Personal Intelligence</span>
+            <svg class="dropdown-arrow-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="user-menu-dropdown" class="user-menu-dropdown hidden">
+            <div class="user-menu-header">
+              <span class="user-menu-avatar">🧠</span>
+              <div class="user-menu-info">
+                <span class="user-menu-name">Personal Intelligence</span>
+                <span id="user-menu-location-preview" class="user-menu-sub">Living Dossier &amp; Memory</span>
+              </div>
+            </div>
+            <div class="user-menu-divider"></div>
+            <div class="user-menu-items">
+              <button class="user-menu-item" data-action="memory">
+                <span class="user-menu-item-icon">📋</span>
+                <span>Living Dossier Matrix</span>
+              </button>
+              <button class="user-menu-item" data-action="import-memory">
+                <span class="user-menu-item-icon">📥</span>
+                <span>Import Memory from Another Model</span>
+                <span class="user-menu-item-tag">Claude • Gemini • ChatGPT • Venice • Grok</span>
+              </button>
+              <button class="user-menu-item" data-action="update-location">
+                <span class="user-menu-item-icon">📍</span>
+                <span>Update Location: <strong id="menu-current-location-text">Austin, TX</strong></span>
+              </button>
+              <button class="user-menu-item" data-action="calibration">
+                <span class="user-menu-item-icon">🧪</span>
+                <span>Memory Calibration Lab</span>
+              </button>
+              <div class="user-menu-divider"></div>
+              <button class="user-menu-item" data-action="settings">
+                <span class="user-menu-item-icon">⚙️</span>
+                <span>Full Settings Hub</span>
+              </button>
+              <button class="user-menu-item" data-action="feedback">
+                <span class="user-menu-item-icon">🐞</span>
+                <span>Send Feedback / Log Issue</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <button id="btn-quick-feedback" class="feedback-pill-btn" title="Call out and log bug issues or feature recommendations">
           <span class="pill-dot"></span>
           <span class="pill-icon">🐞 / 💡</span>
@@ -463,10 +513,15 @@
                 <h2 class="panel-title">Memory Bank &amp; Living Dossier</h2>
                 <p class="panel-subtitle">Everything Digital Bestie understands about your baseline, psychology, boundaries, and ventures</p>
               </div>
-              <div class="memory-tab-switch">
-                <button id="tab-memory-dossier" class="memory-tab-btn active">📋 Living Dossier</button>
-                <button id="tab-memory-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
-                <button id="tab-memory-calibration" class="memory-tab-btn">🧪 Calibration Lab</button>
+              <div class="panel-header-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-import-memory-header" class="btn-neon" title="Import memory from Claude, Gemini, ChatGPT, Venice, or Grok">
+                  <span>📥</span> Import Memory from Another Model
+                </button>
+                <div class="memory-tab-switch">
+                  <button id="tab-memory-dossier" class="memory-tab-btn active">📋 Living Dossier</button>
+                  <button id="tab-memory-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
+                  <button id="tab-memory-calibration" class="memory-tab-btn">🧪 Calibration Lab</button>
+                </div>
               </div>
             </div>
           </div>
@@ -474,7 +529,8 @@
             <div class="memory-loading">Loading your profile...</div>
           </div>
           <div class="memory-actions">
-            <button id="btn-open-calibration-from-memory" class="btn-neon">⚡ Deepen Memory with Question Packs</button>
+            <button id="btn-open-import-hub" class="btn-neon">📥 Import Memory from Another Model</button>
+            <button id="btn-open-calibration-from-memory" class="btn-glass">⚡ Deepen Memory with Question Packs</button>
             <button id="btn-export" class="btn-glass">Export Data</button>
             <button id="btn-import" class="btn-glass">Import Data</button>
             <button id="btn-clear-conversation" class="btn-glass btn-danger">Clear Chat History</button>
@@ -490,16 +546,21 @@
                 <h2 class="panel-title">🧪 Memory Calibration Lab</h2>
                 <p class="panel-subtitle">Deepen Bestie's understanding of your psychology, blind spots, financial runway, and boundaries through guided drills or an interactive 1-on-1 interview</p>
               </div>
-              <div class="memory-tab-switch">
-                <button id="tab-calib-dossier" class="memory-tab-btn">📋 Living Dossier</button>
-                <button id="tab-calib-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
-                <button id="tab-calib-lab" class="memory-tab-btn active">🧪 Calibration Lab</button>
+              <div class="panel-header-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-import-memory-calib" class="btn-neon" title="Import memory from Claude, Gemini, ChatGPT, Venice, or Grok to calibrate your Living Dossier">
+                  <span>📥</span> Import Memory from Another Model
+                </button>
+                <div class="memory-tab-switch">
+                  <button id="tab-calib-dossier" class="memory-tab-btn">📋 Living Dossier</button>
+                  <button id="tab-calib-credentials" class="memory-tab-btn">🎖️ Credentials &amp; Merit</button>
+                  <button id="tab-calib-lab" class="memory-tab-btn active">🧪 Calibration Lab</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="calibration-container">
-            <!-- Category Filter Pills -->
+          <!-- Dedicated Filter Pills Bar (stationary, non-overlapping) -->
+          <div class="calibration-categories-wrapper">
             <div class="calibration-categories" id="calibration-categories">
               <button class="cal-cat-pill" data-category="all" title="View and scroll all 17 calibration questions a la carte">
                 <span class="cat-emoji">⚡</span>
@@ -537,7 +598,9 @@
                 <span class="cal-cat-count" id="cal-count-tone">0/2</span>
               </button>
             </div>
+          </div>
 
+          <div class="calibration-container">
             <!-- Dynamic Active Category Content -->
             <div id="calibration-active-card" class="calibration-active-card">
               <!-- Rendered via JS -->
@@ -699,169 +762,462 @@
           </div>
         </div>
 
-        <!-- Settings View -->
+        <!-- Settings Hub View -->
         <div id="view-settings" class="view">
-          <div class="panel-header">
-            <h2 class="panel-title">Settings</h2>
-            <p class="panel-subtitle">Configure your Digital Bestie</p>
-          </div>
-          <div class="settings-form">
-            <div class="setting-group" id="group-ollama-health">
-              <div class="setting-group-header-flex">
-                <div>
-                  <h3 style="margin-bottom: 2px;">🛡️ Ollama &amp; Model System Health</h3>
-                  <p class="setting-desc" style="margin: 0; font-size: 12px; color: var(--text-muted);">
-                    Self-healing fallback keeps Digital Bestie online even if models are deleted or missing.
+          <div class="settings-hub-layout">
+            <!-- Left Navigation Sidebar -->
+            <aside class="settings-sidebar">
+              <div class="settings-sidebar-header">
+                <div class="settings-title-line">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>Settings Hub</span>
+                </div>
+                <div class="settings-search-wrap">
+                  <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input type="text" id="settings-search-input" class="settings-search-input" placeholder="Search settings..." />
+                </div>
+              </div>
+
+              <div class="settings-nav-sections" id="settings-nav-sections">
+                <!-- Group 1: Memory & Intelligence -->
+                <div class="settings-nav-section-title">MEMORY &amp; CONSOLIDATION</div>
+                <button class="settings-nav-btn active" data-settings-panel="panel-settings-memory">
+                  <span class="nav-icon">📥</span>
+                  <span class="nav-label">Import from other AIs</span>
+                  <span class="nav-badge-neon">Claude • Gemini</span>
+                </button>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-dossier">
+                  <span class="nav-icon">📋</span>
+                  <span class="nav-label">Living Dossier State</span>
+                </button>
+
+                <!-- Group 2: General & Preferences -->
+                <div class="settings-nav-section-title">GENERAL &amp; PROFILE</div>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-general">
+                  <span class="nav-icon">⚡</span>
+                  <span class="nav-label">General &amp; Themes</span>
+                </button>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-location">
+                  <span class="nav-icon">📍</span>
+                  <span class="nav-label">Location &amp; Sanctuary</span>
+                </button>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-dynamic">
+                  <span class="nav-icon">🎙️</span>
+                  <span class="nav-label">Voice, Tone &amp; Execution</span>
+                </button>
+
+                <!-- Group 3: AI Engine -->
+                <div class="settings-nav-section-title">AI ENGINE &amp; HEALTH</div>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-ollama">
+                  <span class="nav-icon">🛡️</span>
+                  <span class="nav-label">Ollama &amp; Core Models</span>
+                  <span id="settings-ollama-pill" class="status-pill status-active">Online</span>
+                </button>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-performance">
+                  <span class="nav-icon">📊</span>
+                  <span class="nav-label">RAM, VRAM &amp; Power</span>
+                </button>
+
+                <!-- Group 4: Vaults & Updates -->
+                <div class="settings-nav-section-title">SYSTEM &amp; UPDATES</div>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-updates">
+                  <span class="nav-icon">🚀</span>
+                  <span class="nav-label">App Updates &amp; GitHub</span>
+                  <span class="version-tag-sm">v2.2.0</span>
+                </button>
+              </div>
+            </aside>
+
+            <!-- Right Content Panels Area -->
+            <div class="settings-content-area" id="settings-content-area">
+              <!-- Panel 1: Memory Import & Consolidation Hub -->
+              <div id="panel-settings-memory" class="settings-panel active" data-search-terms="import memory claude gemini venice chatgpt consolidation export prompt migrate dossier">
+                <div class="panel-header-compact">
+                  <div class="panel-title-with-badge">
+                    <h3>📥 Multi-AI Memory Consolidation &amp; Import Hub</h3>
+                    <span class="status-pill status-active">Claude • Gemini • Venice • ChatGPT • Grok</span>
+                  </div>
+                  <p class="panel-desc">
+                    Consolidate memories, stored instructions, and psychological context from any other AI assistant. Staged items are reviewed before being committed into your persistent Living Dossier and Calibrated Memory to prevent inadvertent details from being hardcoded.
                   </p>
                 </div>
-                <button type="button" id="btn-refresh-health" class="btn-glass btn-sm">↻ Check Health</button>
-              </div>
 
-              <!-- Self-Healing Banner (shown if fallback is engaged) -->
-              <div id="self-healing-banner" class="self-healing-banner hidden">
-                <span class="sh-icon">🛡️</span>
-                <div class="sh-content">
-                  <strong>Self-Healing Active:</strong>
-                  <span id="self-healing-msg">Defaulted to fallback model because original model was missing.</span>
-                </div>
-              </div>
-
-              <div class="health-cards-grid">
-                <!-- Ollama Service -->
-                <div class="health-card" id="health-card-ollama">
-                  <div class="health-card-header">
-                    <span class="health-card-title">Ollama Engine</span>
-                    <span id="health-status-ollama" class="health-badge healthy">Online</span>
-                  </div>
-                  <div class="health-card-desc" id="health-desc-ollama">localhost:11434</div>
+                <div class="import-section-card" style="text-align: center; padding: 32px 20px; background: linear-gradient(180deg, rgba(0, 240, 255, 0.08) 0%, rgba(10, 12, 22, 0.7) 100%); border-color: rgba(0, 240, 255, 0.3);">
+                  <div style="font-size: 38px; margin-bottom: 12px;">🧠 ⇄ 📥</div>
+                  <h4 style="font-size: 18px; margin: 0 0 8px 0; color: #fff;">Import Memory from Another Model</h4>
+                  <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 20px auto; font-size: 13px; line-height: 1.5;">
+                    Generate an export prompt tailored for Claude, Gemini, ChatGPT, Grok, or Venice, then paste the results to analyze, stage, and integrate them directly into your calibrated Living Dossier.
+                  </p>
+                  <button type="button" id="btn-launch-import-from-settings" class="btn-neon" style="padding: 12px 28px; font-size: 14px; font-weight: 700;">
+                    📥 Open Memory Import Hub
+                  </button>
                 </div>
 
-                <!-- Bestie Persona Core -->
-                <div class="health-card" id="health-card-persona">
-                  <div class="health-card-header">
-                    <span class="health-card-title">Persona Core (Bestie)</span>
-                    <span id="health-status-persona" class="health-badge healthy">Installed</span>
-                  </div>
-                  <div class="health-card-desc" id="health-desc-persona">bestie-light (14B)</div>
-                  <div class="health-card-actions">
-                    <button type="button" id="btn-restore-persona" class="btn-glass btn-xs hidden">⚡ Recreate Model</button>
-                  </div>
-                </div>
+                <!-- Memory In-Chat Toggles (like Claude's Memory Settings) -->
+                <div class="setting-group" style="margin-top: 24px;">
+                  <h3>Memory In-Chat Directives &amp; Sync</h3>
+                  <label class="setting-item toggle-setting-row">
+                    <div class="setting-text-wrap">
+                      <span class="setting-title">Inject Living Dossier into Prompts</span>
+                      <small class="setting-desc">Automatically injects current identity, cash floor, 90-day North Star, and anti-goals into every generation.</small>
+                    </div>
+                    <input type="checkbox" id="setting-inject-dossier" class="toggle-checkbox" checked />
+                  </label>
 
-                <!-- Vector Memory Embeddings -->
-                <div class="health-card" id="health-card-embeddings">
-                  <div class="health-card-header">
-                    <span class="health-card-title">Vector Memory (RAG)</span>
-                    <span id="health-status-embeddings" class="health-badge healthy">Installed</span>
-                  </div>
-                  <div class="health-card-desc" id="health-desc-embeddings">nomic-embed-text (274 MB)</div>
-                  <div class="health-card-actions">
-                    <button type="button" id="btn-pull-embeddings" class="btn-glass btn-xs hidden">📥 Download nomic-embed-text</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="setting-group">
-              <h3>Ollama Connection</h3>
-              <label class="setting-item">
-                <span>Base URL</span>
-                <input type="text" id="setting-ollama-url" class="setting-input" value="http://localhost:11434" />
-              </label>
-              <label class="setting-item">
-                <span>Model Name</span>
-                <select id="setting-model-name" class="setting-input">
-                  <option value="bestie-light">bestie-light (14B • 🛡️ System Core)</option>
-                  <option value="bestie">bestie (Hermes 3 70B • 🛡️ System Core)</option>
-                </select>
-              </label>
-              <label class="setting-item">
-                <span>Context Window (tokens)</span>
-                <input type="number" id="setting-num-ctx" class="setting-input" value="16384" min="2048" max="131072" step="1024" />
-              </label>
-            </div>
-            <div class="setting-group">
-              <h3>Conversation</h3>
-              <label class="setting-item">
-                <span>Message History Window</span>
-                <input type="number" id="setting-context-window" class="setting-input" value="50" min="10" max="200" />
-              </label>
-            </div>
-
-            <div class="setting-group">
-              <h3>Application & Updates</h3>
-              <div class="setting-item updater-status-row">
-                <div class="updater-info">
-                  <div class="updater-title-line">
-                    <span class="updater-app-name">Digital Bestie</span>
-                    <span id="app-version-badge" class="version-tag">v2.2.0</span>
-                    <span id="updater-status-badge" class="status-pill status-active">Up to date</span>
-                  </div>
-                  <p id="updater-status-text" class="updater-status-text">Click below to check for the latest release.</p>
-                  <div id="updater-release-details" class="updater-release-details hidden">
-                    <h4 id="updater-release-title" class="updater-release-title"></h4>
-                    <p id="updater-release-snippet" class="updater-release-snippet"></p>
-                  </div>
-                </div>
-                <div class="updater-actions">
-                  <button type="button" id="btn-check-updates" class="btn-glass btn-sm">Check for Updates</button>
-                  <button type="button" id="btn-download-update" class="btn-neon btn-sm hidden">Download Update 🚀</button>
+                  <label class="setting-item toggle-setting-row">
+                    <div class="setting-text-wrap">
+                      <span class="setting-title">Auto-Commit Updates in Chat</span>
+                      <small class="setting-desc">Allows Digital Bestie to automatically extract and commit concrete boundaries or dollar amounts using machine tags.</small>
+                    </div>
+                    <input type="checkbox" id="setting-auto-commit" class="toggle-checkbox" checked />
+                  </label>
                 </div>
               </div>
 
-              <label class="setting-item">
-                <span>GitHub Personal Access Token <small style="color: var(--text-muted); font-size: 11px;">(Optional — for private repo updates)</small></span>
-                <input type="password" id="setting-github-token" class="setting-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
-              </label>
-            </div>
-
-            <div class="setting-group">
-              <h3>Performance, Memory &amp; Power Optimization</h3>
-              <label class="setting-item">
-                <div style="display: flex; flex-direction: column;">
-                  <span style="font-weight: 600;">Power Saver Mode</span>
-                  <small style="color: var(--text-muted); font-size: 11px;">Disables background GPU canvas re-draws, strips heavy blurs, and bounds context window for maximum battery and low CPU.</small>
-                </div>
-                <input type="checkbox" id="setting-power-saver" style="width: 20px; height: 20px; accent-color: var(--neon-cyan); cursor: pointer;" />
-              </label>
-
-              <label class="setting-item">
-                <div style="display: flex; flex-direction: column;">
-                  <span style="font-weight: 600;">Ollama Model Retention (keep_alive)</span>
-                  <small style="color: var(--text-muted); font-size: 11px;">Controls how long Ollama holds large LLMs (14B/70B) in VRAM/RAM after generation before unloading.</small>
-                </div>
-                <select id="setting-keep-alive" class="setting-input" style="max-width: 260px;">
-                  <option value="5m">5 Minutes (Standard balance)</option>
-                  <option value="1m">1 Minute (Aggressive RAM recovery)</option>
-                  <option value="0">Unload Immediately (Zero idle RAM footprint)</option>
-                  <option value="15m">15 Minutes (High responsiveness)</option>
-                </select>
-              </label>
-
-              <div class="memory-monitor-box">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">In-Process Memory Telemetry</span>
-                  <div style="display: flex; gap: 6px;">
-                    <button type="button" id="btn-refresh-memory" class="btn-glass btn-sm">Refresh</button>
-                    <button type="button" id="btn-clear-mem-cache" class="btn-glass btn-sm">Clear Cache ⚡</button>
+              <!-- Panel 2: Living Dossier Matrix Quick View -->
+              <div id="panel-settings-dossier" class="settings-panel" data-search-terms="living dossier profile baseline north star cash floor anti goals">
+                <div class="panel-header-compact">
+                  <div class="panel-title-with-badge">
+                    <h3>📋 Living Dossier Current State</h3>
+                    <button type="button" id="btn-settings-jump-calibration" class="btn-neon btn-xs">🧪 Open Calibration Lab</button>
                   </div>
+                  <p class="panel-desc">Snapshot of what Digital Bestie currently knows about your baseline and high-stakes goals.</p>
                 </div>
-                <div class="memory-stat-row">
-                  <span>Renderer &amp; Node Heap Used:</span>
-                  <span id="mem-heap-used" class="memory-stat-val">-- MB</span>
-                </div>
-                <div class="memory-stat-row">
-                  <span>Resident Set Size (RSS):</span>
-                  <span id="mem-rss" class="memory-stat-val">-- MB</span>
-                </div>
-                <div class="memory-stat-row" style="margin-bottom: 0;">
-                  <span>System Free Memory:</span>
-                  <span id="mem-sys-free" class="memory-stat-val">-- GB</span>
+
+                <div id="settings-dossier-summary-grid" class="dossier-summary-cards-grid">
+                  <!-- Dynamically rendered -->
                 </div>
               </div>
-            </div>
 
-            <button id="btn-save-settings" class="btn-neon">Save Settings</button>
+              <!-- Panel 3: General & Appearance -->
+              <div id="panel-settings-general" class="settings-panel" data-search-terms="general appearance theme cyberpunk neon dark power saver history window">
+                <div class="panel-header-compact">
+                  <h3>⚡ General &amp; Appearance</h3>
+                  <p class="panel-desc">Configure visual styling, power consumption, and chat memory buffer.</p>
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-item">
+                    <span>Theme Preset</span>
+                    <select id="setting-theme-select" class="setting-input">
+                      <option value="neon-dark">Neon Midnight (Electric Cyan &amp; Purple • Default)</option>
+                      <option value="cyberpunk">Cyberpunk Neon (High Contrast)</option>
+                      <option value="obsidian">Obsidian Minimal (Low Glow Dark)</option>
+                    </select>
+                  </label>
+
+                  <label class="setting-item">
+                    <span>Message History Window (turns)</span>
+                    <input type="number" id="setting-context-window" class="setting-input" value="50" min="10" max="200" />
+                  </label>
+
+                  <label class="setting-item toggle-setting-row">
+                    <div class="setting-text-wrap">
+                      <span class="setting-title">Power Saver Mode</span>
+                      <small class="setting-desc">Disables background canvas particle mesh, strips heavy blurs, and bounds context window for maximum battery efficiency.</small>
+                    </div>
+                    <input type="checkbox" id="setting-power-saver" class="toggle-checkbox" />
+                  </label>
+                </div>
+
+                <div class="setting-group danger-zone-group">
+                  <h3 style="color: #ff4444;">Danger Zone</h3>
+                  <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <span style="font-weight: 600;">Clear All Chat History</span>
+                      <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">Deletes all saved conversations while preserving your Living Dossier.</p>
+                    </div>
+                    <button type="button" id="btn-settings-clear-chat" class="btn-glass btn-danger btn-sm">Clear History</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 4: Location & Sanctuary -->
+              <div id="panel-settings-location" class="settings-panel" data-search-terms="location sanctuary austin texas living situation studio apartment work radius">
+                <div class="panel-header-compact">
+                  <h3>📍 Active Location &amp; Physical Sanctuary</h3>
+                  <p class="panel-desc">Used for scouting third-place work sanctuaries, local coffee shops, libraries, and grounding routines.</p>
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-item">
+                    <span>Current City &amp; State</span>
+                    <input type="text" id="setting-user-location" class="setting-input" placeholder="e.g. Austin, TX, USA" />
+                  </label>
+
+                  <label class="setting-item">
+                    <span>Current Living &amp; Workspace Environment</span>
+                    <textarea id="setting-living-setup" class="setting-textarea" rows="3" placeholder="e.g. Studio apartment with domestic friction, temporary sublet, couch-surfing..."></textarea>
+                  </label>
+
+                  <button type="button" id="btn-save-location-settings" class="btn-neon btn-sm" style="margin-top: 8px;">Save Location &amp; Sanctuary</button>
+                </div>
+              </div>
+
+              <!-- Panel 5: Voice, Tone & Execution -->
+              <div id="panel-settings-dynamic" class="settings-panel" data-search-terms="voice tone dynamic coaching execution style bestie candid">
+                <div class="panel-header-compact">
+                  <h3>🎙️ Operating Dynamic &amp; Voice</h3>
+                  <p class="panel-desc">Tune how candidly Bestie speaks and whether it takes action or coaches with questions.</p>
+                </div>
+
+                <div class="setting-group">
+                  <label class="setting-item">
+                    <span>Operating Voice &amp; Tone</span>
+                    <select id="setting-tone-preference" class="setting-input">
+                      <option value="digital_bestie">Digital Bestie (Warm, candid, humorous, zero fluff)</option>
+                      <option value="direct_and_factual">Direct &amp; Factual (Concise, tactical, military rigor)</option>
+                      <option value="gentle_exploratory">Gentle &amp; Exploratory (Low pressure, soothing)</option>
+                    </select>
+                  </label>
+
+                  <label class="setting-item">
+                    <span>Execution vs. Coaching Bias</span>
+                    <select id="setting-execution-style" class="setting-input">
+                      <option value="execution_first">Execution First (Draft copy, write code, formulate plans immediately)</option>
+                      <option value="coaching_first">Coaching First (Ask 1 diagnostic question before taking action)</option>
+                    </select>
+                  </label>
+
+                  <button type="button" id="btn-save-tone-settings" class="btn-neon btn-sm" style="margin-top: 8px;">Save Operating Dynamic</button>
+                </div>
+              </div>
+
+              <!-- Panel 6: Ollama & AI Models -->
+              <div id="panel-settings-ollama" class="settings-panel" data-search-terms="ollama models system health llama hermes context window tokens keep alive">
+                <div class="panel-header-compact">
+                  <div class="setting-group-header-flex">
+                    <div>
+                      <h3 style="margin-bottom: 2px;">🛡️ Ollama &amp; Model System Health</h3>
+                      <p class="panel-desc">Self-healing fallback keeps Digital Bestie online even if models are deleted or missing.</p>
+                    </div>
+                    <button type="button" id="btn-refresh-health" class="btn-glass btn-sm">↻ Check Health</button>
+                  </div>
+                </div>
+
+                <!-- Self-Healing Banner -->
+                <div id="self-healing-banner" class="self-healing-banner hidden">
+                  <span class="sh-icon">🛡️</span>
+                  <div class="sh-content">
+                    <strong>Self-Healing Active:</strong>
+                    <span id="self-healing-msg">Defaulted to fallback model because original model was missing.</span>
+                  </div>
+                </div>
+
+                <!-- Model Upgrade & Version Notification Banner -->
+                <div id="model-upgrade-banner" class="model-upgrade-banner hidden" style="margin-bottom: 16px; background: linear-gradient(135deg, rgba(20, 184, 166, 0.12) 0%, rgba(14, 165, 233, 0.12) 100%); border: 1px solid rgba(20, 184, 166, 0.4); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                  <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 22px;">⚡</span>
+                    <div>
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                        <span id="model-upgrade-badge" class="health-badge healthy" style="font-size: 10px; text-transform: uppercase;">Upgrade Available</span>
+                        <strong id="model-upgrade-title" style="color: #fff; font-size: 13px;">Curated Uncensored Core Available</strong>
+                      </div>
+                      <p id="model-upgrade-desc" style="font-size: 12px; color: #cbd5e1; margin: 0; line-height: 1.4;">
+                        Switch to a verified uncensored base for reliable tool-calling and zero moralizing disclaimers.
+                      </p>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <button type="button" id="btn-apply-model-upgrade" class="btn-neon" style="font-size: 12px; padding: 6px 14px; white-space: nowrap;">
+                      📥 Upgrade Core
+                    </button>
+                  </div>
+                </div>
+
+                <div class="health-cards-grid">
+                  <div class="health-card" id="health-card-ollama">
+                    <div class="health-card-header">
+                      <span class="health-card-title">Ollama Engine</span>
+                      <span id="health-status-ollama" class="health-badge healthy">Online</span>
+                    </div>
+                    <div class="health-card-desc" id="health-desc-ollama">localhost:11434</div>
+                  </div>
+
+                  <div class="health-card" id="health-card-persona">
+                    <div class="health-card-header">
+                      <span class="health-card-title">Persona Core (Bestie)</span>
+                      <span id="health-status-persona" class="health-badge healthy">Installed</span>
+                    </div>
+                    <div class="health-card-desc" id="health-desc-persona">bestie-abliterated (27B • 🔥 Abliterated)</div>
+                    <div class="health-card-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                      <button type="button" id="btn-restore-persona" class="btn-glass btn-xs">⚡ Recreate 27B Core</button>
+                      <button type="button" id="btn-restore-persona-light" class="btn-glass btn-xs hidden">Recreate 14B Light</button>
+                    </div>
+                  </div>
+
+                  <div class="health-card" id="health-card-embeddings">
+                    <div class="health-card-header">
+                      <span class="health-card-title">Vector Memory (RAG)</span>
+                      <span id="health-status-embeddings" class="health-badge healthy">Installed</span>
+                    </div>
+                    <div class="health-card-desc" id="health-desc-embeddings">nomic-embed-text (274 MB)</div>
+                    <div class="health-card-actions">
+                      <button type="button" id="btn-pull-embeddings" class="btn-glass btn-xs hidden">📥 Download nomic-embed-text</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Base Model Infusion Engine -->
+                <div class="infusion-card" style="margin-top: 18px; background: linear-gradient(180deg, rgba(168, 85, 247, 0.08) 0%, rgba(10, 12, 22, 0.7) 100%); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-lg); padding: 18px 20px;">
+                  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                      <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <span>🔥</span>
+                        <span>Infuse Base Model as Digital Bestie Core</span>
+                        <span class="status-pill status-active" style="border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.15); color: #c084fc;">Soul &amp; Bones Compiler</span>
+                      </h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                        Compile your own selected local model into the dedicated "bestie" architecture. Automatically bakes in the 5 operating tenets, sovereign sanctuary directives, 16K context parameters, and links all Living Dossier memory vaults.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: flex-end;">
+                    <div class="form-group" style="margin: 0;">
+                      <label for="infuse-base-model-select" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block;">
+                        Source Base Model
+                      </label>
+                      <select id="infuse-base-model-select" class="feedback-select" style="width: 100%; font-size: 12px; height: 36px;">
+                        <!-- Dynamically populated with local models -->
+                      </select>
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                      <label for="infuse-target-name-input" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block;">
+                        Compiled Model Name
+                      </label>
+                      <input type="text" id="infuse-target-name-input" class="feedback-input" value="bestie" placeholder="e.g. bestie, bestie-custom" style="font-family: var(--font-mono); font-size: 12px; height: 36px;" />
+                    </div>
+
+                    <button type="button" id="btn-infuse-model" class="btn-neon" style="height: 36px; padding: 0 16px; font-size: 12px; white-space: nowrap;">
+                      ⚡ Compile Bestie Core
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Curated Uncensored & High-Logic Model Catalog -->
+                <div class="curated-catalog-wrap" style="margin-top: 18px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color-dim); border-radius: var(--radius-lg); padding: 18px 20px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                      <h4 style="margin: 0 0 4px 0; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <span>🛡️</span>
+                        <span>Curated Uncensored &amp; High-Logic Models</span>
+                        <span style="font-size: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(20, 184, 166, 0.15); color: var(--neon-cyan); border: 1px solid rgba(20, 184, 166, 0.3);">Verified Foundations</span>
+                      </h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">
+                        Pre-screened open-weights models trained on refusal-scrubbed datasets that preserve function calling and logical deduction without mathematical degradation.
+                      </p>
+                    </div>
+                    <button type="button" id="btn-refresh-catalog" class="btn-glass btn-xs">↻ Refresh Catalog</button>
+                  </div>
+
+                  <div id="curated-models-list" class="curated-models-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+                    <!-- Rendered dynamically by renderer.js -->
+                  </div>
+                </div>
+
+                <div class="setting-group" style="margin-top: 20px;">
+                  <h3>Ollama Connection &amp; Context</h3>
+                  <label class="setting-item">
+                    <span>Base URL</span>
+                    <input type="text" id="setting-ollama-url" class="setting-input" value="http://localhost:11434" />
+                  </label>
+                  <label class="setting-item">
+                    <span>Active Model</span>
+                    <select id="setting-model-name" class="setting-input">
+                      <option value="bestie-abliterated">bestie-abliterated (27B • 🔥 Abliterated Core)</option>
+                      <option value="huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K">huihui_ai/qwen3.5-abliterated:27b-Claude-4.6-Opus-q4_K (27B)</option>
+                      <option value="bestie-light">bestie-light (14B • 🛡️ System Core)</option>
+                      <option value="bestie">bestie (Hermes 3 70B • 🛡️ System Core)</option>
+                    </select>
+                  </label>
+                  <label class="setting-item">
+                    <span>Context Window (tokens)</span>
+                    <input type="number" id="setting-num-ctx" class="setting-input" value="16384" min="2048" max="131072" step="1024" />
+                  </label>
+                  <label class="setting-item">
+                    <span>Model Retention (keep_alive)</span>
+                    <select id="setting-keep-alive" class="setting-input">
+                      <option value="5m">5 Minutes (Standard balance)</option>
+                      <option value="1m">1 Minute (Aggressive RAM recovery)</option>
+                      <option value="0">Unload Immediately (Zero idle RAM footprint)</option>
+                      <option value="15m">15 Minutes (High responsiveness)</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Panel 7: RAM, VRAM & Power -->
+              <div id="panel-settings-performance" class="settings-panel" data-search-terms="ram vram memory heap resident set size cache telemetry">
+                <div class="panel-header-compact">
+                  <h3>📊 In-Process Memory Telemetry &amp; Cache</h3>
+                  <p class="panel-desc">Real-time memory metrics for Electron, Node heap, and system resources.</p>
+                </div>
+
+                <div class="memory-monitor-box">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">In-Process Memory Telemetry</span>
+                    <div style="display: flex; gap: 6px;">
+                      <button type="button" id="btn-refresh-memory" class="btn-glass btn-sm">Refresh</button>
+                      <button type="button" id="btn-clear-mem-cache" class="btn-glass btn-sm">Clear Cache ⚡</button>
+                    </div>
+                  </div>
+                  <div class="memory-stat-row">
+                    <span>Renderer &amp; Node Heap Used:</span>
+                    <span id="mem-heap-used" class="memory-stat-val">-- MB</span>
+                  </div>
+                  <div class="memory-stat-row">
+                    <span>Resident Set Size (RSS):</span>
+                    <span id="mem-rss" class="memory-stat-val">-- MB</span>
+                  </div>
+                  <div class="memory-stat-row" style="margin-bottom: 0;">
+                    <span>System Free Memory:</span>
+                    <span id="mem-sys-free" class="memory-stat-val">-- GB</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 8: App Updates & GitHub -->
+              <div id="panel-settings-updates" class="settings-panel" data-search-terms="updates release github version changelog token">
+                <div class="panel-header-compact">
+                  <h3>🚀 Application &amp; Updates</h3>
+                  <p class="panel-desc">Check for new releases, review changelogs, and configure private repo tokens.</p>
+                </div>
+
+                <div class="setting-group">
+                  <div class="setting-item updater-status-row">
+                    <div class="updater-info">
+                      <div class="updater-title-line">
+                        <span class="updater-app-name">Digital Bestie</span>
+                        <span id="app-version-badge" class="version-tag">v2.2.0</span>
+                        <span id="updater-status-badge" class="status-pill status-active">Up to date</span>
+                      </div>
+                      <p id="updater-status-text" class="updater-status-text">Click below to check for the latest release.</p>
+                      <div id="updater-release-details" class="updater-release-details hidden">
+                        <h4 id="updater-release-title" class="updater-release-title"></h4>
+                        <p id="updater-release-snippet" class="updater-release-snippet"></p>
+                      </div>
+                    </div>
+                    <div class="updater-actions">
+                      <button type="button" id="btn-check-updates" class="btn-glass btn-sm">Check for Updates</button>
+                      <button type="button" id="btn-download-update" class="btn-neon btn-sm hidden">Download Update 🚀</button>
+                    </div>
+                  </div>
+
+                  <label class="setting-item" style="margin-top: 14px;">
+                    <span>GitHub Personal Access Token <small style="color: var(--text-muted); font-size: 11px;">(Optional — for private repo updates)</small></span>
+                    <input type="password" id="setting-github-token" class="setting-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Global Save Button Footer -->
+              <div class="settings-footer-bar">
+                <span class="settings-footer-hint">Settings are saved locally in <code>~/.digital-bestie/settings.json</code></span>
+                <button type="button" id="btn-save-settings" class="btn-neon">Save All Settings</button>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -1369,6 +1725,228 @@
           <div class="feedback-actions" style="margin-top: 14px;">
             <button type="button" id="btn-cancel-nb" class="btn-glass">Cancel</button>
             <button type="button" id="btn-submit-nb" class="btn-neon">Add to Bank 🚀</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Memory from Another Model Modal -->
+    <div id="import-memory-modal" class="feedback-overlay hidden">
+      <div class="feedback-card import-modal-card">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan);">
+              <span>📥</span>
+            </div>
+            <div>
+              <h3 id="import-modal-title">Import Memory from Another Model</h3>
+              <p class="feedback-subtitle">Copy our migration prompt for Claude, Gemini, ChatGPT, Grok, or Venice, then paste the results to calibrate your Living Dossier.</p>
+            </div>
+          </div>
+          <button id="btn-close-import-modal" class="btn-icon-close" title="Close (Esc)">✕</button>
+        </div>
+
+        <div class="import-modal-scroll">
+          <!-- Step 1: Provider Selector -->
+          <div class="import-section-card">
+            <div class="import-step-header">
+              <span class="import-step-num">1</span>
+              <div>
+                <h4 class="import-step-title">Select Source AI &amp; Copy Migration Prompt</h4>
+                <p class="import-step-desc">Pick where you are migrating from, copy our tuned export prompt, and paste it into that assistant.</p>
+              </div>
+            </div>
+
+            <div class="import-provider-pills" id="import-provider-pills">
+              <button type="button" class="provider-pill active" data-provider="claude">
+                <span class="provider-pill-icon">🟠</span>
+                <span class="provider-pill-name">Claude</span>
+                <span class="provider-pill-tag">Anthropic</span>
+              </button>
+              <button type="button" class="provider-pill" data-provider="gemini">
+                <span class="provider-pill-icon">🔵</span>
+                <span class="provider-pill-name">Gemini</span>
+                <span class="provider-pill-tag">Google</span>
+              </button>
+              <button type="button" class="provider-pill" data-provider="chatgpt">
+                <span class="provider-pill-icon">🟢</span>
+                <span class="provider-pill-name">ChatGPT</span>
+                <span class="provider-pill-tag">OpenAI</span>
+              </button>
+              <button type="button" class="provider-pill" data-provider="grok">
+                <span class="provider-pill-icon">⚡</span>
+                <span class="provider-pill-name">Grok</span>
+                <span class="provider-pill-tag">xAI</span>
+              </button>
+              <button type="button" class="provider-pill" data-provider="venice">
+                <span class="provider-pill-icon">🟣</span>
+                <span class="provider-pill-name">Venice AI</span>
+                <span class="provider-pill-tag">Venice</span>
+              </button>
+              <button type="button" class="provider-pill" data-provider="custom">
+                <span class="provider-pill-icon">📝</span>
+                <span class="provider-pill-name">Raw Notes / Other</span>
+                <span class="provider-pill-tag">Universal</span>
+              </button>
+            </div>
+
+            <!-- Prompt Display Box -->
+            <div class="import-prompt-box">
+              <div class="import-prompt-top">
+                <div class="import-prompt-meta">
+                  <span id="import-selected-provider-title">🟠 Claude Memory Export Prompt</span>
+                  <span class="import-prompt-hint">Copy &amp; paste into your other AI's chat window</span>
+                </div>
+                <button type="button" id="btn-copy-import-prompt" class="btn-neon btn-sm">
+                  <span class="copy-icon">📋</span>
+                  <span class="copy-text">Copy Export Prompt</span>
+                </button>
+              </div>
+              <pre class="import-prompt-pre"><code id="import-prompt-display"></code></pre>
+            </div>
+          </div>
+
+          <!-- Step 2: Paste Export Area -->
+          <div class="import-section-card">
+            <div class="import-step-header">
+              <span class="import-step-num">2</span>
+              <div>
+                <h4 class="import-step-title">Paste Exported Memories from the Other Model</h4>
+                <p class="import-step-desc">Paste the response from your other AI below. Bestie will parse and categorize each fact into your calibrated memory fields.</p>
+              </div>
+            </div>
+
+            <textarea id="import-memory-input" class="import-textarea" placeholder="Paste the exported text or bullet points here..."></textarea>
+            
+            <div class="import-action-bar">
+              <div class="import-action-left">
+                <button type="button" id="btn-parse-memory" class="btn-neon">⚡ Analyze &amp; Stage Memories</button>
+                <button type="button" id="btn-load-sample-memory" class="btn-glass btn-sm">Load Demo Example</button>
+              </div>
+              <button type="button" id="btn-clear-import-input" class="btn-glass btn-sm">Clear</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Staging & Review Area (Revealed on parse) -->
+          <div id="import-staging-area" class="import-section-card staging-area-card hidden">
+            <div class="staging-hero-banner">
+              <div class="staging-hero-info">
+                <h4 class="staging-hero-title">Step 3: Review Staged Memories Before Committing</h4>
+                <p class="staging-hero-desc">
+                  To prevent inadvertent or unimportant details from being saved, uncheck or trash anything you don't want in your memory bank. You can edit any value inline.
+                </p>
+              </div>
+              <div class="staging-counter-badge">
+                <span id="staged-selected-count">0</span> / <span id="staged-total-count">0</span> selected
+              </div>
+            </div>
+
+            <!-- Staging Filters & Batch Actions -->
+            <div class="staging-controls-bar">
+              <div class="staging-filter-chips" id="staged-filter-chips">
+                <button type="button" class="staging-chip active" data-filter="all">All Items</button>
+                <button type="button" class="staging-chip" data-filter="Goals &amp; Boundaries">Goals &amp; Boundaries</button>
+                <button type="button" class="staging-chip" data-filter="Identity &amp; Baseline">Identity</button>
+                <button type="button" class="staging-chip" data-filter="Capital &amp; Financials">Financials</button>
+                <button type="button" class="staging-chip" data-filter="Psychology &amp; Avoidance">Psychology</button>
+                <button type="button" class="staging-chip" data-filter="Ventures &amp; Skills">Ventures</button>
+                <button type="button" class="staging-chip" data-filter="Instructions &amp; Rules">Rules</button>
+              </div>
+              <div class="staging-batch-actions">
+                <button type="button" id="btn-stage-select-all" class="btn-glass btn-xs">Select All</button>
+                <button type="button" id="btn-stage-deselect-all" class="btn-glass btn-xs">Deselect All</button>
+                <button type="button" id="btn-add-staged-custom" class="btn-glass btn-xs">+ Add Item</button>
+              </div>
+            </div>
+
+            <!-- Staged Items Grid/List -->
+            <div class="staged-items-container" id="import-staged-items">
+              <!-- Staged cards dynamically injected here -->
+            </div>
+
+            <!-- Final Commit Bar -->
+            <div class="staging-commit-bar">
+              <div class="staging-commit-summary">
+                <span>Ready to merge into <strong>Living Dossier &amp; Calibrated Memory</strong>. Only checked items will be saved.</span>
+              </div>
+              <div class="staging-commit-actions">
+                <button type="button" id="btn-cancel-staged-memory" class="btn-glass">Cancel</button>
+                <button type="button" id="btn-commit-staged-memory" class="btn-neon">Commit Approved Items to Calibrated Memory ✨</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Switch Warning & Custom Selection Modal -->
+    <div id="model-warning-modal" class="feedback-overlay hidden">
+      <div class="feedback-card" style="max-width: 580px; border-color: rgba(255, 170, 0, 0.45); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 50px rgba(255, 170, 0, 0.15);">
+        <div class="feedback-header">
+          <div class="feedback-header-left">
+            <div class="feedback-icon-wrap" style="background: rgba(255, 170, 0, 0.15); color: #ffaa00; border-color: rgba(255, 170, 0, 0.35);">
+              <span>⚠️</span>
+            </div>
+            <div>
+              <h3 style="color: #ffaa00;">Model Alteration Warning</h3>
+              <p class="feedback-subtitle">Altering the underlying engine will impact system performance.</p>
+            </div>
+          </div>
+          <button id="btn-close-model-warning" class="btn-icon-close" title="Cancel (Esc)">✕</button>
+        </div>
+
+        <div style="padding: 22px 24px; overflow-y: auto;">
+          <div class="model-warning-callout" style="background: rgba(255, 170, 0, 0.08); border: 1px solid rgba(255, 170, 0, 0.25); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <span style="font-size: 20px;">⚡</span>
+              <div>
+                <div style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 4px;">
+                  System Performance &amp; Alignment Alert
+                </div>
+                <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5; margin: 0;">
+                  Altering the model used will affect the performance of the system and may produce adverse results. Digital Bestie’s 20 operational personas, anti-self-sabotage defenses, and Living Dossier memory ingestion are specifically calibrated for the <strong style="color: var(--neon-cyan);">bestie</strong> core architecture.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+            <div style="font-weight: 600; color: #fff; margin-bottom: 6px;">Potential adverse impacts of switching:</div>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-muted);">
+              <li><strong style="color: var(--text-primary);">Degraded Tone &amp; Refusal Triggers</strong>: Unabliterated base models may lecture, moralize, or refuse sensitive financial and personal boundary discussions.</li>
+              <li><strong style="color: var(--text-primary);">Context Window Constraints</strong>: Models configured with smaller context windows may drop living dossier context or truncate conversation vaults.</li>
+              <li><strong style="color: var(--text-primary);">Formatting &amp; Tool Breakage</strong>: Administrative ghostwriting, markdown matrices, and tag parsing may become ungrounded or verbose.</li>
+            </ul>
+          </div>
+
+          <!-- Target Model Box / Custom Input -->
+          <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color-dim); border-radius: var(--radius-md); padding: 14px; margin-bottom: 20px;">
+            <label style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">
+              Target Model to Activate
+            </label>
+            <div id="model-warning-selected-preview" style="font-family: var(--font-mono); font-size: 14px; color: var(--neon-cyan); font-weight: 600;">
+              --
+            </div>
+
+            <!-- Custom Model Input Field (shown if user selected "Use Custom Model...") -->
+            <div id="model-warning-custom-field" class="hidden" style="margin-top: 10px;">
+              <label for="custom-model-input" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">
+                Enter exact Ollama model tag or registry name:
+              </label>
+              <input type="text" id="custom-model-input" class="feedback-input" placeholder="e.g. llama3.3:70b, deepseek-r1:32b, mistral-nemo" style="font-family: var(--font-mono); width: 100%;" />
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                Tip: Ensure this model is already installed in Ollama (<code style="color: var(--neon-cyan);">ollama list</code>) or available locally.
+              </div>
+            </div>
+          </div>
+
+          <div class="feedback-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 0; padding-top: 0; border-top: none;">
+            <button type="button" id="btn-cancel-model-warning" class="btn-glass">
+              Cancel (Keep Calibrated Model)
+            </button>
+            <button type="button" id="btn-confirm-model-warning" class="btn-neon" style="border-color: #ffaa00; color: #ffaa00; background: rgba(255, 170, 0, 0.12);">
+              I Understand Risks — Switch Model ⚡
+            </button>
           </div>
         </div>
       </div>

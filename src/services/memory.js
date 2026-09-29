@@ -75,10 +75,10 @@ const DEFAULT_PROFILE = {
 
 const DEFAULT_SETTINGS = {
   ollama_url: 'http://localhost:11434',
-  model_name: 'bestie-light',
+  model_name: 'bestie-abliterated',
   context_window: 50,
   theme: 'neon-dark',
-  num_ctx: 8192,
+  num_ctx: 16384,
   ollama_keep_alive: '5m',
   power_saver: false
 };
