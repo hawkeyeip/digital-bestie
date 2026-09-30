@@ -82,6 +82,10 @@
                 <span>Memory Calibration Lab</span>
               </button>
               <div class="user-menu-divider"></div>
+              <button class="user-menu-item" data-action="tour">
+                <span class="user-menu-item-icon">✨</span>
+                <span>Bestie System Tour &amp; Cheat Sheet</span>
+              </button>
               <button class="user-menu-item" data-action="settings">
                 <span class="user-menu-item-icon">⚙️</span>
                 <span>Full Settings Hub</span>
@@ -93,6 +97,11 @@
             </div>
           </div>
         </div>
+
+        <button id="btn-system-tour" class="feedback-pill-btn tour-pill-btn" title="Launch System Capabilities Tour &amp; Keybindings Cheat Sheet">
+          <span class="pill-icon">✨</span>
+          <span class="pill-text">Bestie Tour</span>
+        </button>
 
         <button id="btn-quick-feedback" class="feedback-pill-btn" title="Call out and log bug issues or feature recommendations">
           <span class="pill-dot"></span>
@@ -534,6 +543,7 @@
             <button id="btn-export" class="btn-glass">Export Data</button>
             <button id="btn-import" class="btn-glass">Import Data</button>
             <button id="btn-clear-conversation" class="btn-glass btn-danger">Clear Chat History</button>
+            <button id="btn-replay-system-tour-memory" class="btn-glass">✨ System Tour</button>
             <button id="btn-rerun-onboarding" class="btn-glass">Re-run Onboarding</button>
           </div>
         </div>
@@ -918,6 +928,17 @@
                     </div>
                     <input type="checkbox" id="setting-power-saver" class="toggle-checkbox" />
                   </label>
+                </div>
+
+                <div class="setting-group">
+                  <div class="panel-header-compact" style="margin-bottom: 12px;">
+                    <h3>🎓 System Tour &amp; Baseline Calibration</h3>
+                    <p class="panel-desc">Revisit system capability briefings and operational cheat sheets, or recalibrate your personal baseline interview.</p>
+                  </div>
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" id="btn-replay-system-tour" class="btn-neon btn-sm">✨ Replay Bestie System Tour</button>
+                    <button type="button" id="btn-rerun-onboarding-settings" class="btn-glass btn-sm">🎯 Re-run Personal Baseline Intake</button>
+                  </div>
                 </div>
 
                 <div class="setting-group danger-zone-group">
@@ -1327,6 +1348,57 @@
           </div>
           <div id="feedback-items-container" class="feedback-items-container">
             <!-- Items rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Capabilities Walkthrough & Tutorial Modal -->
+    <div id="system-tour-modal" class="system-tour-overlay hidden">
+      <div class="system-tour-card">
+        <!-- Close button -->
+        <button id="btn-close-system-tour" class="system-tour-close-btn" title="Close Tour (Esc)">✕</button>
+
+        <!-- Top Header & Progress Stepper -->
+        <div class="system-tour-topbar">
+          <div class="system-tour-brand">
+            <span class="tour-brand-badge">⚡ FLIGHT CHECK &amp; CAPABILITIES</span>
+            <span id="tour-step-counter" class="tour-step-counter">Step 1 of 7</span>
+          </div>
+          <div class="system-tour-stepper" id="system-tour-stepper">
+            <div class="tour-step-dot active" data-step="1" title="1. Welcome &amp; Sovereignty">1</div>
+            <div class="tour-step-dot" data-step="2" title="2. Chat Vault &amp; Folders">2</div>
+            <div class="tour-step-dot" data-step="3" title="3. 20 Personas (⌘P)">3</div>
+            <div class="tour-step-dot" data-step="4" title="4. 8 Operational Modules">4</div>
+            <div class="tour-step-dot" data-step="5" title="5. Living Dossier &amp; Memory">5</div>
+            <div class="tour-step-dot" data-step="6" title="6. Superbrain &amp; Runway">6</div>
+            <div class="tour-step-dot" data-step="7" title="7. Keybindings Cheat Sheet">7</div>
+          </div>
+        </div>
+
+        <!-- Dynamic Step Content Body -->
+        <div class="system-tour-body" id="system-tour-body">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Sticky Footer: Acknowledgment Checkbox & Controls -->
+        <div class="system-tour-footer">
+          <div class="tour-acknowledgment-box" id="tour-acknowledgment-box">
+            <label class="tour-ack-label" id="tour-ack-label">
+              <input type="checkbox" id="tour-ack-checkbox" class="tour-ack-checkbox" />
+              <span class="tour-ack-indicator">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span id="tour-ack-text" class="tour-ack-text">I acknowledge that Digital Bestie runs 100% locally and stores all memory encrypted on my machine.</span>
+            </label>
+          </div>
+
+          <div class="system-tour-actions">
+            <button id="btn-tour-prev" class="btn-glass" disabled>← Back</button>
+            <div class="tour-actions-right">
+              <button id="btn-tour-skip" class="btn-glass btn-subtle">Skip Tour</button>
+              <button id="btn-tour-next" class="btn-neon" disabled>Next Capability →</button>
+            </div>
           </div>
         </div>
       </div>

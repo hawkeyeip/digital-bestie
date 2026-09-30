@@ -68,8 +68,10 @@ const DEFAULT_PROFILE = {
   },
   onboarding_state: {
     completed: false,
+    system_tour_completed: false,
     current_phase: 0,
-    phase_responses: {}
+    phase_responses: {},
+    tour_acknowledgments: {}
   }
 };
 

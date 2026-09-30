@@ -11,6 +11,8 @@ import os from 'node:os';
 import https from 'node:https';
 import { execSync } from 'node:child_process';
 
+import { loadSettings } from './memory.js';
+
 const GITHUB_REPO = 'hawkeyeip/digital-bestie';
 
 /**
@@ -43,24 +45,39 @@ function getGitHubToken() {
   if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN.trim();
   if (process.env.GH_TOKEN) return process.env.GH_TOKEN.trim();
 
+  // 1. Check encrypted settings store via safeStorage / loadSettings
   try {
-    const settingsPath = path.join(os.homedir(), '.digital-bestie', 'settings.json');
-    if (fs.existsSync(settingsPath)) {
-      const raw = fs.readFileSync(settingsPath, 'utf8');
-      const settings = JSON.parse(raw);
-      if (settings && settings.github_token) {
-        return String(settings.github_token).trim();
-      }
+    const settings = loadSettings();
+    if (settings && settings.github_token) {
+      return String(settings.github_token).trim();
     }
   } catch {
     // Ignore settings read errors
   }
 
-  try {
-    const token = execSync('gh auth token 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim();
-    if (token) return token;
-  } catch {
-    // gh not available or not logged in
+  // 2. Check local gh CLI across standard binary paths (macOS GUI apps omit /opt/homebrew/bin by default)
+  const ghCandidates = [
+    '/opt/homebrew/bin/gh',
+    '/usr/local/bin/gh',
+    'gh'
+  ];
+
+  for (const candidate of ghCandidates) {
+    try {
+      const token = execSync(`${candidate} auth token 2>/dev/null`, {
+        encoding: 'utf8',
+        timeout: 2000,
+        env: {
+          ...process.env,
+          PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || '/usr/bin:/bin'}`
+        }
+      }).trim();
+      if (token && token.startsWith('gh')) {
+        return token;
+      }
+    } catch {
+      // try next candidate
+    }
   }
 
   return null;

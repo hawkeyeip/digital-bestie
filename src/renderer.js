@@ -362,6 +362,24 @@ const els = {
   btnOnboardingNext: $('#btn-onboarding-next'),
   progressDots: $$('.progress-dot'),
 
+  // System Capabilities Tour & Keybindings Cheat Sheet
+  btnSystemTour: $('#btn-system-tour'),
+  btnReplaySystemTour: $('#btn-replay-system-tour'),
+  btnReplaySystemTourMemory: $('#btn-replay-system-tour-memory'),
+  btnRerunOnboardingSettings: $('#btn-rerun-onboarding-settings'),
+  systemTourModal: $('#system-tour-modal'),
+  btnCloseSystemTour: $('#btn-close-system-tour'),
+  tourStepCounter: $('#tour-step-counter'),
+  systemTourStepper: $('#system-tour-stepper'),
+  systemTourBody: $('#system-tour-body'),
+  tourAcknowledgmentBox: $('#tour-acknowledgment-box'),
+  tourAckCheckbox: $('#tour-ack-checkbox'),
+  tourAckText: $('#tour-ack-text'),
+  btnTourPrev: $('#btn-tour-prev'),
+  btnTourNext: $('#btn-tour-next'),
+  btnTourSkip: $('#btn-tour-skip'),
+  tourStepDots: $$('.tour-step-dot'),
+
   // Feedback & Bug Reporter
   btnQuickFeedback: $('#btn-quick-feedback'),
   persistentFeedbackBar: $('#persistent-feedback-bar'),
@@ -580,8 +598,13 @@ async function init() {
     document.body.dataset.theme = state.settings.theme;
   }
 
-  // Check if onboarding is needed
-  if (!state.profile?.onboarding_state?.completed) {
+  // Initialize System Capabilities Tour
+  setupSystemTour();
+
+  // Check if system tour or onboarding intake is needed
+  if (!state.profile?.onboarding_state?.system_tour_completed) {
+    openSystemTourModal(false);
+  } else if (!state.profile?.onboarding_state?.completed) {
     startOnboarding();
   }
 }
@@ -985,12 +1008,13 @@ function registerEventListeners() {
       e.preventDefault();
       switchView(state.currentView === 'prompts' ? 'chat' : 'prompts');
     }
-    // Escape: Close persona menu, prompt modal, import modal & model warning modal if open
+    // Escape: Close persona menu, prompt modal, import modal, warning modal & tour modal if open
     if (e.key === 'Escape') {
       closePersonaDropdown();
       closePromptModal();
       closeImportMemoryModal();
       closeModelWarningModal(true);
+      closeSystemTourModal();
     }
   });
 
@@ -3338,6 +3362,660 @@ async function handleDossierUpdatesInContent(rawText, messageEl) {
 }
 
 // ============================================================
+// SYSTEM CAPABILITIES TOUR & INTERACTIVE FLIGHT CHECK
+// ============================================================
+
+let currentTourStep = 1;
+let isTourReplayMode = false;
+let tourAcknowledgedSteps = {};
+
+const TOUR_STEPS = [
+  {
+    step: 1,
+    icon: '👋',
+    badge: '100% LOCAL • HARDWARE ENCRYPTED',
+    title: 'Hey new bestie! 👋',
+    subtitle: 'Welcome to your sovereign second-brain & operational OS.',
+    desc: 'Digital Bestie is an autonomous, local-first intelligence architecture designed to give you extreme leverage, absolute privacy, and an uncompromising operational ally. Before we calibrate your personal baseline, let\'s run a 90-second flight check through your core capabilities.',
+    features: [
+      {
+        icon: '🔒',
+        title: '100% Local Sovereignty',
+        text: 'Runs entirely on your machine via Ollama. No remote telemetry, no chat logging, and no cloud subscriptions.'
+      },
+      {
+        icon: '🛡️',
+        title: 'Apple Keychain Encryption',
+        text: 'All profiles, chat histories, and financial data are secured at rest with hardware-backed encryption (safeStorage).'
+      },
+      {
+        icon: '⚡',
+        title: 'Anti-Moralizing Stance',
+        text: 'Engineered with zero corporate fluff, no preachy disclaimers, and ride-or-die loyalty to your personal agency.'
+      },
+      {
+        icon: '🧠',
+        title: 'Continuous Second Brain',
+        text: 'Maintains long-term memory across sessions so your context, constraints, and priorities are never forgotten.'
+      }
+    ],
+    interactive: null,
+    ack: 'I acknowledge that Digital Bestie runs 100% locally on my machine and encrypts my data with Apple Keychain.'
+  },
+  {
+    step: 2,
+    icon: '💬',
+    badge: 'VAULT SIDEBAR • ⌘B HOTKEY',
+    title: 'Chat Vault & Strategic Categorization',
+    subtitle: 'Persistent multi-conversation memory organized into custom strategic folders.',
+    desc: 'Never lose strategic context. Your conversation history is organized into categorized folders with instant real-time search.',
+    features: [
+      {
+        icon: '📁',
+        title: 'Strategic Category Folders',
+        text: 'Sort discussions into Finances, Strategy, Ventures, Diary, and General with dedicated custom icons.'
+      },
+      {
+        icon: '🔍',
+        title: 'Instant Real-Time Search',
+        text: 'Filter through previous conversations immediately as you type without waiting for database queries.'
+      },
+      {
+        icon: '🏷️',
+        title: 'Intelligent Auto-Titling',
+        text: 'Discussions receive meaningful contextual names based on topics discussed, rather than generic date tags.'
+      },
+      {
+        icon: '⌨️',
+        title: 'Vault Sidebar Hotkey (⌘B)',
+        text: 'Press ⌘B (or Ctrl+B) anytime in chat to toggle the history sidebar on or off seamlessly.'
+      }
+    ],
+    interactive: {
+      text: 'Test toggling your Chat Vault sidebar in the background:',
+      btnText: 'Peek at Chat Vault (⌘B)',
+      action: 'toggleVault'
+    },
+    ack: 'I understand how to organize, search, and toggle my chat vault using ⌘B.'
+  },
+  {
+    step: 3,
+    icon: '🎭',
+    badge: '20 LENSES • 60 STARTERS • ⌘P',
+    title: '20 Operational Personas & In-Chat Switcher',
+    subtitle: 'Switch strategic advisory lenses mid-conversation without losing context or memory.',
+    desc: 'One size never fits all. Bestie equips you with 20 specialized operational advisors spanning 5 strategic domains:',
+    features: [
+      {
+        icon: '🏛️',
+        title: 'Executive & Strategy (4)',
+        text: 'Sovereign Strategist, Devil\'s Advocate, Resource Allocator, and Systems Architect.'
+      },
+      {
+        icon: '⚡',
+        title: 'Tactical & Execution (4)',
+        text: 'Ruthless Operator, Sprint Master, Forensic Debugger, and Friction Eliminator.'
+      },
+      {
+        icon: '🔥',
+        title: 'Brutal Honesty (4)',
+        text: 'Reality Checker, Anti-Bullshit Mirror, Cold-Shower Mentor, and Tough-Love Partner.'
+      },
+      {
+        icon: '💡',
+        title: 'Creative & Learning (4)',
+        text: 'Socratic Provocateur, First-Principles Deconstructor, Rapid Prototyper, 80/20 Synthesizer.'
+      },
+      {
+        icon: '🛡️',
+        title: 'Support & Equilibrium (4)',
+        text: 'Ride-or-Die Confidante, Nervous-System Anchor, Boundary Enforcer, and Recovery Guard.'
+      },
+      {
+        icon: '🔄',
+        title: 'Zero Context Loss (⌘P)',
+        text: 'Press ⌘P mid-chat to swap lenses instantly. All previous turns and memory remain fully intact.'
+      }
+    ],
+    interactive: {
+      text: 'Experience the 20-persona drawer and starter directives:',
+      btnText: 'Preview Personas Menu (⌘P)',
+      action: 'openPersonas'
+    },
+    ack: 'I recognize that I can switch operational personas mid-chat via ⌘P without losing conversation memory.'
+  },
+  {
+    step: 4,
+    icon: '⚙️',
+    badge: 'RUTHLESS ALGORITHMS • BOUNDARY DEFENSE',
+    title: '8 Hardcoded Operational Modules',
+    subtitle: 'Pre-configured, non-negotiable mental algorithms for critical life & business moments.',
+    desc: 'When overwhelmed or making high-stakes decisions, generic advice fails. Switch to the Modules tab to run 8 specialized frameworks:',
+    features: [
+      {
+        icon: '🛡️',
+        title: 'Inbound Boundary Shield',
+        text: 'Enforces your client rate floor, flags scope creep, and drafts ready-to-send boundary emails.'
+      },
+      {
+        icon: '💰',
+        title: 'Capital Guardian',
+        text: 'Enforces 72-hour purchase cooling-off periods and alerts on runway burn before buying.'
+      },
+      {
+        icon: '⚡',
+        title: 'Ruthless Priority Sorter',
+        text: 'Ranks tasks by consequence of delay and extracts the immediate 10-minute action.'
+      },
+      {
+        icon: '🔮',
+        title: 'Project Pre-Mortem',
+        text: 'Identifies fatal failure modes before launch and outlines counter-measures.'
+      },
+      {
+        icon: '🧹',
+        title: 'Mess-to-Execution Converter',
+        text: 'Turns chaotic brain-dumps into Kanban-ready sequential action plans.'
+      },
+      {
+        icon: '🔍',
+        title: 'Hidden Assumptions Breaker',
+        text: 'Red-teams core beliefs and isolates blind spots before committing resources.'
+      },
+      {
+        icon: '🧠',
+        title: '80/20 Learning Engine',
+        text: 'Strips fluff for rapid 20-30 minute micro-project skill acquisition.'
+      },
+      {
+        icon: '🔧',
+        title: 'Technical Troubleshooting',
+        text: 'Methodically isolates variables and root causes with rigorous interrogation.'
+      }
+    ],
+    interactive: {
+      text: 'Switch to the Modules view in the application:',
+      btnText: 'Explore Modules View',
+      action: 'viewModules'
+    },
+    ack: 'I understand how the 8 operational modules enforce boundaries, protect capital, and cut through decision paralysis.'
+  },
+  {
+    step: 5,
+    icon: '🧠',
+    badge: 'PERSISTENT DOSSIER • 1-CLICK IMPORT',
+    title: 'Living Dossier & Memory Calibration Lab',
+    subtitle: 'A persistent second-brain that never forgets your real situation, goals, or triggers.',
+    desc: 'Unlike ephemeral cloud chats, Bestie maintains your living state in ~/.digital-bestie/user_profile.json. It injects your active location, living reality, financial runway, and behavioral triggers into every prompt.',
+    features: [
+      {
+        icon: '📋',
+        title: 'Living Dossier Matrix',
+        text: 'Your living situation, primary stressors, behavioral avoidances, and 90-day North Star.'
+      },
+      {
+        icon: '🧪',
+        title: 'Memory Calibration Lab',
+        text: 'Deepen or update your profile question-by-question a la carte with status badges and ⌘+Enter fast saving.'
+      },
+      {
+        icon: '📥',
+        title: 'Multi-Provider Memory Import',
+        text: '1-click prompt generator to pull your existing memory out of Claude, ChatGPT, Venice, or Superbrain, inspect staged facts, and consolidate them!'
+      },
+      {
+        icon: '🎖️',
+        title: 'Credentials & Merits Vault',
+        text: 'Track real credentials, certifications, and high-stakes achievements verified in memory.'
+      }
+    ],
+    interactive: {
+      text: 'Inspect your Calibration Lab & Living Dossier:',
+      btnText: 'View Calibration Lab',
+      action: 'viewCalibration'
+    },
+    ack: 'I acknowledge that my Living Dossier powers the AI\'s contextual awareness and I can calibrate or import memories anytime.'
+  },
+  {
+    step: 6,
+    icon: '🌌',
+    badge: 'CAPITAL DEFENSE • REAL-TIME RUNWAY',
+    title: 'Superbrain Hub & Financial Runway Tracker',
+    subtitle: 'Live tracking of subscriptions, physical assets, and burn rates synced to memory.',
+    desc: 'Ground your decisions in reality. Track all assets and monthly commitments in real time:',
+    features: [
+      {
+        icon: '💳',
+        title: 'SaaS & Subscriptions',
+        text: 'Track monthly/annual recurring charges with 1-click active status toggles.'
+      },
+      {
+        icon: '💻',
+        title: 'Hardware & Workstation Assets',
+        text: 'Catalog high-value tools, equipment, and serial numbers in a secure vault.'
+      },
+      {
+        icon: '✈️',
+        title: 'Travel Credits & Points',
+        text: 'Track vouchers, airline miles, and expiration alerts before benefits expire.'
+      },
+      {
+        icon: '📊',
+        title: 'Dynamic Runway Calculator',
+        text: 'Bestie calculates your exact financial runway in real time and automatically warns you if an impulsive purchase or low-rate project threatens your survival floor.'
+      }
+    ],
+    interactive: {
+      text: 'View the Superbrain Hub & Resource Tracker:',
+      btnText: 'Inspect Superbrain Hub',
+      action: 'viewSuperbrain'
+    },
+    ack: 'I understand that the Superbrain Hub calculates my burn rate and financial runway to keep my decisions grounded in reality.'
+  },
+  {
+    step: 7,
+    icon: '⌨️',
+    badge: 'VELOCITY • KEYBINDING CHEAT SHEET',
+    title: 'Operational Keybindings & Final Flight Check',
+    subtitle: 'Master your keyboard shortcuts and initiate your system.',
+    desc: 'Operate Digital Bestie at the speed of thought. Review your operational hotkeys below:',
+    cheatSheet: [
+      { key: '⌘B / Ctrl+B', label: 'Toggle Chat Vault Sidebar' },
+      { key: '⌘P / Ctrl+P', label: 'Open 20 Operational Personas Switcher' },
+      { key: '⌘L / Ctrl+L', label: 'Open Prompt Vault & Directives' },
+      { key: '⌘+Enter', label: 'Send Chat Message / Quick Save Question' },
+      { key: 'Esc', label: 'Dismiss Active Modal, Drawer, or Import Hub' },
+      { key: 'Header Dropdown', label: 'Switch Models or Compile Base Infusions' }
+    ],
+    features: [
+      {
+        icon: '🛡️',
+        title: 'Model Alteration Interceptor',
+        text: 'Changing models in the titlebar or settings displays an alert warning you of potential performance changes, persona drift, or moralizing censorship risks.'
+      },
+      {
+        icon: '🔥',
+        title: 'Base Model Infusion Engine',
+        text: 'In Settings, compile any raw local model into the Bestie architecture with baked-in 16,384 context and anti-refusal system directives.'
+      }
+    ],
+    interactive: null,
+    ack: 'I have reviewed the operational keybindings and I am ready to calibrate my Digital Bestie.'
+  }
+];
+
+function setupSystemTour() {
+  els.btnSystemTour?.addEventListener('click', () => openSystemTourModal(true));
+  els.btnReplaySystemTour?.addEventListener('click', () => openSystemTourModal(true));
+  els.btnReplaySystemTourMemory?.addEventListener('click', () => openSystemTourModal(true));
+  els.btnRerunOnboardingSettings?.addEventListener('click', () => {
+    switchView('chat');
+    startOnboarding();
+  });
+
+  els.btnCloseSystemTour?.addEventListener('click', () => closeSystemTourModal());
+  els.systemTourModal?.addEventListener('click', (e) => {
+    if (e.target === els.systemTourModal) closeSystemTourModal();
+  });
+
+  els.btnTourPrev?.addEventListener('click', handleTourPrev);
+  els.btnTourNext?.addEventListener('click', handleTourNext);
+  els.btnTourSkip?.addEventListener('click', handleTourSkip);
+  els.tourAckCheckbox?.addEventListener('change', handleTourAckChange);
+
+  // Stepper dots click handler
+  els.tourStepDots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const step = parseInt(dot.dataset.step, 10);
+      if (step) {
+        // In replay mode, jump freely; in initial walkthrough, allow jump if previous is acknowledged
+        if (isTourReplayMode || tourAcknowledgedSteps[step - 1] || step === 1) {
+          renderTourStep(step);
+        } else {
+          els.tourAcknowledgmentBox?.classList.add('pulse-warn');
+          setTimeout(() => els.tourAcknowledgmentBox?.classList.remove('pulse-warn'), 600);
+          showToast('Please acknowledge previous steps before advancing.');
+        }
+      }
+    });
+  });
+}
+
+function openSystemTourModal(isReplay = false) {
+  isTourReplayMode = isReplay;
+  tourAcknowledgedSteps = state.profile?.onboarding_state?.tour_acknowledgments || {};
+  currentTourStep = 1;
+
+  if (els.systemTourModal) {
+    els.systemTourModal.classList.remove('hidden');
+    renderTourStep(1);
+  }
+}
+
+function closeSystemTourModal(markCompleted = false) {
+  if (els.systemTourModal) {
+    els.systemTourModal.classList.add('hidden');
+  }
+  if (markCompleted && state.profile) {
+    state.profile.onboarding_state = state.profile.onboarding_state || {};
+    state.profile.onboarding_state.system_tour_completed = true;
+    window.bestie.memory.saveProfile(state.profile);
+  }
+}
+
+function renderTourStep(stepNum) {
+  currentTourStep = Math.max(1, Math.min(7, stepNum));
+  const step = TOUR_STEPS[currentTourStep - 1];
+  if (!step) return;
+
+  // Update top counter
+  if (els.tourStepCounter) {
+    els.tourStepCounter.textContent = `Step ${currentTourStep} of 7`;
+  }
+
+  // Update stepper dots
+  els.tourStepDots.forEach(dot => {
+    const s = parseInt(dot.dataset.step, 10);
+    dot.classList.remove('active');
+    if (s === currentTourStep) dot.classList.add('active');
+    dot.classList.toggle('acknowledged', !!tourAcknowledgedSteps[s]);
+  });
+
+  // Render body
+  let html = `
+    <div class="tour-step-header">
+      <div class="tour-step-icon-wrap">${step.icon}</div>
+      <div class="tour-step-title-wrap">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span class="tour-brand-badge">${step.badge}</span>
+        </div>
+        <h2 class="tour-step-title">${step.title}</h2>
+        <p class="tour-step-subtitle">${step.subtitle}</p>
+      </div>
+    </div>
+    <div class="tour-step-desc">${step.desc}</div>
+  `;
+
+  // Keybindings Cheat Sheet (Step 7)
+  if (step.cheatSheet) {
+    html += `
+      <div class="tour-cheat-grid">
+        ${step.cheatSheet.map(item => `
+          <div class="tour-cheat-item">
+            <span class="tour-cheat-label">${item.label}</span>
+            <span class="tour-cheat-keys"><kbd>${item.key}</kbd></span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Features Grid
+  if (step.features && step.features.length > 0) {
+    html += `
+      <div class="tour-features-grid">
+        ${step.features.map(f => `
+          <div class="tour-feature-card">
+            <h4 class="tour-feature-title"><span>${f.icon}</span> <span>${f.title}</span></h4>
+            <p class="tour-feature-text">${f.text}</p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Live action / Peek row
+  if (step.interactive) {
+    html += `
+      <div class="tour-interactive-row">
+        <span class="tour-interactive-text">
+          <span>⚡</span> ${step.interactive.text}
+        </span>
+        <button type="button" class="tour-peek-btn" data-tour-action="${step.interactive.action}">
+          ${step.interactive.btnText}
+        </button>
+      </div>
+    `;
+  }
+
+  // Step 7 final graduation options
+  if (currentTourStep === 7) {
+    if (isTourReplayMode) {
+      html += `
+        <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-lg); padding: 16px; margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <strong style="color: #fff; display: block; font-size: 13px;">Refresher Flight Check Complete!</strong>
+            <span style="font-size: 12px; color: var(--text-muted);">You're all brushed up on operational hotkeys and architecture.</span>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" id="btn-tour-reintake" class="btn-glass btn-sm">🎯 Re-run Personal Baseline</button>
+            <button type="button" id="btn-tour-finish-replay" class="btn-neon btn-sm">Done / Close Tour ✓</button>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-lg); padding: 18px; margin-top: 14px;">
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #fff; display: block; font-size: 14px;">Ready to initiate your sovereign Bestie? 🚀</strong>
+            <span style="font-size: 12px; color: var(--text-muted);">Choose how you want to proceed. You can take the 5-phase personal interview to dial in your baseline right now, or jump straight into chatting.</span>
+          </div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button type="button" id="btn-tour-start-intake" class="btn-neon" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
+              🚀 Continue to Personal Baseline Intake
+            </button>
+            <button type="button" id="btn-tour-skip-to-chat" class="btn-glass" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
+              💬 Skip Intake &amp; Start Chatting
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (els.systemTourBody) {
+    els.systemTourBody.innerHTML = html;
+
+    // Attach listeners to interactive buttons in body
+    els.systemTourBody.querySelectorAll('[data-tour-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = e.currentTarget.dataset.tourAction;
+        handleTourAction(action);
+      });
+    });
+
+    // Step 7 graduation buttons
+    const btnStartIntake = els.systemTourBody.querySelector('#btn-tour-start-intake');
+    btnStartIntake?.addEventListener('click', handleTourContinueToIntake);
+
+    const btnSkipToChat = els.systemTourBody.querySelector('#btn-tour-skip-to-chat');
+    btnSkipToChat?.addEventListener('click', handleTourSkipToChat);
+
+    const btnFinishReplay = els.systemTourBody.querySelector('#btn-tour-finish-replay');
+    btnFinishReplay?.addEventListener('click', () => {
+      closeSystemTourModal(true);
+      showToast('Bestie system tour completed! ✨');
+    });
+
+    const btnReintake = els.systemTourBody.querySelector('#btn-tour-reintake');
+    btnReintake?.addEventListener('click', () => {
+      closeSystemTourModal(true);
+      switchView('chat');
+      startOnboarding();
+    });
+  }
+
+  // Update Acknowledgment Checkbox
+  if (els.tourAckText) {
+    els.tourAckText.textContent = step.ack;
+  }
+  const isAck = !!tourAcknowledgedSteps[currentTourStep];
+  if (els.tourAckCheckbox) {
+    els.tourAckCheckbox.checked = isAck;
+  }
+  if (els.tourAcknowledgmentBox) {
+    els.tourAcknowledgmentBox.classList.toggle('checked', isAck);
+  }
+
+  // Update navigation buttons
+  if (els.btnTourPrev) {
+    els.btnTourPrev.disabled = (currentTourStep === 1);
+  }
+  if (els.btnTourNext) {
+    if (isAck) {
+      els.btnTourNext.disabled = false;
+      els.btnTourNext.style.opacity = '1';
+    } else {
+      els.btnTourNext.disabled = true;
+      els.btnTourNext.style.opacity = '0.4';
+    }
+
+    if (currentTourStep === 7) {
+      els.btnTourNext.textContent = isTourReplayMode ? 'Finish Tour ✓' : 'Complete Flight Check ✓';
+    } else {
+      els.btnTourNext.textContent = 'Next Capability →';
+    }
+  }
+
+  if (els.btnTourSkip) {
+    els.btnTourSkip.textContent = isTourReplayMode ? 'Close' : 'Skip Tour';
+  }
+}
+
+function handleTourAction(action) {
+  if (action === 'toggleVault') {
+    toggleHistorySidebar();
+    showToast('Chat Vault sidebar toggled! (⌘B)');
+  } else if (action === 'openPersonas') {
+    togglePersonaDropdown();
+    showToast('Persona drawer toggled! (⌘P)');
+  } else if (action === 'viewModules') {
+    switchView('modules');
+    showToast('Switched to Operational Modules view.');
+  } else if (action === 'viewCalibration') {
+    switchView('calibration');
+    showToast('Switched to Memory Calibration Lab.');
+  } else if (action === 'viewSuperbrain') {
+    switchView('superbrain');
+    showToast('Switched to Superbrain Hub.');
+  }
+}
+
+async function handleTourAckChange(e) {
+  const isChecked = e.target.checked;
+  if (isChecked) {
+    tourAcknowledgedSteps[currentTourStep] = true;
+    if (state.profile) {
+      state.profile.onboarding_state = state.profile.onboarding_state || {};
+      state.profile.onboarding_state.tour_acknowledgments = tourAcknowledgedSteps;
+      await window.bestie.memory.saveProfile(state.profile);
+    }
+    els.tourAcknowledgmentBox?.classList.add('checked');
+    if (els.btnTourNext) {
+      els.btnTourNext.disabled = false;
+      els.btnTourNext.style.opacity = '1';
+    }
+    // Update step dot
+    const activeDot = document.querySelector(`.tour-step-dot[data-step="${currentTourStep}"]`);
+    activeDot?.classList.add('acknowledged');
+
+    // If step 7, unlock action buttons
+    if (currentTourStep === 7) {
+      const btnIntake = $('#btn-tour-start-intake');
+      if (btnIntake) btnIntake.disabled = false;
+      const btnChat = $('#btn-tour-skip-to-chat');
+      if (btnChat) btnChat.disabled = false;
+    }
+  } else {
+    delete tourAcknowledgedSteps[currentTourStep];
+    if (state.profile?.onboarding_state?.tour_acknowledgments) {
+      delete state.profile.onboarding_state.tour_acknowledgments[currentTourStep];
+      await window.bestie.memory.saveProfile(state.profile);
+    }
+    els.tourAcknowledgmentBox?.classList.remove('checked');
+    if (els.btnTourNext) {
+      els.btnTourNext.disabled = true;
+      els.btnTourNext.style.opacity = '0.4';
+    }
+    const activeDot = document.querySelector(`.tour-step-dot[data-step="${currentTourStep}"]`);
+    activeDot?.classList.remove('acknowledged');
+
+    if (currentTourStep === 7) {
+      const btnIntake = $('#btn-tour-start-intake');
+      if (btnIntake) btnIntake.disabled = true;
+      const btnChat = $('#btn-tour-skip-to-chat');
+      if (btnChat) btnChat.disabled = true;
+    }
+  }
+}
+
+function handleTourNext() {
+  if (!tourAcknowledgedSteps[currentTourStep]) {
+    els.tourAcknowledgmentBox?.classList.add('pulse-warn');
+    setTimeout(() => els.tourAcknowledgmentBox?.classList.remove('pulse-warn'), 600);
+    showToast('Please check the acknowledgment box to proceed.');
+    return;
+  }
+
+  if (currentTourStep < 7) {
+    renderTourStep(currentTourStep + 1);
+  } else {
+    if (isTourReplayMode) {
+      closeSystemTourModal(true);
+      showToast('Bestie system tour completed! ✨');
+    } else {
+      handleTourContinueToIntake();
+    }
+  }
+}
+
+function handleTourPrev() {
+  if (currentTourStep > 1) {
+    renderTourStep(currentTourStep - 1);
+  }
+}
+
+function handleTourSkip() {
+  if (isTourReplayMode) {
+    closeSystemTourModal();
+  } else {
+    if (confirm('Skip the system capabilities tour and proceed directly to personal intake?')) {
+      if (state.profile) {
+        state.profile.onboarding_state = state.profile.onboarding_state || {};
+        state.profile.onboarding_state.system_tour_completed = true;
+        window.bestie.memory.saveProfile(state.profile);
+      }
+      closeSystemTourModal();
+      startOnboarding();
+    }
+  }
+}
+
+async function handleTourContinueToIntake() {
+  if (state.profile) {
+    state.profile.onboarding_state = state.profile.onboarding_state || {};
+    state.profile.onboarding_state.system_tour_completed = true;
+    await window.bestie.memory.saveProfile(state.profile);
+  }
+  closeSystemTourModal();
+  startOnboarding();
+  showToast('Flight check verified! Let\'s dial in your personal baseline. 🎯');
+}
+
+async function handleTourSkipToChat() {
+  if (state.profile) {
+    state.profile.onboarding_state = state.profile.onboarding_state || {};
+    state.profile.onboarding_state.system_tour_completed = true;
+    state.profile.onboarding_state.completed = true;
+    await window.bestie.memory.saveProfile(state.profile);
+  }
+  closeSystemTourModal();
+  switchView('chat');
+  addMessage('assistant', 'Hey! System flight check verified. 🚀 I\'ve got all 20 personas, 8 operational modules, and your sovereign memory engine ready to roll. What are we tackling first?');
+  els.chatInput?.focus();
+}
+
+// ============================================================
 // ONBOARDING
 // ============================================================
 
@@ -4921,7 +5599,9 @@ function setupUserMenuDropdown() {
     item.addEventListener('click', () => {
       els.userMenuDropdown.classList.add('hidden');
       const action = item.dataset.action;
-      if (action === 'memory') {
+      if (action === 'tour') {
+        openSystemTourModal(true);
+      } else if (action === 'memory') {
         switchView('memory');
       } else if (action === 'import-memory') {
         openImportMemoryModal();

@@ -180,3 +180,477 @@
   color: var(--neon-cyan);
   animation: pulse 1.5s ease-in-out infinite;
 }
+
+/* ============================================================
+   SYSTEM CAPABILITIES WALKTHROUGH & TUTORIAL STYLES
+   Interactive flight check & keybindings cheat sheet
+   ============================================================ */
+
+.system-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 12, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: overlayIn 0.35s ease;
+}
+
+.system-tour-overlay.hidden {
+  display: none !important;
+}
+
+.system-tour-card {
+  width: 94%;
+  max-width: 760px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 15, 28, 0.92);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 240, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.system-tour-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-xl);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.35), rgba(179, 71, 255, 0.25), transparent 65%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.system-tour-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: var(--transition-fast);
+}
+
+.system-tour-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Tour Header & Stepper */
+.system-tour-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 28px 16px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(20, 22, 40, 0.4);
+}
+
+.system-tour-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tour-brand-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.tour-step-counter {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.system-tour-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 36px;
+}
+
+.tour-step-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-medium);
+}
+
+.tour-step-dot:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.tour-step-dot.active {
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+  color: #fff;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 12px var(--neon-cyan-glow);
+  transform: scale(1.08);
+}
+
+.tour-step-dot.acknowledged {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+/* Tour Body & Content Panels */
+.system-tour-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  min-height: 320px;
+}
+
+.system-tour-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.system-tour-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.tour-step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tour-step-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(179, 71, 255, 0.12));
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.1);
+}
+
+.tour-step-title-wrap {
+  flex: 1;
+}
+
+.tour-step-title {
+  font-size: 21px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.3px;
+}
+
+.tour-step-subtitle {
+  font-size: 13px;
+  color: var(--neon-cyan);
+  line-height: 1.4;
+  margin: 0;
+  font-weight: 500;
+}
+
+.tour-step-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Feature Grid inside Tour */
+.tour-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tour-feature-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: var(--transition-fast);
+}
+
+.tour-feature-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 240, 255, 0.25);
+}
+
+.tour-feature-card.highlight {
+  background: rgba(0, 240, 255, 0.04);
+  border-color: rgba(0, 240, 255, 0.2);
+}
+
+.tour-feature-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 5px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-feature-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Live Action / Peek Row */
+.tour-interactive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 240, 255, 0.03);
+  border: 1px dashed rgba(0, 240, 255, 0.22);
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+}
+
+.tour-interactive-text {
+  font-size: 12px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-peek-btn {
+  font-size: 11px;
+  padding: 6px 12px;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: var(--neon-cyan);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tour-peek-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 12px var(--neon-cyan-glow);
+}
+
+/* Keybindings Cheat Sheet Grid */
+.tour-cheat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tour-cheat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.tour-cheat-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 240, 255, 0.2);
+}
+
+.tour-cheat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tour-cheat-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tour-cheat-keys kbd,
+.tour-body kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--neon-cyan);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  font-weight: 600;
+}
+
+/* Footer & Mandatory Acknowledgment Checkbox */
+.system-tour-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 16px 28px 20px 28px;
+  background: rgba(10, 11, 22, 0.75);
+}
+
+.tour-acknowledgment-box {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  background: rgba(0, 240, 255, 0.03);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: var(--radius-lg);
+  transition: all 0.25s ease;
+}
+
+.tour-acknowledgment-box.checked {
+  background: rgba(0, 240, 255, 0.07);
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.08);
+}
+
+.tour-acknowledgment-box.pulse-warn {
+  animation: ackWarn 0.6s ease;
+}
+
+@keyframes ackWarn {
+  0%, 100% {
+    border-color: rgba(0, 240, 255, 0.15);
+    box-shadow: none;
+  }
+  50% {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 18px var(--neon-pink-glow);
+  }
+}
+
+.tour-ack-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tour-ack-checkbox {
+  display: none;
+}
+
+.tour-ack-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  flex-shrink: 0;
+  transition: var(--transition-fast);
+}
+
+.tour-ack-indicator svg {
+  width: 12px;
+  height: 12px;
+}
+
+.tour-ack-checkbox:checked + .tour-ack-indicator {
+  background: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  color: #060710;
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+.tour-ack-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.system-tour-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tour-actions-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-subtle {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--text-muted) !important;
+}
+
+.btn-subtle:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
+.tour-pill-btn {
+  background: rgba(0, 240, 255, 0.1) !important;
+  border: 1px solid rgba(0, 240, 255, 0.3) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1) !important;
+}
+
+.tour-pill-btn:hover {
+  background: rgba(0, 240, 255, 0.2) !important;
+  border-color: var(--neon-cyan) !important;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3) !important;
+}
+
