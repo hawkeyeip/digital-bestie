@@ -4787,7 +4787,7 @@ document.head.appendChild(toastStyle);
 function setupUpdater() {
   if (!window.bestie || !window.bestie.updater) return;
 
-  let currentAppVersion = '2.3.0';
+  let currentAppVersion = '2.4.0';
   let cachedUpdateInfo = null;
 
   // Retrieve and show current version

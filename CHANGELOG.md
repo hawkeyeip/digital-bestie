@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2026-10-03
+
+### Added
+- **Dynamic MCP Router & Deterministic DAG Execution Hub (`hawkeye-stack/`)**:
+  - Modular FastMCP micro-servers isolating domain capabilities:
+    - `task_tracker_mcp.py`: TaskFlow SQLite/REST integration for ticket lifecycle, filtering, and priority tracking.
+    - `personality_mcp.py`: Living dossier calibration, behavioral adjustments, sentiment and tone analysis.
+    - `resume_architect_mcp.py`: Career tailoring, gap analysis, and ATS-optimized bullet generator.
+    - `resource_tracker_mcp.py`: Superbrain resource catalog, bookmarking, and domain tagging.
+  - `unified_hub.py`: Centralized FastMCP proxy aggregating all 21 micro-tools into a single SSE server on port 8765 with dynamic routing and prefixing.
+  - `central_router.py`: Ollama-powered semantic orchestrator (`qwen2.5:7b`) triaging natural language user prompts into single-silo or multi-step tool execution pipelines.
+  - `dag_executor.py`: Deterministic DAG execution engine supporting topological node resolution, dependent variable interpolation (`{{node.field}}`), execution telemetry, and automated fallback paths.
+  - Pre-packaged multi-agent workflows (`workflows.py`): Morning Briefing (`workflow_morning_briefing`), Career Opportunity Evaluator (`workflow_career_evaluation`), and Focus Session Orchestrator (`workflow_focus_session`), alongside native n8n JSON workflow templates.
+- **Knowledge Retrieval & Local Vector Store (RAG)**:
+  - Local Qdrant vector database integration running on `localhost:6333` with 768-dimensional `nomic-embed-text` embeddings (`src/services/rag.js`).
+  - Pre-flight retrieval hook in `ollama:chat` IPC intercepting prompts to enrich LLM context with relevant memories, notes, and profile traits from the `hawkeye_memory` collection.
+  - Automated indexing for Living Dossier entries and Superbrain resources.
+- **Universal Ingestion & Data Capture Engine**:
+  - Lightweight HTTP webhook daemon listening on `127.0.0.1:3848` (`src/services/ingestion.js`).
+  - Automated classification heuristics routing incoming payloads, raw markdown, and structured tickets directly into TaskFlow, Superbrain, and Qdrant vector collections.
+- **Telemetry & Observability Dashboard**:
+  - Dedicated multi-agent observability panel in UI (`#view-telemetry`) tracking token consumption, cumulative compute latency, and local vs. GPT-4 cost-avoidance ROI calculations.
+  - Real-time hardware telemetry reflecting Apple Silicon / Metal utilization and active LLM footprint.
+  - Live activity trace stream capturing multi-agent DAG transitions, MCP queries, and vector retrieval timestamps.
+- **Human-in-the-Loop (HITL) Outbound Action Gateway**:
+  - Secure Outbound Action Execution Node (`src/services/execution-node.js`) enforcing human confirmation on high-impact external actions (`send_email`, `webhook_dispatch`, `shell_command`, `file_export`).
+  - Floating authorization modal (`#hitl-modal`) with payload inspection, rationale display, and one-click approve/reject controls.
+  - Interactive approval badge (`#hitl-nav-badge`) in navigation updating in real-time.
+  - Tamper-resistant execution audit log recording approvals, rejections, timestamps, and executor results.
+- **TaskFlow Kanban & Wear OS Companion Scaffolding**:
+  - Seamless local synchronization bridge with TaskFlow project management backend.
+  - Google Wear OS companion simulator architecture allowing wearable glanceable task notifications.
+
+### Changed
+- Refactored `src/services/memory.js` to dynamically support both Electron ESM runtime (`safeStorage`) and headless Node test runners.
+- Updated application versioning to 2.4.0 across `package.json`, `index.html`, `src/renderer.js`, `src/services/execution-node.js`, and system update telemetry.
+
+---
+
 ## [2.3.0] - 2026-09-29
 
 ### Added

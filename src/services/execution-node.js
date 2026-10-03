@@ -137,7 +137,7 @@ export async function approveExecution(requestId, userComment = '') {
           method: item.payload.method || 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'DigitalBestie-AutonomousNode/2.3.0',
+            'User-Agent': 'DigitalBestie-AutonomousNode/2.4.0',
             ...(item.payload.headers || {})
           },
           body: item.payload.body ? JSON.stringify(item.payload.body) : undefined
