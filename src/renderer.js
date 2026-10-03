@@ -216,6 +216,21 @@ const els = {
   navBtnPrompts: $('[data-view="prompts"]'),
   viewPrompts: $('#view-prompts'),
   btnChatPromptVault: $('#btn-chat-prompt-vault'),
+  btnMetapromptEnhance: $('#btn-metaprompt-enhance'),
+  metapromptModal: $('#metaprompt-modal'),
+  btnCloseMetapromptModal: $('#btn-close-metaprompt-modal'),
+  metaInputPrompt: $('#meta-input-prompt'),
+  metaSelectModel: $('#meta-select-model'),
+  metaSelectArchetype: $('#meta-select-archetype'),
+  metaScorePill: $('#meta-score-pill'),
+  metaEvalScoreLive: $('#meta-eval-score-live'),
+  btnRunSynthesizeMeta: $('#btn-run-synthesize-meta'),
+  metaOutputContainer: $('#meta-output-container'),
+  metaOutputText: $('#meta-output-text'),
+  metaImprovementBadge: $('#meta-improvement-badge'),
+  btnCopyMetaprompt: $('#btn-copy-metaprompt'),
+  btnSaveMetapromptVault: $('#btn-save-metaprompt-vault'),
+  btnInsertMetapromptChat: $('#btn-insert-metaprompt-chat'),
   promptsSearchInput: $('#prompts-search-input'),
   btnClearPromptsSearch: $('#btn-clear-prompts-search'),
   promptsCategoryFilters: $('#prompts-category-filters'),
@@ -696,6 +711,8 @@ async function init() {
 
   // Initialize System Capabilities Tour
   setupSystemTour();
+  setupTelemetryListeners();
+  setupMetaprompt();
 
   // Check if system tour or onboarding intake is needed
   if (!state.profile?.onboarding_state?.system_tour_completed) {
@@ -7125,6 +7142,125 @@ function openHitlModal(request) {
 function closeHitlModal() {
   currentActiveHitlRequest = null;
   if (els.hitlModal) els.hitlModal.classList.add('hidden');
+}
+
+function setupMetaprompt() {
+  if (!window.bestie || !window.bestie.metaprompt) return;
+
+  function openMetapromptModal(prefill = '') {
+    if (!els.metapromptModal) return;
+    if (prefill && els.metaInputPrompt) {
+      els.metaInputPrompt.value = prefill;
+    }
+    els.metapromptModal.classList.remove('hidden');
+    if (els.metaInputPrompt) {
+      els.metaInputPrompt.focus();
+      updateMetaInputScore();
+    }
+  }
+
+  function closeMetapromptModal() {
+    if (els.metapromptModal) {
+      els.metapromptModal.classList.add('hidden');
+    }
+  }
+
+  async function updateMetaInputScore() {
+    const text = els.metaInputPrompt?.value || '';
+    if (!text.trim()) {
+      if (els.metaEvalScoreLive) els.metaEvalScoreLive.textContent = 'Efficacy: Not evaluated';
+      return;
+    }
+    try {
+      const evaluation = await window.bestie.metaprompt.evaluate(text);
+      if (els.metaEvalScoreLive) {
+        els.metaEvalScoreLive.textContent = `Efficacy: ${evaluation.totalScore}/100 (${evaluation.rating})`;
+      }
+    } catch (_) {}
+  }
+
+  els.btnMetapromptEnhance?.addEventListener('click', () => {
+    const currentChatText = els.chatInput?.value || '';
+    openMetapromptModal(currentChatText);
+  });
+
+  els.btnCloseMetapromptModal?.addEventListener('click', closeMetapromptModal);
+  els.metapromptModal?.addEventListener('click', (e) => {
+    if (e.target === els.metapromptModal) closeMetapromptModal();
+  });
+
+  els.metaInputPrompt?.addEventListener('input', () => {
+    updateMetaInputScore();
+  });
+
+  els.btnRunSynthesizeMeta?.addEventListener('click', async () => {
+    const rawPrompt = els.metaInputPrompt?.value || '';
+    const targetModel = els.metaSelectModel?.value || 'claude_sonnet';
+    const archetype = els.metaSelectArchetype?.value || 'code_architect';
+
+    try {
+      const res = await window.bestie.metaprompt.synthesize({ rawPrompt, targetModel, archetype });
+      if (els.metaOutputText) {
+        els.metaOutputText.value = res.synthesizedPrompt;
+      }
+      if (els.metaScorePill) {
+        els.metaScorePill.textContent = `Score: ${res.efficacyScoreAfter}/100`;
+        els.metaScorePill.classList.remove('hidden');
+      }
+      if (els.metaImprovementBadge) {
+        els.metaImprovementBadge.textContent = `▲ +${res.improvementPct}% Efficacy Gain`;
+      }
+      if (els.metaOutputContainer) {
+        els.metaOutputContainer.classList.remove('hidden');
+      }
+      showToast('✨ Metaprompt synthesized successfully!');
+    } catch (err) {
+      showToast(`Synthesis failed: ${err.message}`, 'error');
+    }
+  });
+
+  els.btnCopyMetaprompt?.addEventListener('click', () => {
+    const text = els.metaOutputText?.value || '';
+    if (!text) {
+      showToast('No synthesized metaprompt to copy.', 'error');
+      return;
+    }
+    navigator.clipboard.writeText(text);
+    showToast('Metaprompt copied to clipboard! 📋');
+  });
+
+  els.btnInsertMetapromptChat?.addEventListener('click', () => {
+    const text = els.metaOutputText?.value || els.metaInputPrompt?.value || '';
+    if (!text) return;
+    if (els.chatInput) {
+      els.chatInput.value = text;
+      els.chatInput.dispatchEvent(new Event('input'));
+    }
+    closeMetapromptModal();
+    switchView('chat');
+    showToast('✨ Metaprompt loaded into chat input!');
+  });
+
+  els.btnSaveMetapromptVault?.addEventListener('click', async () => {
+    const content = els.metaOutputText?.value || '';
+    if (!content) {
+      showToast('Generate a metaprompt first before saving.', 'error');
+      return;
+    }
+    try {
+      const title = (els.metaInputPrompt?.value || 'Master Metaprompt').slice(0, 50);
+      await window.bestie.memory.addPrompt({
+        title: `✨ ${title}`,
+        category: 'ops',
+        content,
+        favorite: true,
+        tags: ['metaprompt', 'high-efficacy']
+      });
+      showToast('⭐ Metaprompt saved directly to Prompt Vault!');
+    } catch (e) {
+      showToast(`Save failed: ${e.message}`, 'error');
+    }
+  });
 }
 
 function setupTelemetryListeners() {

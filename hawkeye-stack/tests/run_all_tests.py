@@ -81,8 +81,10 @@ class TestHawkeyeAgenticSystem(unittest.IsolatedAsyncioTestCase):
 
         # Unified Hub
         hub_tools = await hawkeye_unified_hub.list_tools()
-        self.assertEqual(len(hub_tools), 21, "Unified Hub must expose 21 cross-silo tools")
-        print("  -> All 4 FastMCP silos and Unified Hub: PASS (21 tools exposed)")
+        self.assertGreaterEqual(len(hub_tools), 21, "Unified Hub must expose at least 21 cross-silo tools")
+        hub_names = [t.name for t in hub_tools]
+        self.assertIn("metaprompt_synthesize", hub_names)
+        print(f"  -> All 4 FastMCP silos and Unified Hub: PASS ({len(hub_tools)} tools exposed, including metaprompt_synthesize)")
 
     async def test_03_state_preservation(self):
         print("\n[TEST 3] Testing Cross-Silo State Preservation...")

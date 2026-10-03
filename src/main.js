@@ -91,6 +91,13 @@ import {
   decryptZDRLocal
 } from './services/output-governance.js';
 import {
+  synthesizeMetaprompt,
+  evaluatePromptEfficacy,
+  CURATED_METAPROMPT_TEMPLATES,
+  TARGET_MODELS,
+  EXECUTION_ARCHETYPES
+} from './services/metaprompt.js';
+import {
   loadTasks,
   getTaskById,
   createTask,
@@ -823,6 +830,21 @@ function registerIPC() {
   });
   ipcMain.handle('governance:decrypt', async (_event, data) => {
     return decryptZDRLocal(data);
+  });
+
+  // --- Metaprompt Architecture & Efficacy Engine ---
+  ipcMain.handle('metaprompt:synthesize', async (_event, params) => {
+    return synthesizeMetaprompt(params);
+  });
+  ipcMain.handle('metaprompt:evaluate', async (_event, promptText) => {
+    return evaluatePromptEfficacy(promptText);
+  });
+  ipcMain.handle('metaprompt:getMetadata', async () => {
+    return {
+      models: TARGET_MODELS,
+      archetypes: EXECUTION_ARCHETYPES,
+      templates: CURATED_METAPROMPT_TEMPLATES
+    };
   });
 }
 

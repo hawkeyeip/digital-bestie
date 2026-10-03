@@ -391,6 +391,9 @@
                       <path d="M9 14h4"/>
                     </svg>
                   </button>
+                  <button id="btn-metaprompt-enhance" class="btn-chat-prompt-vault" style="color: var(--neon-cyan);" title="✨ Metaprompt Studio & Quick Efficacy Enhancement">
+                    <span style="font-size: 15px;">✨</span>
+                  </button>
                   <button id="btn-send" class="btn-send" title="Send message" disabled>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
@@ -2581,6 +2584,83 @@
         </button>
         <button class="btn btn-primary" id="btn-approve-hitl-modal">
           <span>✓</span> Approve &amp; Execute
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Metaprompt Architect Studio Modal -->
+  <div id="metaprompt-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 680px; width: 90%;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 24px;">✨</span>
+          <div>
+            <h3 class="modal-title" style="margin: 0; font-size: 16px;">Metaprompt Architect Studio</h3>
+            <p class="text-muted text-xs" style="margin: 0;">Engineer master-grade prompts optimized for peak model efficacy and zero defect execution</p>
+          </div>
+        </div>
+        <button class="btn-icon" id="btn-close-metaprompt-modal">✕</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between;">
+            <span>RAW OBJECTIVE OR ROUGH INTENT</span>
+            <span class="text-muted text-xs" id="meta-eval-score-live">Efficacy: Not evaluated</span>
+          </label>
+          <textarea id="meta-input-prompt" class="form-textarea" rows="3" placeholder="e.g. Audit my backend API for memory leaks and race conditions..."></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">TARGET MODEL ARCHITECTURE</label>
+            <select id="meta-select-model" class="form-input">
+              <option value="claude_sonnet" selected>Claude 3.5 Sonnet (XML & Nuanced Reasoning)</option>
+              <option value="local_ollama">Local Ollama (Qwen 2.5 / Hermes 3 / Bestie-Light)</option>
+              <option value="gpt4o">OpenAI GPT-4o / o1 (Structured Sections)</option>
+              <option value="deepseek_r1">DeepSeek R1 (Chain of Thought & Verification)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">EXECUTION ARCHETYPE</label>
+            <select id="meta-select-archetype" class="form-input">
+              <option value="code_architect" selected>💻 High-Performance Code Architect</option>
+              <option value="autonomous_agent">🤖 Autonomous Multi-Agent Orchestrator</option>
+              <option value="executive_strategist">⚡ Executive Strategist (BLUF & Red-Team)</option>
+              <option value="data_schema">📊 Structured Data & JSON Schema Extractor</option>
+              <option value="research_synthesizer">🔬 Deep Research & Technical Synthesizer</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div id="meta-score-pill" class="status-pill status-active hidden">
+            <span>Score: 95</span>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-run-synthesize-meta">
+            <span>✨</span> Synthesize Metaprompt
+          </button>
+        </div>
+
+        <div id="meta-output-container" class="hidden" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="form-label" style="margin: 0;">SYNTHESIZED PRODUCTION METAPROMPT</label>
+            <span class="text-neon-green text-xs" id="meta-improvement-badge">▲ +120% Efficacy Gain</span>
+          </div>
+          <textarea id="meta-output-text" class="form-textarea font-mono" rows="8" style="font-size: 12px; background: rgba(0, 0, 0, 0.4); line-height: 1.45;" readonly></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary btn-sm" id="btn-copy-metaprompt">
+            <span>📋</span> Copy
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-save-metaprompt-vault">
+            <span>⭐</span> Save to Vault
+          </button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-insert-metaprompt-chat">
+          <span>🚀</span> Insert into Chat
         </button>
       </div>
     </div>

@@ -230,6 +230,13 @@ contextBridge.exposeInMainWorld('bestie', {
     encrypt: (data) => ipcRenderer.invoke('governance:encrypt', data),
     decrypt: (data) => ipcRenderer.invoke('governance:decrypt', data),
   },
+
+  // --- Metaprompt Architecture & Efficacy Engine ---
+  metaprompt: {
+    synthesize: (params) => ipcRenderer.invoke('metaprompt:synthesize', params),
+    evaluate: (promptText) => ipcRenderer.invoke('metaprompt:evaluate', promptText),
+    getMetadata: () => ipcRenderer.invoke('metaprompt:getMetadata'),
+  },
 });
 
 

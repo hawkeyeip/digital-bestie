@@ -13,6 +13,27 @@ export const PERSONA_CATEGORIES = {
 };
 
 export const MODULES_METADATA = {
+  'metaprompt-architect': {
+    name: 'Metaprompt Architect',
+    badge: 'Prompt Synthesis & Efficacy',
+    category: 'systems',
+    color: '#00f0ff',
+    icon: '✨',
+    purpose: 'Engineer production-grade metaprompts from raw thoughts, rough tasks, or vague instructions.',
+    whenToUse: 'When you need to get maximum efficacy, depth, and zero-defect execution from any LLM or autonomous agent.',
+    keywords: ['metaprompt', 'prompt engineering', 'prompt synthesis', 'claude prompt', 'system prompt', 'efficacy', 'master prompt'],
+    whatItDoes: [
+      'Deconstructs raw goals into role framing, step-by-step tasks, and negative constraints',
+      'Optimizes prompt structure specifically for Claude 3.5 Sonnet (XML), local Ollama (Markdown), or GPT-4o',
+      'Evaluates prompt efficacy scores across 5 dimensions and injects grounding guardrails'
+    ],
+    examplePrompt: 'I need a master prompt for an autonomous code review agent that audits security vulnerabilities and performance bottlenecks.',
+    starterPrompts: [
+      'Engineer a master prompt for an autonomous code architect agent.',
+      'Transform this rough task into a high-efficacy metaprompt for Claude 3.5 Sonnet: "audit my database queries".',
+      'Synthesize an executive decision prompt with strict BLUF and red-team constraints.'
+    ]
+  },
   'sanity-scout': {
     name: 'Sanity Scout',
     badge: 'Third Places & Sanity',

@@ -10,6 +10,7 @@ import { autoScheduleBacklog, shiftUnfinishedTasks, checkInterruptionThreats, ge
 import { getTieredPromptContext, addSprintItem, addWorkingMemoryItem, clearWorkingMemory, recordAndEvaluateDrift, getDriftSummary } from '../../src/services/layered-memory.js';
 import { evaluateOutput, repairOutput, sanitizePayloadForExternalAPI, encryptZDRLocal, decryptZDRLocal } from '../../src/services/output-governance.js';
 import { startWebhookServer, stopWebhookServer, DEFAULT_WEBHOOK_PORT } from '../../src/services/ingestion.js';
+import { synthesizeMetaprompt, evaluatePromptEfficacy } from '../../src/services/metaprompt.js';
 
 let passed = 0;
 let total = 0;
@@ -136,6 +137,24 @@ async function runPhase9Tests() {
   assert(dictData.verdict === 'ACTIONABLE_TASK', 'Classified voice input as ACTIONABLE_TASK');
 
   stopWebhookServer();
+
+  // ------------------------------------------------------------
+  // TEST 5: Metaprompt Architecture & Efficacy Engine
+  // ------------------------------------------------------------
+  console.log('[TEST 5/5] Testing Metaprompt Architecture & Efficacy Engine...');
+  const weakPrompt = 'build a microservice';
+  const evalWeak = evaluatePromptEfficacy(weakPrompt);
+  assert(evalWeak.totalScore < 50, 'Weak prompt efficacy correctly flagged low');
+
+  const synRes = synthesizeMetaprompt({
+    rawPrompt: weakPrompt,
+    targetModel: 'claude_sonnet',
+    archetype: 'code_architect'
+  });
+  assert(synRes.efficacyScoreAfter >= 85, 'Synthesized metaprompt achieved Master Grade score');
+  assert(synRes.synthesizedPrompt.includes('<system_role>'), 'Synthesized prompt contains XML system_role tag');
+  assert(synRes.synthesizedPrompt.includes('<negative_constraints>'), 'Synthesized prompt contains negative_constraints tag');
+  assert(synRes.improvementPct > 50, 'Efficacy improved by +50% or more');
 
   console.log('============================================================');
   console.log(`PHASE 9 VERIFICATION SUMMARY: ${passed}/${total} TESTS PASSED`);
