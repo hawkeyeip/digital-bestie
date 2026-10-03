@@ -145,6 +145,22 @@ contextBridge.exposeInMainWorld('bestie', {
     toggleHighlight: (id) => ipcRenderer.invoke('credentials:toggleHighlight', id),
   },
 
+  // --- TaskFlow Kanban Task Manager ---
+  taskflow: {
+    loadTasks: (filters) => ipcRenderer.invoke('taskflow:loadTasks', filters),
+    getTaskById: (id) => ipcRenderer.invoke('taskflow:getTaskById', id),
+    createTask: (data) => ipcRenderer.invoke('taskflow:createTask', data),
+    updateTask: (id, updates) => ipcRenderer.invoke('taskflow:updateTask', { id, updates }),
+    deleteTask: (id) => ipcRenderer.invoke('taskflow:deleteTask', id),
+    getTaskStats: () => ipcRenderer.invoke('taskflow:getTaskStats'),
+    reorderTasks: (orders) => ipcRenderer.invoke('taskflow:reorderTasks', orders),
+    syncToNeonBrain: () => ipcRenderer.invoke('taskflow:syncToNeonBrain'),
+    getWearTasks: () => ipcRenderer.invoke('taskflow:getWearTasks'),
+    toggleWearTask: (id) => ipcRenderer.invoke('taskflow:toggleWearTask', id),
+    quickAddWearTask: (data) => ipcRenderer.invoke('taskflow:quickAddWearTask', data),
+    getWearTileData: () => ipcRenderer.invoke('taskflow:getWearTileData'),
+  },
+
   // --- System Telemetry & Memory Optimization ---
   system: {
     getMemoryUsage: () => ipcRenderer.invoke('system:getMemoryUsage'),
@@ -153,6 +169,39 @@ contextBridge.exposeInMainWorld('bestie', {
       const handler = (_event, state) => callback(state);
       ipcRenderer.on('app:background-state', handler);
       return () => ipcRenderer.removeListener('app:background-state', handler);
+    }
+  },
+
+  // --- Knowledge Retrieval & Vector Store (RAG) ---
+  rag: {
+    search: (query, options) => ipcRenderer.invoke('rag:search', { query, options }),
+    index: (item) => ipcRenderer.invoke('rag:index', item),
+    getStats: () => ipcRenderer.invoke('rag:getStats'),
+  },
+
+  // --- Ingestion & Data Capture Engine ---
+  ingestion: {
+    process: (payload) => ipcRenderer.invoke('ingestion:process', payload),
+    getStats: () => ipcRenderer.invoke('ingestion:getStats'),
+  },
+
+  // --- Telemetry & Observability Engine ---
+  telemetry: {
+    getSummary: () => ipcRenderer.invoke('telemetry:getSummary'),
+    clear: () => ipcRenderer.invoke('telemetry:clear'),
+  },
+
+  // --- Outbound Execution & Human-in-the-Loop Gateway ---
+  execution: {
+    request: (data) => ipcRenderer.invoke('execution:request', data),
+    getPending: () => ipcRenderer.invoke('execution:getPending'),
+    approve: (requestId, comment) => ipcRenderer.invoke('execution:approve', { requestId, comment }),
+    reject: (requestId, reason) => ipcRenderer.invoke('execution:reject', { requestId, reason }),
+    getAuditLog: (limit) => ipcRenderer.invoke('execution:getAuditLog', limit),
+    onNewPending: (callback) => {
+      const handler = (_event, req) => callback(req);
+      ipcRenderer.on('hitl:newPending', handler);
+      return () => ipcRenderer.removeListener('hitl:newPending', handler);
     }
   },
 });

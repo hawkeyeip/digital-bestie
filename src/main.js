@@ -46,6 +46,42 @@ import {
   toggleNeonBrainTask
 } from './services/superbrain.js';
 import { checkForUpdates } from './services/updater.js';
+import {
+  searchMemory,
+  indexMemoryItem,
+  getMemoryStats,
+  getRagPromptSnippet
+} from './services/rag.js';
+import {
+  processIngestionPayload,
+  getIngestionStats,
+  startWebhookServer
+} from './services/ingestion.js';
+import {
+  getTelemetrySummary,
+  clearTelemetry
+} from './services/telemetry.js';
+import {
+  requestExecution,
+  getPendingApprovals,
+  approveExecution,
+  rejectExecution,
+  getExecutionAuditLog
+} from './services/execution-node.js';
+import {
+  loadTasks,
+  getTaskById,
+  createTask,
+  updateTask,
+  deleteTask,
+  getTaskStats,
+  reorderTasks,
+  syncTaskflowToNeonBrain,
+  getWearTasks,
+  toggleWearTask,
+  quickAddWearTask,
+  getWearTileData
+} from './services/taskflow.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -212,8 +248,16 @@ function registerIPC() {
     // Save user message
     appendMessage('user', message);
 
-    // Build system prompt with current profile state
-    const systemPrompt = buildSystemPrompt(activeModule);
+    // Build system prompt with current profile state & autonomous RAG retrieval
+    let systemPrompt = buildSystemPrompt(activeModule);
+    try {
+      const ragSnippet = await getRagPromptSnippet(message);
+      if (ragSnippet) {
+        systemPrompt += ragSnippet;
+      }
+    } catch (ragErr) {
+      console.warn('[RAG] Pre-flight context injection skipped:', ragErr.message);
+    }
 
     // Get windowed message history and model settings
     const settings = loadSettings();
@@ -538,6 +582,100 @@ function registerIPC() {
       global.gc();
     }
     return true;
+  });
+
+  // --- TaskFlow Kanban Task Manager ---
+  ipcMain.handle('taskflow:loadTasks', async (_event, filters) => {
+    return loadTasks(filters);
+  });
+  ipcMain.handle('taskflow:getTaskById', async (_event, id) => {
+    return getTaskById(id);
+  });
+  ipcMain.handle('taskflow:createTask', async (_event, data) => {
+    return createTask(data);
+  });
+  ipcMain.handle('taskflow:updateTask', async (_event, { id, updates }) => {
+    return updateTask(id, updates);
+  });
+  ipcMain.handle('taskflow:deleteTask', async (_event, id) => {
+    return deleteTask(id);
+  });
+  ipcMain.handle('taskflow:getTaskStats', async () => {
+    return getTaskStats();
+  });
+  ipcMain.handle('taskflow:reorderTasks', async (_event, orders) => {
+    return reorderTasks(orders);
+  });
+  ipcMain.handle('taskflow:syncToNeonBrain', async () => {
+    return syncTaskflowToNeonBrain();
+  });
+  ipcMain.handle('taskflow:getWearTasks', async () => {
+    return getWearTasks();
+  });
+  ipcMain.handle('taskflow:toggleWearTask', async (_event, id) => {
+    return toggleWearTask(id);
+  });
+  ipcMain.handle('taskflow:quickAddWearTask', async (_event, data) => {
+    return quickAddWearTask(data);
+  });
+  ipcMain.handle('taskflow:getWearTileData', async () => {
+    return getWearTileData();
+  });
+
+  // ============================================================
+  // RAG & KNOWLEDGE RETRIEVAL IPC HANDLERS
+  // ============================================================
+  ipcMain.handle('rag:search', async (_event, { query, options }) => {
+    return searchMemory(query, options || {});
+  });
+  ipcMain.handle('rag:index', async (_event, item) => {
+    return indexMemoryItem(item);
+  });
+  ipcMain.handle('rag:getStats', async () => {
+    return getMemoryStats();
+  });
+
+  // ============================================================
+  // INGESTION & DATA CAPTURE ENGINE IPC HANDLERS
+  // ============================================================
+  ipcMain.handle('ingestion:process', async (_event, payload) => {
+    return processIngestionPayload(payload);
+  });
+  ipcMain.handle('ingestion:getStats', async () => {
+    return getIngestionStats();
+  });
+
+  // ============================================================
+  // TELEMETRY & OBSERVABILITY IPC HANDLERS
+  // ============================================================
+  ipcMain.handle('telemetry:getSummary', async () => {
+    return getTelemetrySummary();
+  });
+  ipcMain.handle('telemetry:clear', async () => {
+    return clearTelemetry();
+  });
+
+  // ============================================================
+  // EXTERNAL EXECUTION & HITL GATEWAY IPC HANDLERS
+  // ============================================================
+  ipcMain.handle('execution:request', async (_event, data) => {
+    const req = requestExecution(data);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('hitl:newPending', req);
+    }
+    return req;
+  });
+  ipcMain.handle('execution:getPending', async () => {
+    return getPendingApprovals();
+  });
+  ipcMain.handle('execution:approve', async (_event, { requestId, comment }) => {
+    return approveExecution(requestId, comment);
+  });
+  ipcMain.handle('execution:reject', async (_event, { requestId, reason }) => {
+    return rejectExecution(requestId, reason);
+  });
+  ipcMain.handle('execution:getAuditLog', async (_event, limit) => {
+    return getExecutionAuditLog(limit || 50);
   });
 }
 

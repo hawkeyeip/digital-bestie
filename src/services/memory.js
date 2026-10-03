@@ -6,7 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { safeStorage } from 'electron';
+import * as electron from 'electron';
+const safeStorage = electron.safeStorage || electron.default?.safeStorage || null;
 
 import { DEFAULT_OPERATOR_PROMPTS } from './prompts-data.js';
 

@@ -1,0 +1,162 @@
+{
+  "name": "Hawkeye Workflow A - Experience Capitalization",
+  "meta": {
+    "instanceId": "hawkeye-experience-capitalization",
+    "description": "Triggered when a task epic is marked Resolved. Extracts metrics, tools, and deliverables, invokes Resume Architect MCP to synthesize an XYZ impact bullet, and calibrates domain confidence in Personality MCP."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "workflow-a-trigger",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Task Resolved Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "taskflow_resolve_task"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { task_id: $json.body.task_id, completion_notes: $json.body.notes, metrics: $json.body.metrics, tools_used: $json.body.tools_used, deliverables: $json.body.deliverables } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "taskflow-resolve-node",
+      "name": "TaskFlow Resolve Epic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "resume_generate_bullet"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { role: 'Lead Agentic Systems Architect', action_verb: 'Architected', tools_used: $json.body.tools_used, metrics: $json.body.metrics_summary || 'sub-50ms context routing', outcome: $json.body.title } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resume-bullet-node",
+      "name": "Generate Resume Bullet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "resume_append_bullet"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { role: 'Lead Agentic Systems Architect', company: 'Hawkeye Autonomous Systems', bullet_text: $json.bullet_text, skills: $json.tools_used, tags: ['agentic', 'mcp'] } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resume-append-node",
+      "name": "Append to Master Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [720, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "personality_log_confidence_milestone"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { domain: 'AI Agentic Systems', epic_name: $('TaskFlow Resolve Epic').item.json.title, metrics: $('TaskFlow Resolve Epic').item.json.metrics, outcome: 'Epic resolved and verified against master tests' } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "personality-milestone-node",
+      "name": "Calibrate Personality Milestone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 100]
+    }
+  ],
+  "connections": {
+    "Task Resolved Webhook": {
+      "main": [
+        [
+          {
+            "node": "TaskFlow Resolve Epic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TaskFlow Resolve Epic": {
+      "main": [
+        [
+          {
+            "node": "Generate Resume Bullet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calibrate Personality Milestone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Resume Bullet": {
+      "main": [
+        [
+          {
+            "node": "Append to Master Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

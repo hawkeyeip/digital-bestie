@@ -9,7 +9,9 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish"
+    "publish": "electron-forge publish",
+    "test": "node hawkeye-stack/tests/test_bestie_integration.js",
+    "test:all": "cd hawkeye-stack && uv run python tests/run_all_tests.py && cd .. && node hawkeye-stack/tests/test_bestie_integration.js"
   },
   "keywords": [],
   "author": {

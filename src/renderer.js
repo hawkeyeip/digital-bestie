@@ -515,7 +515,93 @@ const els = {
   btnSaveLocationSettings: $('#btn-save-location-settings'),
   settingTonePreference: $('#setting-tone-preference'),
   settingExecutionStyle: $('#setting-execution-style'),
-  btnSaveToneSettings: $('#btn-save-tone-settings')
+  btnSaveToneSettings: $('#btn-save-tone-settings'),
+
+  // TaskFlow Kanban Module
+  btnNewTaskflowTask: $('#btn-new-taskflow-task'),
+  btnSyncTaskflowNeon: $('#btn-sync-taskflow-neon'),
+  tfStatTodo: $('#tf-stat-todo'),
+  tfStatProgress: $('#tf-stat-progress'),
+  tfStatDone: $('#tf-stat-done'),
+  tfStatOverdue: $('#tf-stat-overdue'),
+  tfStatCritical: $('#tf-stat-critical'),
+  tfSearchInput: $('#tf-search-input'),
+  tfBtnClearSearch: $('#tf-btn-clear-search'),
+  tfFilterPriority: $('#tf-filter-priority'),
+  tfSortSelect: $('#tf-sort-select'),
+  tfBoard: $('#tf-board'),
+  tfCardsTodo: $('#tf-cards-todo'),
+  tfCardsProgress: $('#tf-cards-progress'),
+  tfCardsDone: $('#tf-cards-done'),
+  tfCountTodo: $('#tf-count-todo'),
+  tfCountProgress: $('#tf-count-progress'),
+  tfCountDone: $('#tf-count-done'),
+  tfTaskModal: $('#tf-task-modal'),
+  tfModalTitle: $('#tf-modal-title'),
+  btnCloseTfModal: $('#btn-close-tf-modal'),
+  btnCancelTfTask: $('#btn-cancel-tf-task'),
+  btnSaveTfTask: $('#btn-save-tf-task'),
+  tfTaskForm: $('#tf-task-form'),
+  tfTaskId: $('#tf-task-id'),
+  tfTaskTitleInput: $('#tf-task-title-input'),
+  tfTaskDescInput: $('#tf-task-desc-input'),
+  tfTaskPriorityInput: $('#tf-task-priority-input'),
+  tfTaskStatusInput: $('#tf-task-status-input'),
+  tfTaskDueInput: $('#tf-task-due-input'),
+  tfTagContainer: $('#tf-tag-container'),
+  tfTagInput: $('#tf-tag-input'),
+  tfDeleteModal: $('#tf-delete-modal'),
+  tfDeleteTaskName: $('#tf-delete-task-name'),
+  btnCancelTfDelete: $('#btn-cancel-tf-delete'),
+  btnConfirmTfDelete: $('#btn-confirm-tf-delete'),
+  btnWearCompanion: $('#btn-wear-companion'),
+  wearModal: $('#wear-modal'),
+  btnCloseWearModal: $('#btn-close-wear-modal'),
+  wearContent: $('#wear-content'),
+  wearClock: $('#wear-clock'),
+  wearDockBtns: $('#wear-modal .wear-dock-btn'),
+
+  // Telemetry, RAG & HITL Elements
+  btnToggleQuickIngest: $('#btn-toggle-quick-ingest'),
+  btnRefreshTelemetry: $('#btn-refresh-telemetry'),
+  btnClearTelemetry: $('#btn-clear-telemetry'),
+  telemetryIngestDrawer: $('#telemetry-ingest-drawer'),
+  ingestInputText: $('#ingest-input-text'),
+  ingestInputUrl: $('#ingest-input-url'),
+  btnSubmitIngestion: $('#btn-submit-ingestion'),
+  ingestFeedback: $('#ingest-feedback'),
+  btnCopyWebhookUrl: $('#btn-copy-webhook-url'),
+  btnToggleHitlAudit: $('#btn-toggle-hitl-audit'),
+  hitlPendingList: $('#hitl-pending-list'),
+  hitlAuditList: $('#hitl-audit-list'),
+  hitlNavBadge: $('#hitl-nav-badge'),
+  hitlHeaderCount: $('#hitl-header-count'),
+  hitlModal: $('#hitl-modal'),
+  btnCloseHitlModal: $('#btn-close-hitl-modal'),
+  btnApproveHitlModal: $('#btn-approve-hitl-modal'),
+  btnRejectHitlModal: $('#btn-reject-hitl-modal'),
+  hitlModalRisk: $('#hitl-modal-risk'),
+  hitlModalType: $('#hitl-modal-type'),
+  hitlModalId: $('#hitl-modal-id'),
+  hitlModalTarget: $('#hitl-modal-target'),
+  hitlModalDesc: $('#hitl-modal-desc'),
+  hitlModalPayload: $('#hitl-modal-payload'),
+  hitlModalComment: $('#hitl-modal-comment'),
+  telTokensTotal: $('#tel-tokens-total'),
+  telTokensSpeed: $('#tel-tokens-speed'),
+  telCostSaved: $('#tel-cost-saved'),
+  telCostSonnet: $('#tel-cost-sonnet'),
+  telMcpCalls: $('#tel-mcp-calls'),
+  telMcpSuccessRate: $('#tel-mcp-success-rate'),
+  telQdrantCount: $('#tel-qdrant-count'),
+  telQdrantStatus: $('#tel-qdrant-status'),
+  telHwPlatform: $('#tel-hw-platform'),
+  telHwCpu: $('#tel-hw-cpu'),
+  telHwRam: $('#tel-hw-ram'),
+  telHwHeap: $('#tel-hw-heap'),
+  telRamBar: $('#tel-ram-bar'),
+  telTraceTbody: $('#tel-trace-tbody'),
+  telTraceCount: $('#tel-trace-count')
 };
 
 // ============================================================
@@ -592,6 +678,9 @@ async function init() {
   setupSettingsHub();
   setupMemoryImportHub();
   syncSettingsFieldsFromState();
+
+  // Initialize TaskFlow Kanban Module
+  await setupTaskflow();
 
   // Apply theme if set
   if (state.settings?.theme) {
@@ -1879,6 +1968,8 @@ function switchView(viewName) {
   if (viewName === 'calibration') refreshCalibrationView();
   if (viewName === 'feedback') refreshFeedbackView();
   if (viewName === 'superbrain') refreshSuperbrainView();
+  if (viewName === 'taskflow') refreshTaskflowView();
+  if (viewName === 'telemetry') refreshTelemetryView();
   if (viewName === 'prompts') renderPromptsGrid();
   if (viewName === 'credentials') refreshCredentialsList();
   if (viewName === 'settings') {
@@ -6226,6 +6317,897 @@ async function refreshMemoryTelemetry() {
   } catch (err) {
     console.warn('Error fetching memory telemetry:', err);
   }
+}
+
+// ============================================================
+// TASKFLOW KANBAN MODULE
+// ============================================================
+
+let tfState = {
+  tasks: [],
+  currentTags: [],
+  editingTaskId: null,
+  deleteTargetId: null,
+  searchDebounce: null
+};
+
+async function setupTaskflow() {
+  if (!els.btnNewTaskflowTask) return;
+
+  // New task button opens modal
+  els.btnNewTaskflowTask.addEventListener('click', () => openTfCreateModal());
+
+  // Close modals
+  if (els.btnCloseTfModal) els.btnCloseTfModal.addEventListener('click', closeTfTaskModal);
+  if (els.btnCancelTfTask) els.btnCancelTfTask.addEventListener('click', closeTfTaskModal);
+  if (els.tfTaskModal) {
+    els.tfTaskModal.addEventListener('click', (e) => {
+      if (e.target === els.tfTaskModal) closeTfTaskModal();
+    });
+  }
+
+  // Task form submit
+  if (els.tfTaskForm) {
+    els.tfTaskForm.addEventListener('submit', handleTfFormSubmit);
+  }
+
+  // Tag input handling
+  if (els.tfTagInput) els.tfTagInput.addEventListener('keydown', handleTfTagInput);
+  if (els.tfTagContainer) els.tfTagContainer.addEventListener('click', handleTfTagRemove);
+
+  // Search input with debounce
+  if (els.tfSearchInput) {
+    els.tfSearchInput.addEventListener('input', () => {
+      const val = els.tfSearchInput.value.trim();
+      if (els.tfBtnClearSearch) els.tfBtnClearSearch.classList.toggle('hidden', !val);
+      clearTimeout(tfState.searchDebounce);
+      tfState.searchDebounce = setTimeout(() => {
+        refreshTaskflowBoard();
+      }, 250);
+    });
+  }
+
+  if (els.tfBtnClearSearch) {
+    els.tfBtnClearSearch.addEventListener('click', () => {
+      els.tfSearchInput.value = '';
+      els.tfBtnClearSearch.classList.add('hidden');
+      refreshTaskflowBoard();
+    });
+  }
+
+  // Filter & sort dropdowns
+  if (els.tfFilterPriority) {
+    els.tfFilterPriority.addEventListener('change', () => refreshTaskflowBoard());
+  }
+  if (els.tfSortSelect) {
+    els.tfSortSelect.addEventListener('change', () => refreshTaskflowBoard());
+  }
+
+  // Delete modal controls
+  if (els.btnCancelTfDelete) els.btnCancelTfDelete.addEventListener('click', closeTfDeleteModal);
+  if (els.tfDeleteModal) {
+    els.tfDeleteModal.addEventListener('click', (e) => {
+      if (e.target === els.tfDeleteModal) closeTfDeleteModal();
+    });
+  }
+  if (els.btnConfirmTfDelete) {
+    els.btnConfirmTfDelete.addEventListener('click', handleConfirmTfDelete);
+  }
+
+  // Sync with Superbrain button
+  if (els.btnSyncTaskflowNeon) {
+    els.btnSyncTaskflowNeon.addEventListener('click', handleSyncTaskflowNeon);
+  }
+
+  // Wear OS Smartwatch Companion
+  if (els.btnWearCompanion) {
+    els.btnWearCompanion.addEventListener('click', openWearModal);
+  }
+  if (els.btnCloseWearModal) {
+    els.btnCloseWearModal.addEventListener('click', closeWearModal);
+  }
+  if (els.wearModal) {
+    els.wearModal.addEventListener('click', (e) => {
+      if (e.target === els.wearModal) closeWearModal();
+    });
+  }
+  els.wearDockBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchWearTab(btn.dataset.tab));
+  });
+
+  // Keyboard shortcut: Esc to close modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (els.tfTaskModal && !els.tfTaskModal.classList.contains('hidden')) closeTfTaskModal();
+      if (els.tfDeleteModal && !els.tfDeleteModal.classList.contains('hidden')) closeTfDeleteModal();
+      if (els.wearModal && !els.wearModal.classList.contains('hidden')) closeWearModal();
+    }
+  });
+
+  // Setup Drag and Drop
+  setupTfDragAndDrop();
+}
+
+async function refreshTaskflowView() {
+  await refreshTaskflowBoard();
+  await refreshTaskflowStats();
+}
+
+async function refreshTaskflowBoard() {
+  if (!window.bestie?.taskflow?.loadTasks) return;
+  try {
+    const filters = {
+      priority: els.tfFilterPriority ? els.tfFilterPriority.value : 'all',
+      search: els.tfSearchInput ? els.tfSearchInput.value.trim() : '',
+      sort: els.tfSortSelect ? els.tfSortSelect.value : 'position',
+      order: 'asc'
+    };
+
+    tfState.tasks = await window.bestie.taskflow.loadTasks(filters);
+    renderTfBoard();
+  } catch (err) {
+    console.error('[TaskFlow] Error loading tasks:', err);
+  }
+}
+
+async function refreshTaskflowStats() {
+  if (!window.bestie?.taskflow?.getTaskStats) return;
+  try {
+    const stats = await window.bestie.taskflow.getTaskStats();
+    if (els.tfStatTodo) els.tfStatTodo.textContent = stats.todo ?? 0;
+    if (els.tfStatProgress) els.tfStatProgress.textContent = stats.in_progress ?? 0;
+    if (els.tfStatDone) els.tfStatDone.textContent = stats.done ?? 0;
+    if (els.tfStatOverdue) els.tfStatOverdue.textContent = stats.overdue ?? 0;
+    if (els.tfStatCritical) els.tfStatCritical.textContent = stats.critical ?? 0;
+  } catch (err) {
+    console.error('[TaskFlow] Error loading stats:', err);
+  }
+}
+
+function renderTfBoard() {
+  const grouped = {
+    todo: tfState.tasks.filter(t => t.status === 'todo'),
+    in_progress: tfState.tasks.filter(t => t.status === 'in_progress'),
+    done: tfState.tasks.filter(t => t.status === 'done')
+  };
+
+  renderTfColumn(els.tfCardsTodo, grouped.todo, 'todo');
+  renderTfColumn(els.tfCardsProgress, grouped.in_progress, 'in_progress');
+  renderTfColumn(els.tfCardsDone, grouped.done, 'done');
+
+  if (els.tfCountTodo) els.tfCountTodo.textContent = grouped.todo.length;
+  if (els.tfCountProgress) els.tfCountProgress.textContent = grouped.in_progress.length;
+  if (els.tfCountDone) els.tfCountDone.textContent = grouped.done.length;
+}
+
+function renderTfColumn(container, tasks, status) {
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (tasks.length === 0) {
+    const emptyMsgs = {
+      todo: { icon: '📋', text: 'No pending items' },
+      in_progress: { icon: '⚡', text: 'Nothing in progress' },
+      done: { icon: '✨', text: 'No completed tasks yet' }
+    };
+    const m = emptyMsgs[status] || emptyMsgs.todo;
+    container.innerHTML = `
+      <div class="tf-empty-column">
+        <div class="tf-empty-icon">${m.icon}</div>
+        <div class="tf-empty-text">${m.text}</div>
+      </div>
+    `;
+    return;
+  }
+
+  tasks.forEach(task => {
+    container.appendChild(createTfCardElement(task));
+  });
+}
+
+function createTfCardElement(task) {
+  const card = document.createElement('div');
+  card.className = `tf-card priority-${task.priority} status-${task.status}`;
+  card.dataset.id = task.id;
+  card.draggable = true;
+
+  const tags = Array.isArray(task.tags) ? task.tags : [];
+  const tagsHTML = tags.map(t => `<span class="tf-tag">${escapeTfHtml(t)}</span>`).join('');
+  const dueDateHTML = task.due_date ? formatTfDueDate(task.due_date) : '';
+
+  card.innerHTML = `
+    <div class="tf-card-header">
+      <div class="tf-card-title">${escapeTfHtml(task.title)}</div>
+      <div class="tf-card-actions">
+        <button type="button" class="tf-card-btn edit" data-id="${task.id}" title="Edit task">✏️</button>
+        <button type="button" class="tf-card-btn delete" data-id="${task.id}" title="Delete task">🗑️</button>
+      </div>
+    </div>
+    ${task.description ? `<div class="tf-card-desc">${escapeTfHtml(task.description)}</div>` : ''}
+    <div class="tf-card-meta">
+      <span class="tf-priority-badge ${task.priority}">${task.priority}</span>
+      ${tagsHTML}
+      ${dueDateHTML}
+    </div>
+  `;
+
+  // Attach button events
+  const editBtn = card.querySelector('.tf-card-btn.edit');
+  if (editBtn) {
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTfEditModal(task.id);
+    });
+  }
+
+  const deleteBtn = card.querySelector('.tf-card-btn.delete');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTfDeleteModal(task.id);
+    });
+  }
+
+  return card;
+}
+
+function formatTfDueDate(dateStr) {
+  const date = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  const isOverdue = diffDays < 0;
+
+  let label;
+  if (diffDays === 0) label = 'Today';
+  else if (diffDays === 1) label = 'Tomorrow';
+  else if (diffDays === -1) label = 'Yesterday';
+  else if (diffDays > 1 && diffDays <= 7) label = `In ${diffDays}d`;
+  else if (diffDays < -1) label = `${Math.abs(diffDays)}d overdue`;
+  else label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  return `<span class="tf-due-date ${isOverdue ? 'overdue' : ''}">${isOverdue ? '⚠️' : '📅'} ${label}</span>`;
+}
+
+function escapeTfHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Modal handling
+function openTfCreateModal() {
+  tfState.editingTaskId = null;
+  els.tfModalTitle.textContent = 'New Task';
+  els.btnSaveTfTask.textContent = 'Create Task';
+  els.tfTaskForm.reset();
+  els.tfTaskId.value = '';
+  els.tfTaskPriorityInput.value = 'medium';
+  els.tfTaskStatusInput.value = 'todo';
+  tfState.currentTags = [];
+  renderTfTags();
+  els.tfTaskModal.classList.remove('hidden');
+  setTimeout(() => els.tfTaskTitleInput.focus(), 150);
+}
+
+function openTfEditModal(id) {
+  const task = tfState.tasks.find(t => t.id === id);
+  if (!task) return;
+
+  tfState.editingTaskId = id;
+  els.tfModalTitle.textContent = 'Edit Task';
+  els.btnSaveTfTask.textContent = 'Save Changes';
+  els.tfTaskId.value = task.id;
+  els.tfTaskTitleInput.value = task.title;
+  els.tfTaskDescInput.value = task.description || '';
+  els.tfTaskPriorityInput.value = task.priority;
+  els.tfTaskStatusInput.value = task.status;
+  els.tfTaskDueInput.value = task.due_date || '';
+  tfState.currentTags = Array.isArray(task.tags) ? [...task.tags] : [];
+  renderTfTags();
+  els.tfTaskModal.classList.remove('hidden');
+  setTimeout(() => els.tfTaskTitleInput.focus(), 150);
+}
+
+function closeTfTaskModal() {
+  if (els.tfTaskModal) els.tfTaskModal.classList.add('hidden');
+  tfState.editingTaskId = null;
+  tfState.currentTags = [];
+}
+
+function openTfDeleteModal(id) {
+  const task = tfState.tasks.find(t => t.id === id);
+  if (!task) return;
+  tfState.deleteTargetId = id;
+  els.tfDeleteTaskName.textContent = `"${task.title}"`;
+  els.tfDeleteModal.classList.remove('hidden');
+}
+
+function closeTfDeleteModal() {
+  if (els.tfDeleteModal) els.tfDeleteModal.classList.add('hidden');
+  tfState.deleteTargetId = null;
+}
+
+async function handleConfirmTfDelete() {
+  if (!tfState.deleteTargetId) return;
+  try {
+    await window.bestie.taskflow.deleteTask(tfState.deleteTargetId);
+    closeTfDeleteModal();
+    await refreshTaskflowBoard();
+    await refreshTaskflowStats();
+  } catch (err) {
+    console.error('[TaskFlow] Delete error:', err);
+  }
+}
+
+async function handleTfFormSubmit(e) {
+  e.preventDefault();
+  const title = els.tfTaskTitleInput.value.trim();
+  if (!title) return;
+
+  const payload = {
+    title,
+    description: els.tfTaskDescInput.value.trim(),
+    priority: els.tfTaskPriorityInput.value,
+    status: els.tfTaskStatusInput.value,
+    due_date: els.tfTaskDueInput.value || null,
+    tags: [...tfState.currentTags]
+  };
+
+  try {
+    if (tfState.editingTaskId) {
+      await window.bestie.taskflow.updateTask(tfState.editingTaskId, payload);
+    } else {
+      await window.bestie.taskflow.createTask(payload);
+    }
+    closeTfTaskModal();
+    await refreshTaskflowBoard();
+    await refreshTaskflowStats();
+  } catch (err) {
+    console.error('[TaskFlow] Save error:', err);
+  }
+}
+
+function handleTfTagInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = els.tfTagInput.value.trim().replace(',', '');
+    if (val && !tfState.currentTags.includes(val)) {
+      tfState.currentTags.push(val);
+      renderTfTags();
+    }
+    els.tfTagInput.value = '';
+  }
+  if (e.key === 'Backspace' && els.tfTagInput.value === '' && tfState.currentTags.length > 0) {
+    tfState.currentTags.pop();
+    renderTfTags();
+  }
+}
+
+function handleTfTagRemove(e) {
+  const btn = e.target.closest('.tf-tag-remove');
+  if (!btn) return;
+  const tag = btn.dataset.tag;
+  tfState.currentTags = tfState.currentTags.filter(t => t !== tag);
+  renderTfTags();
+}
+
+function renderTfTags() {
+  if (!els.tfTagContainer || !els.tfTagInput) return;
+  els.tfTagContainer.querySelectorAll('.tf-tag-pill').forEach(el => el.remove());
+  tfState.currentTags.forEach(tag => {
+    const pill = document.createElement('span');
+    pill.className = 'tf-tag-pill';
+    pill.innerHTML = `
+      ${escapeTfHtml(tag)}
+      <button type="button" class="tf-tag-remove" data-tag="${escapeTfHtml(tag)}">✕</button>
+    `;
+    els.tfTagContainer.insertBefore(pill, els.tfTagInput);
+  });
+}
+
+function setupTfDragAndDrop() {
+  const columns = $('.tf-column-cards');
+  let draggedCard = null;
+
+  document.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.tf-card');
+    if (!card) return;
+    draggedCard = card;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+  });
+
+  document.addEventListener('dragend', () => {
+    if (draggedCard) {
+      draggedCard.classList.remove('dragging');
+      draggedCard = null;
+    }
+    $('.tf-column').forEach(col => col.classList.remove('drag-over'));
+  });
+
+  columns.forEach(col => {
+    const columnParent = col.closest('.tf-column');
+
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (columnParent) columnParent.classList.add('drag-over');
+    });
+
+    col.addEventListener('dragleave', (e) => {
+      if (columnParent && !col.contains(e.relatedTarget)) {
+        columnParent.classList.remove('drag-over');
+      }
+    });
+
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      if (columnParent) columnParent.classList.remove('drag-over');
+
+      const taskId = e.dataTransfer.getData('text/plain');
+      const newStatus = col.dataset.status;
+      if (!taskId || !newStatus) return;
+
+      try {
+        await window.bestie.taskflow.updateTask(taskId, { status: newStatus });
+        await refreshTaskflowBoard();
+        await refreshTaskflowStats();
+      } catch (err) {
+        console.error('[TaskFlow] Drop error:', err);
+      }
+    });
+  });
+}
+
+
+// --- Wear OS Smartwatch Companion Controller ---
+let activeWearTab = 'tasks';
+let wearClockTimer = null;
+
+function updateWearClock() {
+  if (els.wearClock) {
+    const now = new Date();
+    els.wearClock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+async function openWearModal() {
+  updateWearClock();
+  clearInterval(wearClockTimer);
+  wearClockTimer = setInterval(updateWearClock, 10000);
+  if (els.wearModal) els.wearModal.classList.remove('hidden');
+  await renderActiveWearTab();
+}
+
+function closeWearModal() {
+  if (els.wearModal) els.wearModal.classList.add('hidden');
+  clearInterval(wearClockTimer);
+}
+
+async function switchWearTab(tab) {
+  activeWearTab = tab;
+  els.wearDockBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  await renderActiveWearTab();
+}
+
+async function renderActiveWearTab() {
+  if (!els.wearContent) return;
+
+  if (activeWearTab === 'tasks') {
+    els.wearContent.innerHTML = '<div style="text-align:center; padding: 20px; font-size:10px; color:#888;">Syncing with wrist...</div>';
+    try {
+      const wearTasks = await window.bestie.taskflow.getWearTasks();
+      if (!wearTasks || wearTasks.length === 0) {
+        els.wearContent.innerHTML = '<div style="text-align:center; padding: 30px 10px; font-size:11px; color:#00ff88;">All duties done! ✨</div>';
+        return;
+      }
+
+      els.wearContent.innerHTML = '';
+      wearTasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = 'wear-task-item' + (task.completed ? ' done' : '');
+        item.innerHTML = `
+          <span class="wear-task-dot ${task.priority}"></span>
+          <span class="wear-task-text" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeTfHtml(task.title)}</span>
+          <span style="font-size:10px; color:${task.completed ? '#00ff88' : '#888'};">${task.completed ? '✓' : '○'}</span>
+        `;
+
+        item.addEventListener('click', async () => {
+          await window.bestie.taskflow.toggleWearTask(task.id);
+          await renderActiveWearTab();
+          await refreshTaskflowBoard();
+          await refreshTaskflowStats();
+        });
+
+        els.wearContent.appendChild(item);
+      });
+    } catch (err) {
+      els.wearContent.innerHTML = '<div style="color:#ff1744; font-size:10px; text-align:center;">Sync error</div>';
+    }
+  } else if (activeWearTab === 'voice') {
+    els.wearContent.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:8px; text-align:center;">
+        <button id="btn-wear-mic-bestie" style="width:48px; height:48px; border-radius:50%; background:rgba(179,71,255,0.25); border:1px solid #b347ff; color:#b347ff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center;">🎙️</button>
+        <div id="wear-voice-hint-bestie" style="font-size:10px; color:#aaa; padding:0 6px;">Tap mic to dictate task</div>
+      </div>
+    `;
+
+    const micBtn = els.wearContent.querySelector('#btn-wear-mic-bestie');
+    const hint = els.wearContent.querySelector('#wear-voice-hint-bestie');
+    micBtn.addEventListener('click', async () => {
+      micBtn.style.boxShadow = '0 0 15px #b347ff';
+      hint.textContent = 'Listening to wrist audio...';
+
+      setTimeout(async () => {
+        const sampleTasks = [
+          'Review quarterly cloud budget',
+          'Follow up with client contract',
+          'Deploy security hotfix',
+          'Calibrate living dossier anti-goals'
+        ];
+        const chosen = sampleTasks[Math.floor(Math.random() * sampleTasks.length)];
+        hint.textContent = `"Captured: ${chosen}"`;
+
+        await window.bestie.taskflow.quickAddWearTask({ title: chosen });
+        await refreshTaskflowBoard();
+        await refreshTaskflowStats();
+
+        setTimeout(() => switchWearTab('tasks'), 1000);
+      }, 1200);
+    });
+  } else if (activeWearTab === 'tile') {
+    try {
+      const tile = await window.bestie.taskflow.getWearTileData();
+      els.wearContent.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 4px;">
+          <div style="font-size:9px; font-weight:700; color:#00f0ff; letter-spacing:1px; margin-bottom:2px;">⚡ TASKFLOW TILE</div>
+          <div style="font-size:18px; font-weight:800; color:#b347ff;">${tile.pendingCount} <span style="font-size:10px; font-weight:400; color:#aaa;">duties left</span></div>
+          <div style="width:100%; border-top:1px solid rgba(255,255,255,0.1); margin:6px 0;"></div>
+          ${(tile.tasks || []).map(t => `<div style="font-size:9.5px; color:#eee; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:2px;">• ${escapeTfHtml(t.title)}</div>`).join('')}
+        </div>
+      `;
+    } catch (err) {
+      els.wearContent.innerHTML = '<div style="color:#ff1744; font-size:10px;">Tile load failed</div>';
+    }
+  }
+}
+
+async function handleSyncTaskflowNeon() {
+  try {
+    const res = await window.bestie.taskflow.syncToNeonBrain();
+    if (res && res.success) {
+      if (els.btnSyncTaskflowNeon) {
+        const orig = els.btnSyncTaskflowNeon.textContent;
+        els.btnSyncTaskflowNeon.textContent = '✓ Synced with Superbrain!';
+        setTimeout(() => {
+          els.btnSyncTaskflowNeon.textContent = orig;
+        }, 2000);
+      }
+    }
+  } catch (err) {
+    console.error('[TaskFlow] Sync error:', err);
+  }
+}
+
+// ============================================================
+// TELEMETRY, RAG & HITL EXECUTION OBSERVABILITY
+// ============================================================
+
+let currentActiveHitlRequest = null;
+
+async function refreshHitlBadge() {
+  try {
+    const pending = await window.bestie.execution.getPending();
+    const count = (pending || []).length;
+    if (els.hitlNavBadge) {
+      els.hitlNavBadge.textContent = count;
+      els.hitlNavBadge.classList.toggle('hidden', count === 0);
+    }
+    if (els.hitlHeaderCount) {
+      els.hitlHeaderCount.textContent = `${count} Pending`;
+    }
+  } catch (err) {
+    console.warn('[HITL] Badge refresh error:', err);
+  }
+}
+
+async function refreshTelemetryView() {
+  try {
+    const [summary, qdrantStats, pendingApprovals] = await Promise.all([
+      window.bestie.telemetry.getSummary(),
+      window.bestie.rag.getStats(),
+      window.bestie.execution.getPending()
+    ]);
+
+    // Update KPI 1: Tokens
+    if (els.telTokensTotal) els.telTokensTotal.textContent = (summary.economics.totalTokens || 0).toLocaleString();
+    if (els.telTokensSpeed) els.telTokensSpeed.textContent = `${summary.economics.avgTokensPerSec || 0} tok/sec avg speed`;
+
+    // Update KPI 2: Compute ROI
+    if (els.telCostSaved) els.telCostSaved.textContent = `$${(summary.economics.costSavedGPT4USD || 0).toFixed(2)}`;
+    if (els.telCostSonnet) els.telCostSonnet.textContent = `~$${(summary.economics.costSavedSonnetUSD || 0).toFixed(2)} vs Claude Sonnet`;
+
+    // Update KPI 3: MCP Tools
+    if (els.telMcpCalls) els.telMcpCalls.textContent = (summary.activity.mcpToolCalls || 0).toLocaleString();
+    if (els.telMcpSuccessRate) els.telMcpSuccessRate.textContent = `${summary.activity.mcpSuccessRate || 100}% success rate`;
+
+    // Update KPI 4: Vector Memory
+    if (els.telQdrantCount) els.telQdrantCount.textContent = (qdrantStats.pointsCount || 0).toLocaleString();
+    if (els.telQdrantStatus) els.telQdrantStatus.textContent = qdrantStats.online ? `Online (${qdrantStats.status || 'active'})` : 'Offline';
+
+    // Update Hardware
+    if (els.telHwPlatform) els.telHwPlatform.textContent = summary.hardware.platform || 'Darwin arm64';
+    if (els.telHwCpu) els.telHwCpu.textContent = `${summary.hardware.cpuModel} (${summary.hardware.cpuCores} Cores)`;
+    if (els.telHwRam) els.telHwRam.textContent = `${summary.hardware.usedMemoryGB} GB / ${summary.hardware.totalMemoryGB} GB (${summary.hardware.memoryUsagePercent}%)`;
+    if (els.telHwHeap) els.telHwHeap.textContent = `${summary.hardware.appMemoryMB} MB`;
+    if (els.telRamBar) els.telRamBar.style.width = `${summary.hardware.memoryUsagePercent}%`;
+
+    // Update HITL pending list
+    renderHitlPendingList(pendingApprovals || []);
+    refreshHitlBadge();
+
+    // Update Event Activity Traces
+    renderTelemetryTraces(summary.recentEvents || []);
+  } catch (err) {
+    console.error('[Telemetry] Refresh view error:', err);
+  }
+}
+
+function renderHitlPendingList(items) {
+  if (!els.hitlPendingList) return;
+  if (items.length === 0) {
+    els.hitlPendingList.innerHTML = `
+      <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.01); border-radius: 8px;">
+        <span style="color: var(--neon-green); font-size: 16px;">✓</span> All systems clear. No outbound actions awaiting human approval.
+      </div>
+    `;
+    return;
+  }
+
+  els.hitlPendingList.innerHTML = items.map(item => `
+    <div class="hitl-card risk-${item.riskLevel || 'high'}" data-request-id="${item.id}">
+      <div class="hitl-card-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="hitl-risk-badge ${item.riskLevel || 'high'}">${(item.riskLevel || 'HIGH').toUpperCase()}</span>
+          <span style="font-weight: 700; font-size: 13px; color: var(--text-primary);">${item.actionType.toUpperCase()}</span>
+          <span class="font-mono text-xs text-muted">${item.id}</span>
+        </div>
+        <span class="text-muted text-xs">${new Date(item.createdAt).toLocaleTimeString()}</span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-secondary);">
+        <strong>Target:</strong> <span class="font-mono text-cyan">${item.target}</span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted);">
+        ${item.description || 'Outbound action awaiting operator authorization'}
+      </div>
+      <div class="hitl-actions-row">
+        <button class="btn btn-primary btn-xs btn-hitl-approve" data-id="${item.id}">
+          <span>✓</span> Approve &amp; Execute
+        </button>
+        <button class="btn btn-secondary btn-xs btn-hitl-reject" data-id="${item.id}">
+          <span>✕</span> Reject
+        </button>
+        <button class="btn btn-secondary btn-xs btn-hitl-inspect" data-id="${item.id}">
+          <span>🔍</span> Inspect Payload
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTelemetryTraces(events) {
+  if (!els.telTraceTbody) return;
+  if (els.telTraceCount) els.telTraceCount.textContent = `${events.length} events logged`;
+
+  if (events.length === 0) {
+    els.telTraceTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">No activity events recorded yet.</td></tr>';
+    return;
+  }
+
+  els.telTraceTbody.innerHTML = events.slice(0, 25).map(ev => {
+    let typeClass = 'llm';
+    if (ev.type === 'MCP_TOOL') typeClass = 'mcp';
+    if (ev.type === 'DAG_WORKFLOW') typeClass = 'dag';
+
+    const isSuccess = ev.status === 'SUCCESS';
+    const statusPill = isSuccess
+      ? '<span style="color: var(--neon-green); font-size: 11px;">● SUCCESS</span>'
+      : `<span style="color: #ff1744; font-size: 11px;" title="${ev.error || ''}">● ERROR</span>`;
+
+    const detail = ev.tokens ? `${ev.tokens} tok (${ev.tokensPerSecond || 0} tps)` : (ev.nodesCount ? `${ev.nodesCount} nodes` : (ev.silo || ''));
+    const timeStr = new Date(ev.timestamp).toLocaleTimeString();
+
+    return `
+      <tr>
+        <td><span class="tel-type-badge ${typeClass}">${ev.type}</span></td>
+        <td style="font-weight: 600; color: var(--text-primary);">${ev.name}</td>
+        <td>${ev.durationMs ? `${ev.durationMs}ms` : '-'}</td>
+        <td style="color: var(--text-muted);">${detail}</td>
+        <td>${statusPill}</td>
+        <td style="color: var(--text-muted); font-size: 11px;">${timeStr}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openHitlModal(request) {
+  currentActiveHitlRequest = request;
+  if (!els.hitlModal) return;
+
+  if (els.hitlModalRisk) {
+    els.hitlModalRisk.textContent = (request.riskLevel || 'HIGH').toUpperCase();
+    els.hitlModalRisk.className = `hitl-risk-badge ${request.riskLevel || 'high'}`;
+  }
+  if (els.hitlModalType) els.hitlModalType.textContent = (request.actionType || 'ACTION').toUpperCase();
+  if (els.hitlModalId) els.hitlModalId.textContent = request.id;
+  if (els.hitlModalTarget) els.hitlModalTarget.textContent = request.target;
+  if (els.hitlModalDesc) els.hitlModalDesc.textContent = request.description;
+  if (els.hitlModalPayload) {
+    els.hitlModalPayload.textContent = JSON.stringify(request.payload || {}, null, 2);
+  }
+  if (els.hitlModalComment) els.hitlModalComment.value = '';
+
+  els.hitlModal.classList.remove('hidden');
+}
+
+function closeHitlModal() {
+  currentActiveHitlRequest = null;
+  if (els.hitlModal) els.hitlModal.classList.add('hidden');
+}
+
+function setupTelemetryListeners() {
+  // Refresh button
+  els.btnRefreshTelemetry?.addEventListener('click', () => {
+    refreshTelemetryView();
+    showToast('Telemetry refreshed ⚡');
+  });
+
+  // Clear stats button
+  els.btnClearTelemetry?.addEventListener('click', async () => {
+    if (confirm('Reset rolling telemetry stats and event traces?')) {
+      await window.bestie.telemetry.clear();
+      refreshTelemetryView();
+      showToast('Telemetry counters reset.');
+    }
+  });
+
+  // Toggle Quick Ingest Drawer
+  els.btnToggleQuickIngest?.addEventListener('click', () => {
+    if (els.telemetryIngestDrawer) {
+      els.telemetryIngestDrawer.classList.toggle('hidden');
+    }
+  });
+
+  // Copy Webhook URL
+  els.btnCopyWebhookUrl?.addEventListener('click', () => {
+    const code = els.telWebhookUrlCode?.textContent || 'http://127.0.0.1:3848/api/webhook/universal';
+    navigator.clipboard.writeText(code);
+    showToast('Universal Webhook URL copied to clipboard! 📋');
+  });
+
+  // Submit Ingestion
+  els.btnSubmitIngestion?.addEventListener('click', async () => {
+    const text = els.ingestInputText?.value?.trim();
+    const url = els.ingestInputUrl?.value?.trim() || '';
+    if (!text) {
+      showToast('Please enter text or a URL to ingest.');
+      return;
+    }
+
+    try {
+      if (els.btnSubmitIngestion) els.btnSubmitIngestion.disabled = true;
+      const res = await window.bestie.ingestion.process({
+        text,
+        sourceUrl: url,
+        source: 'manual_quick_capture'
+      });
+
+      if (els.ingestFeedback) {
+        els.ingestFeedback.classList.remove('hidden');
+        els.ingestFeedback.innerHTML = `
+          <strong>✓ Triaged as ${res.verdict}:</strong> "${res.title}"
+          ${res.taskCreated ? '<span class="text-neon-green">[TaskFlow Ticket Created]</span>' : ''}
+          ${res.resourceCreated ? '<span class="text-cyan">[Superbrain Indexed]</span>' : ''}
+        `;
+      }
+      els.ingestInputText.value = '';
+      showToast(`Ingestion complete: ${res.verdict} ⚡`);
+      refreshTelemetryView();
+    } catch (err) {
+      showToast(`Ingestion error: ${err.message}`);
+    } finally {
+      if (els.btnSubmitIngestion) els.btnSubmitIngestion.disabled = false;
+    }
+  });
+
+  // HITL Pending list delegation (Approve / Reject / Inspect)
+  els.hitlPendingList?.addEventListener('click', async (e) => {
+    const approveBtn = e.target.closest('.btn-hitl-approve');
+    const rejectBtn = e.target.closest('.btn-hitl-reject');
+    const inspectBtn = e.target.closest('.btn-hitl-inspect');
+
+    if (approveBtn) {
+      const id = approveBtn.dataset.id;
+      try {
+        await window.bestie.execution.approve(id, 'Approved via dashboard');
+        showToast(`Action ${id} authorized and executed! ✓`);
+        refreshTelemetryView();
+      } catch (err) {
+        showToast(`Execution failed: ${err.message}`);
+      }
+    } else if (rejectBtn) {
+      const id = rejectBtn.dataset.id;
+      try {
+        await window.bestie.execution.reject(id, 'Declined by operator');
+        showToast(`Action ${id} aborted.`);
+        refreshTelemetryView();
+      } catch (err) {
+        showToast(`Reject failed: ${err.message}`);
+      }
+    } else if (inspectBtn) {
+      const id = inspectBtn.dataset.id;
+      const pending = await window.bestie.execution.getPending();
+      const item = (pending || []).find(p => p.id === id);
+      if (item) openHitlModal(item);
+    }
+  });
+
+  // HITL Modal buttons
+  els.btnCloseHitlModal?.addEventListener('click', closeHitlModal);
+  els.btnRejectHitlModal?.addEventListener('click', async () => {
+    if (!currentActiveHitlRequest) return;
+    const reason = els.hitlModalComment?.value || 'Declined from modal';
+    await window.bestie.execution.reject(currentActiveHitlRequest.id, reason);
+    showToast(`Action ${currentActiveHitlRequest.id} rejected.`);
+    closeHitlModal();
+    refreshTelemetryView();
+  });
+  els.btnApproveHitlModal?.addEventListener('click', async () => {
+    if (!currentActiveHitlRequest) return;
+    const comment = els.hitlModalComment?.value || 'Approved from modal';
+    try {
+      await window.bestie.execution.approve(currentActiveHitlRequest.id, comment);
+      showToast(`Action ${currentActiveHitlRequest.id} executed successfully! ✓`);
+      closeHitlModal();
+      refreshTelemetryView();
+    } catch (err) {
+      showToast(`Execution error: ${err.message}`);
+    }
+  });
+
+  // Toggle Audit Log
+  els.btnToggleHitlAudit?.addEventListener('click', async () => {
+    if (!els.hitlAuditList) return;
+    const isHidden = els.hitlAuditList.classList.toggle('hidden');
+    if (!isHidden) {
+      const audit = await window.bestie.execution.getAuditLog(20);
+      els.hitlAuditList.innerHTML = audit.map(a => `
+        <div style="font-size: 11px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; font-family: var(--font-mono);">
+          <div>
+            <span style="color: ${a.status === 'EXECUTED' ? 'var(--neon-green)' : '#ff1744'}; font-weight: 700;">[${a.status}]</span>
+            <span style="color: var(--text-primary);">${a.actionType}</span> -> ${a.target}
+          </div>
+          <span style="color: var(--text-muted);">${new Date(a.resolvedAt || a.createdAt).toLocaleTimeString()}</span>
+        </div>
+      `).join('') || '<div style="color: var(--text-muted); padding: 8px;">No audit records.</div>';
+    }
+  });
+
+  // Listen for real-time incoming HITL requests
+  window.bestie.execution.onNewPending?.((newReq) => {
+    refreshHitlBadge();
+    showToast(`🛡️ Authorization Required: Outbound ${newReq.actionType}`);
+    if (state.currentView === 'telemetry') {
+      refreshTelemetryView();
+    } else {
+      openHitlModal(newReq);
+    }
+  });
 }
 
 // ============================================================

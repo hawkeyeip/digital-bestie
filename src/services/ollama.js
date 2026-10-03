@@ -10,6 +10,7 @@ setGlobalDispatcher(new Agent({
 
 import { getBundledModelfile, generateModelfileForBaseModel } from './modelfile-templates.js';
 import { checkForModelUpdates, getCuratedCatalog } from './model-registry.js';
+import { recordLLMCall } from './telemetry.js';
 
 export const OLLAMA_BASE_URL = 'http://localhost:11434';
 export const MODEL_NAME = 'bestie-abliterated';
@@ -295,6 +296,16 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
             onToken(chunk.message.content);
           }
           if (chunk.done) {
+            try {
+              recordLLMCall({
+                model: modelName,
+                promptTokens: chunk.prompt_eval_count || 0,
+                evalTokens: chunk.eval_count || 0,
+                totalDurationMs: chunk.total_duration ? Math.round(chunk.total_duration / 1_000_000) : 0,
+                evalDurationMs: chunk.eval_duration ? Math.round(chunk.eval_duration / 1_000_000) : 0,
+                status: 'SUCCESS'
+              });
+            } catch (_) {}
             onDone({
               fullResponse,
               totalDuration: chunk.total_duration,
@@ -325,6 +336,13 @@ export async function streamChat(systemPrompt, messages, onToken, onDone, onErro
     if (err.name === 'AbortError') {
       onDone({ fullResponse: '', aborted: true });
     } else {
+      try {
+        recordLLMCall({
+          model: modelName,
+          status: 'ERROR',
+          error: err.message
+        });
+      } catch (_) {}
       onError(err);
     }
   }

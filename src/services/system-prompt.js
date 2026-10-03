@@ -6,6 +6,7 @@
 
 import { loadProfile, getCredentialsSnippet } from './memory.js';
 import { getSuperbrainPromptSnippet } from './superbrain.js';
+import { getTaskflowPromptSnippet } from './taskflow.js';
 
 /**
  * Build the complete system prompt with current user profile injected
@@ -48,6 +49,11 @@ Tone: ${tonePreference} | Execution style: ${executionStyle}
   const superbrainSnippet = getSuperbrainPromptSnippet();
   if (superbrainSnippet) {
     prompt += superbrainSnippet;
+  }
+
+  const taskflowSnippet = getTaskflowPromptSnippet();
+  if (taskflowSnippet) {
+    prompt += taskflowSnippet;
   }
 
   if (activeModule && MODULE_PROMPTS[activeModule]) {

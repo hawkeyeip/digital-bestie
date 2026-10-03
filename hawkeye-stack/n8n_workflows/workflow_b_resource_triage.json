@@ -1,0 +1,125 @@
+{
+  "name": "Hawkeye Workflow B - Resource Triage & Delegation",
+  "meta": {
+    "instanceId": "hawkeye-resource-triage",
+    "description": "Triggered when a raw resource (URL, PDF, snippet) is received. Resource Tracker MCP triages content. Actionable items create prioritized tickets in TaskFlow; referential items embed into Qdrant memory."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resource-triage-trigger",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "resource-webhook",
+      "name": "Incoming Resource Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "resource_triage"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { raw_input: $json.body.raw_input, source_url: $json.body.source_url || '' } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "triage-eval-node",
+      "name": "Triage Resource Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_actionable }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-actionable",
+      "name": "Is Actionable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "taskflow_create_task"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { title: $json.suggested_task.title, description: $json.suggested_task.description, priority: $json.suggested_task.priority, tags: $json.suggested_task.tags } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-taskflow-ticket",
+      "name": "Create TaskFlow Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [720, -100]
+    }
+  ],
+  "connections": {
+    "Incoming Resource Webhook": {
+      "main": [
+        [
+          {
+            "node": "Triage Resource Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage Resource Content": {
+      "main": [
+        [
+          {
+            "node": "Is Actionable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Actionable?": {
+      "main": [
+        [
+          {
+            "node": "Create TaskFlow Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  }
+}

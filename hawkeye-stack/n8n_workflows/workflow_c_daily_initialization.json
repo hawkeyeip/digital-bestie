@@ -1,0 +1,130 @@
+{
+  "name": "Hawkeye Workflow C - Contextual Daily Initialization",
+  "meta": {
+    "instanceId": "hawkeye-daily-initialization",
+    "description": "Triggered on a daily schedule/cron. Synthesizes Personality constraints, TaskFlow backlog, and Resource Tracker runway into a prioritized daily queue."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Morning Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "personality_get_daily_constraints"
+            },
+            {
+              "name": "arguments",
+              "value": "{}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-constraints",
+      "name": "Get Personality Constraints",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "taskflow_get_backlog"
+            },
+            {
+              "name": "arguments",
+              "value": "={{ { limit: 10 } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-backlog",
+      "name": "Get Task Backlog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/call",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "resource_get_runway"
+            },
+            {
+              "name": "arguments",
+              "value": "{}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-runway",
+      "name": "Get Financial Runway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 0]
+    }
+  ],
+  "connections": {
+    "Morning Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Personality Constraints",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Task Backlog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Task Backlog": {
+      "main": [
+        [
+          {
+            "node": "Get Financial Runway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
