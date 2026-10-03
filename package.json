@@ -11,7 +11,8 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "test": "node hawkeye-stack/tests/test_bestie_integration.js",
-    "test:all": "cd hawkeye-stack && uv run python tests/run_all_tests.py && cd .. && node hawkeye-stack/tests/test_bestie_integration.js"
+    "test:phase9": "node hawkeye-stack/tests/test_phase9_governance_proactivity.js",
+    "test:all": "cd hawkeye-stack && uv run python tests/run_all_tests.py && cd .. && node hawkeye-stack/tests/test_bestie_integration.js && node hawkeye-stack/tests/test_phase9_governance_proactivity.js"
   },
   "keywords": [],
   "author": {

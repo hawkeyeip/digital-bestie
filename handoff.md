@@ -51,6 +51,7 @@ taskflow/
 | Phase 6 | Dynamic MCP Router, DAG Executor & Unified Memory | COMPLETE |
 | Phase 7 | Bestie Setup Integration (RAG, Ingestion, Telemetry & HITL) | COMPLETE |
 | Phase 8 | Release v2.4.0 (Multi-Agent Swarm, Vector RAG, Telemetry, and HITL Gateway) | COMPLETE |
+| Phase 9 | Autonomous Proactivity, Layered Memory & Ambient Governance | COMPLETE |
 
 ---
 
@@ -58,60 +59,67 @@ taskflow/
 
 ```
 STATUS: AWAITING_REVIEW
-CURRENT_PHASE: PHASE 8 COMPLETE — RELEASE v2.4.0 PACKAGED & TAGGED
+CURRENT_PHASE: PHASE 9 COMPLETE — AUTONOMOUS PROACTIVITY, LAYERED MEMORY & AMBIENT GOVERNANCE
 
 ### COMPLETED_ACTIONS
 
-- **Release Version Bump & Asset Synchronization**:
-  - `package.json`: Version bumped to `2.4.0`.
-  - `index.html`: Updated system update navigation badge and version pill to `v2.4.0`.
-  - `src/renderer.js`: Set `currentAppVersion = '2.4.0'`.
-  - `src/services/execution-node.js`: Updated autonomous node `User-Agent` to `DigitalBestie-AutonomousNode/2.4.0`.
+- **Pillar 1: Autonomous Proactivity & Time Defense Engine**:
+  - `src/services/time-defense.js`: Implemented capacity-aware scheduling agent that dynamically maps TaskFlow backlog into calendar slots (`autoScheduleBacklog`), pushes unfinished tasks to the next available block (`shiftUnfinishedTasks`), creates automated anti-fatigue decompression buffers between intensive tasks or meetings, detects external calendar collisions (`checkInterruptionThreats`), computes context-switching cost penalties (25m), and generates alternative conflict-free proposal slots.
+  - Exposes `timeDefense:getSchedule`, `timeDefense:autoScheduleBacklog`, `timeDefense:shiftUnfinishedTasks`, `timeDefense:checkInterruptionThreats`, and `timeDefense:getStatus` IPC handlers.
 
-- **Comprehensive Release Documentation**:
-  - `CHANGELOG.md`: Added detailed `## [2.4.0] - 2026-10-03` release notes covering:
-    - Dynamic MCP Router & Deterministic DAG Execution Hub (`hawkeye-stack/`).
-    - Local Vector Store & Retrieval-Augmented Generation (`src/services/rag.js` + Qdrant + `nomic-embed-text`).
-    - Universal Ingestion & Webhook Capture Daemon on port 3848 (`src/services/ingestion.js`).
-    - Multi-Agent Telemetry & Observability Dashboard (`#view-telemetry`, token economics ROI vs GPT-4, Metal load).
-    - Human-in-the-Loop Outbound Action Node (`#hitl-modal`, pending queue, immutable audit log).
-    - TaskFlow Kanban & Google Wear OS companion simulator architecture.
+- **Pillar 2: Layered Memory Architecture & Drift Detection**:
+  - `src/services/layered-memory.js`: Segmented memory into 3 distinct retention horizons:
+    - Tier 1: Durable Preferences (Core Identity, Non-Negotiable Rules, Anti-Moralizing Policy) — Non-Decaying.
+    - Tier 2: Day-to-Day Context (Active Sprints, Weekly Priorities) — 14-day exponential decay half-life.
+    - Tier 3: Short-Term Working Memory (Session Scratchpad, Ephemeral Dictation) — 24h decay / manual session flush.
+  - Synthesized unified multi-tier prompt injection via `getTieredPromptContext()`.
+  - Built continuous Drift Detection engine (`recordAndEvaluateDrift`, `getDriftSummary`) monitoring persona fidelity, verbosity shifts, and decision routing entropy against baseline calibration.
 
-- **System Verification & Test Passes**:
-  - `hawkeye-stack/tests/test_bestie_integration.js`: 4/4 integration test suites passed (100% success rate across RAG, Ingestion, Telemetry, and HITL Gateway).
-  - `hawkeye-stack/tests/run_all_tests.py`: 7/7 unit & DAG workflow tests passed in 0.355s.
-  - `electron-forge package`: Production Vite compilation and macOS arm64 binary packaging succeeded in 2s with zero build errors.
+- **Pillar 3: Evaluation & Output Governance (LLM-as-a-Judge & Zero Data Retention)**:
+  - `src/services/output-governance.js`:
+    - LLM-as-a-Judge Schema & Quality Gate (`evaluateOutput`, `repairOutput`): Evaluates candidate model outputs against a 5-dimension quality matrix (Schema Conformance, Grounding, Anti-Moralizing Policy, Action Safety, Instruction Following) before state changes or external actions are finalized.
+    - Zero Data Retention (ZDR) Enforcements (`encryptZDRLocal`, `decryptZDRLocal`, `sanitizePayloadForExternalAPI`): Local AES-256-GCM hardware encryption for enterprise data; regex and cryptographic HMAC token sanitization (`[ZDR_SECURED_<TYPE>_<HASH>]`) prohibiting external secret leakage.
 
-- **Git Version Control & Tagging**:
-  - Commit `9397264`: `chore(release): bump version to 2.4.0 and add CHANGELOG`.
-  - Git tag: `v2.4.0` created on branch `main`.
+- **Pillar 4: Ambient & Multi-Modal Capture + Glanceable Status Architecture**:
+  - `src/services/ingestion.js`: Added `/api/webhook/dictation` and `/api/webhook/voice` endpoints supporting voice-first captures from iOS Shortcuts, Apple Watch, and Wear OS companion, auto-triaging voice memos into TaskFlow tickets and scheduling focus slots.
+  - `src/main.js`: Upgraded macOS menu bar tray (`Tray`) to display real-time glanceable status (`🟢 Bestie Idle`, `⚡ Focus (38m)`, `🛡️ Buffer Active`, `🟡 HITL Pending`), memory drift scores, and quick voice dictation triggers.
+  - Added `/api/telemetry/glanceable` endpoint for secondary e-ink displays, Stream Deck, and menu bar scripts.
+
+- **Pillar 5: UI & Telemetry Hub Enhancements**:
+  - `index.html` & `src/renderer.js`: Added interactive **Time Defense & Calendar Shifting** card (with live capacity allocation, buffer protection countdown, and 1-click `[Auto-Schedule Backlog]` and `[Shift Overdue]` buttons) and **Layered Memory & Output Governance** card with drift telemetry and ZDR enforcement badge.
+
+- **Automated Verification & Package Validation**:
+  - `hawkeye-stack/tests/test_phase9_governance_proactivity.js`: 23/23 tests passed (100%).
+  - `hawkeye-stack/tests/test_bestie_integration.js`: 4/4 integration suites passed (100%).
+  - `hawkeye-stack/tests/run_all_tests.py`: 7/7 unit & DAG workflow tests passed in 0.152s.
+  - `electron-forge package`: Compiled production Vite bundles and macOS arm64 binary in 2s with zero build errors.
 
 ### TEST_OUTPUT
 
 ```
-Digital Bestie Integration Suite:
-  [TEST 1/4] Knowledge Retrieval & Vector Store (RAG): PASS (Qdrant 26 vectors, preflight snippet injected)
-  [TEST 2/4] Ingestion & Webhook Capture Engine:      PASS (Webhook 3848 live, ACTIONABLE_TASK ticket spawned)
-  [TEST 3/4] Telemetry & Computational Economics:     PASS (8820 tokens, zsh.33 saved vs GPT-4, 100% MCP rate)
-  [TEST 4/4] Outbound Execution & HITL Gateway:       PASS (HITL intercept, safe execution & audit logged)
-  Result: 4/4 TEST SUITES PASSED
+Phase 9 Proactivity, Layered Memory & Governance Suite:
+  [TEST 1/4] Time Defense & Dynamic Calendar Shifting: PASS (3 focus blocks, 3 buffer zones, 25m penalty, shift ok)
+  [TEST 2/4] Layered Memory & Drift Telemetry:          PASS (Tier 1 Durable, Tier 2 Sprint, Tier 3 Working, Drift 0.08)
+  [TEST 3/4] Output Governance (LLM-as-a-Judge & ZDR):  PASS (AES-256-GCM local enc/dec, ZDR HMAC redaction, Gate score 99)
+  [TEST 4/4] Ambient Dictation & Glanceable Telemetry:  PASS (/api/telemetry/glanceable OK, /api/webhook/dictation OK)
+  Result: 23/23 TESTS PASSED
 
 Hawkeye Agent Stack Suite:
-  7/7 Unit & DAG Tests: PASS in 0.355s
+  7/7 Unit & DAG Tests: PASS in 0.152s
+
+Digital Bestie Integration Suite:
+  4/4 Integration Test Suites: PASS
 
 Electron Forge Packaging:
   Vite Main + Preload + Renderer: PASS
   arm64 darwin package: PASS (Clean build in 2s)
-
-Git Status & Verification:
-  Commit: 9397264
-  Tag: v2.4.0
-  Branch: main
 ```
 
 ### NEXT_ACTIONS
 
-- Run `git push origin main --tags` when ready to push release v2.4.0 and tag upstream.
-- Launch Digital Bestie via `npm start` to test the new Telemetry Dashboard, live RAG prompt injection, and universal webhook receiver.
-- Verify Wear OS simulator on `http://localhost:3847` if running the TaskFlow service alongside.
+- Run `npm start` to test the new interactive Time Defense timeline, auto-schedule backlog duties, and observe live menu bar tray updates.
+- Test ambient voice capture via iOS Shortcut or curl:
+  `curl -X POST http://127.0.0.1:3848/api/webhook/dictation -H "Content-Type: application/json" -d '{"transcript": "Urgent review needed for security architecture"}'`
+- Test glanceable endpoint via terminal:
+  `curl http://127.0.0.1:3848/api/telemetry/glanceable`
 ```

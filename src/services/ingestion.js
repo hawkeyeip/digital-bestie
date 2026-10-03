@@ -9,6 +9,9 @@ import crypto from 'node:crypto';
 import { createTask } from './taskflow.js';
 import { addResourceItem } from './superbrain.js';
 import { indexMemoryItem } from './rag.js';
+import { addWorkingMemoryItem, getDriftSummary } from './layered-memory.js';
+import { getActiveDefenseStatus, autoScheduleBacklog } from './time-defense.js';
+import { getPendingApprovals } from './execution-node.js';
 
 export const DEFAULT_WEBHOOK_PORT = 3848;
 
@@ -67,6 +70,14 @@ export async function processIngestionPayload({
 
   const classification = classifyContent(content, sourceUrl);
   const now = new Date().toISOString();
+
+  // 0. Ambient Voice & Working Memory capture
+  let workingMemoryItem = null;
+  if (source.includes('dictation') || source.includes('voice') || source.includes('ambient')) {
+    try {
+      workingMemoryItem = addWorkingMemoryItem(`[Voice Dictation / ${source}] ${title || content.slice(0, 60)}: ${content}`);
+    } catch (_) {}
+  }
 
   // Extract clean title
   let derivedTitle = title;
@@ -178,6 +189,24 @@ export function startWebhookServer(port = DEFAULT_WEBHOOK_PORT) {
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/api/telemetry/glanceable') {
+        const defense = getActiveDefenseStatus();
+        const drift = getDriftSummary();
+        const pending = getPendingApprovals();
+        const glanceableLine = `⚡ Bestie: ${pending.length > 0 ? `🟡 ${pending.length} HITL Pending` : '🟢 Active'} | 🛡️ Defense: ${defense.isInFocusBlock ? `Focus (${defense.remainingMinutes}m)` : (defense.isInBuffer ? `Buffer (${defense.remainingMinutes}m)` : 'Idle')} | Drift: ${drift.current_drift_score.toFixed(2)}`;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: pending.length > 0 ? 'APPROVALS_PENDING' : (defense.isInFocusBlock ? 'FOCUS_ACTIVE' : 'OPTIMAL'),
+          defense,
+          drift,
+          pendingApprovalsCount: pending.length,
+          ingestionStats,
+          glanceableLine,
+          timestamp: new Date().toISOString()
+        }));
+        return;
+      }
+
       if (req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
@@ -205,6 +234,10 @@ export function startWebhookServer(port = DEFAULT_WEBHOOK_PORT) {
               source = 'email_forward';
               title = parsedBody.subject || 'Incoming Email Digest';
               rawText = parsedBody.text || parsedBody.stripped_text || rawText;
+            } else if (url.pathname.includes('/dictation') || url.pathname.includes('/voice') || url.pathname.includes('/ambient')) {
+              source = 'screen_free_dictation';
+              rawText = parsedBody.transcript || parsedBody.dictation || parsedBody.text || rawText;
+              title = parsedBody.title || (rawText.length > 50 ? rawText.slice(0, 47) + '...' : rawText);
             }
 
             const result = await processIngestionPayload({

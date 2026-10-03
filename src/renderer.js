@@ -570,6 +570,13 @@ const els = {
   ingestInputUrl: $('#ingest-input-url'),
   btnSubmitIngestion: $('#btn-submit-ingestion'),
   ingestFeedback: $('#ingest-feedback'),
+  btnAutoScheduleBacklog: $('#btn-auto-schedule-backlog'),
+  btnShiftUnfinished: $('#btn-shift-unfinished'),
+  telDefenseFocusText: $('#tel-defense-focus-text'),
+  telDefenseCapacityText: $('#tel-defense-capacity-text'),
+  telDefenseBufferText: $('#tel-defense-buffer-text'),
+  telDefenseScheduleList: $('#tel-defense-schedule-list'),
+  telDriftScoreText: $('#tel-drift-score-text'),
   btnCopyWebhookUrl: $('#btn-copy-webhook-url'),
   btnToggleHitlAudit: $('#btn-toggle-hitl-audit'),
   hitlPendingList: $('#hitl-pending-list'),
@@ -6950,6 +6957,66 @@ async function refreshTelemetryView() {
     // Update HITL pending list
     renderHitlPendingList(pendingApprovals || []);
     refreshHitlBadge();
+
+    // Update Time Defense & Calendar Shifting
+    if (window.bestie && window.bestie.timeDefense) {
+      try {
+        const [defenseStatus, schedule] = await Promise.all([
+          window.bestie.timeDefense.getStatus(),
+          window.bestie.timeDefense.getSchedule()
+        ]);
+
+        if (els.telDefenseFocusText) {
+          if (defenseStatus.isInFocusBlock) {
+            els.telDefenseFocusText.textContent = `⚡ Active: ${defenseStatus.activeBlockTitle} (${defenseStatus.remainingMinutes}m left)`;
+          } else if (defenseStatus.isInBuffer) {
+            els.telDefenseFocusText.textContent = `🛡️ Buffer: Focus Recovery Active (${defenseStatus.remainingMinutes}m left)`;
+          } else {
+            els.telDefenseFocusText.textContent = 'Idle • No active focus block';
+          }
+        }
+
+        if (els.telDefenseCapacityText && schedule && schedule.summary) {
+          els.telDefenseCapacityText.textContent = `${schedule.summary.allocatedFocusMinutes}m / ${schedule.summary.totalCapacityMinutes}m (${schedule.summary.focusBlockCount} blocks)`;
+        }
+
+        if (els.telDefenseBufferText && schedule && schedule.summary) {
+          els.telDefenseBufferText.textContent = `${schedule.summary.protectedBufferMinutes}m Protected Buffer`;
+        }
+
+        if (els.telDefenseScheduleList && schedule) {
+          const blocks = schedule.blocks || [];
+          if (blocks.length === 0) {
+            els.telDefenseScheduleList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">No focus blocks scheduled for today. Click \"Auto-Schedule Backlog\" to map duties.</div>';
+          } else {
+            els.telDefenseScheduleList.innerHTML = blocks.map(b => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border-left: 3px solid ${b.type === 'FOCUS' ? 'var(--neon-cyan)' : 'var(--neon-green)'}; font-size: 12px;">
+                <div>
+                  <span style="font-weight: 600; color: var(--text-primary);">${b.title}</span>
+                  <span class="text-muted" style="font-size: 11px; margin-left: 8px;">${b.startTime} - ${b.endTime} (${b.durationMinutes}m)</span>
+                </div>
+                <span class="status-pill ${b.status === 'shifted' ? 'status-warning' : 'status-active'}">${b.status.toUpperCase()}</span>
+              </div>
+            `).join('');
+          }
+        }
+      } catch (tdErr) {
+        console.warn('[Telemetry] Time defense load error:', tdErr.message);
+      }
+    }
+
+    // Update Layered Memory & Drift Telemetry
+    if (window.bestie && window.bestie.layeredMemory) {
+      try {
+        const drift = await window.bestie.layeredMemory.getDrift();
+        if (els.telDriftScoreText && drift) {
+          els.telDriftScoreText.textContent = `Drift: ${drift.current_drift_score.toFixed(2)} (${drift.status})`;
+          els.telDriftScoreText.className = `font-mono text-sm ${drift.status === 'OPTIMAL' ? 'text-neon-green' : 'text-danger'}`;
+        }
+      } catch (lmErr) {
+        console.warn('[Telemetry] Drift telemetry load error:', lmErr.message);
+      }
+    }
 
     // Update Event Activity Traces
     renderTelemetryTraces(summary.recentEvents || []);

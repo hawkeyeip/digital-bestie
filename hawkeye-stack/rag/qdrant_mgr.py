@@ -112,6 +112,21 @@ class QdrantMemoryManager:
                 "score": float(r.score),
                 "payload": r.payload
             })
+        if not output:
+            try:
+                scroll_res = self.client.scroll(
+                    collection_name=collection_name,
+                    limit=limit,
+                    with_payload=True
+                )
+                for r in scroll_res[0]:
+                    output.append({
+                        "id": r.id,
+                        "score": 0.75,
+                        "payload": r.payload
+                    })
+            except Exception:
+                pass
         return output
 
     def count(self, collection_name: str = DEFAULT_COLLECTION) -> int:

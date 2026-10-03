@@ -69,6 +69,28 @@ import {
   getExecutionAuditLog
 } from './services/execution-node.js';
 import {
+  getSchedule,
+  autoScheduleBacklog,
+  shiftUnfinishedTasks,
+  checkInterruptionThreats,
+  getActiveDefenseStatus
+} from './services/time-defense.js';
+import {
+  getTieredPromptContext,
+  addSprintItem,
+  addWorkingMemoryItem,
+  clearWorkingMemory,
+  recordAndEvaluateDrift,
+  getDriftSummary
+} from './services/layered-memory.js';
+import {
+  evaluateOutput,
+  repairOutput,
+  sanitizePayloadForExternalAPI,
+  encryptZDRLocal,
+  decryptZDRLocal
+} from './services/output-governance.js';
+import {
   loadTasks,
   getTaskById,
   createTask,
@@ -166,20 +188,66 @@ const createWindow = () => {
   });
 };
 
+function updateTrayGlanceable() {
+  if (!tray) return;
+  try {
+    const defense = getActiveDefenseStatus();
+    const drift = getDriftSummary();
+    const pending = getPendingApprovals();
+    
+    let statusText = '🟢 Bestie Idle';
+    if (pending && pending.length > 0) {
+      statusText = `🟡 ${pending.length} HITL Pending`;
+    } else if (defense.isInFocusBlock) {
+      statusText = `⚡ Focus (${defense.remainingMinutes}m)`;
+    } else if (defense.isInBuffer) {
+      statusText = `🛡️ Buffer (${defense.remainingMinutes}m)`;
+    }
+
+    if (process.platform === 'darwin') {
+      tray.setTitle(` ${statusText}`);
+    }
+    tray.setToolTip(`Digital Bestie | Status: ${statusText} | Drift: ${drift.current_drift_score.toFixed(2)}`);
+
+    const contextMenu = Menu.buildFromTemplate([
+      { label: `Status: ${statusText}`, enabled: false },
+      { label: `Focus: ${defense.activeBlockTitle}`, enabled: false },
+      { label: `Drift Score: ${drift.current_drift_score.toFixed(2)} (${drift.status})`, enabled: false },
+      { label: `Pending HITL: ${pending.length} item(s)`, enabled: false },
+      { type: 'separator' },
+      {
+        label: '🎙️ Quick Voice / Thought Dictation...',
+        click: () => {
+          mainWindow?.show();
+          mainWindow?.webContents.send('ambient:quickCapture');
+        }
+      },
+      {
+        label: '🛡️ Defend Current Focus Block',
+        click: () => {
+          autoScheduleBacklog();
+          updateTrayGlanceable();
+        }
+      },
+      { type: 'separator' },
+      { label: 'Open Digital Bestie', click: () => mainWindow?.show() },
+      { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } }
+    ]);
+    tray.setContextMenu(contextMenu);
+  } catch (err) {
+    console.warn('[Tray] Glanceable update error:', err.message);
+  }
+}
+
 function createTray() {
-  // Create a simple 16x16 tray icon
   const icon = nativeImage.createEmpty();
   tray = new Tray(icon);
-  
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show Digital Bestie', click: () => mainWindow?.show() },
-    { type: 'separator' },
-    { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } }
-  ]);
-  
-  tray.setToolTip('Digital Bestie');
-  tray.setContextMenu(contextMenu);
+  tray.setToolTip('Digital Bestie — Initializing');
   tray.on('click', () => mainWindow?.show());
+  updateTrayGlanceable();
+
+  // Periodic glanceable status refresh every 60 seconds
+  setInterval(updateTrayGlanceable, 60000);
 }
 
 // ============================================================
@@ -259,6 +327,16 @@ function registerIPC() {
       console.warn('[RAG] Pre-flight context injection skipped:', ragErr.message);
     }
 
+    // Inject Layered Memory Architecture (Tier 1 Durable, Tier 2 Sprint, Tier 3 Working)
+    try {
+      const layeredSnippet = getTieredPromptContext();
+      if (layeredSnippet) {
+        systemPrompt += '\n\n' + layeredSnippet;
+      }
+    } catch (layerErr) {
+      console.warn('[LayeredMemory] Context injection skipped:', layerErr.message);
+    }
+
     // Get windowed message history and model settings
     const settings = loadSettings();
     const messages = getMessageWindow(settings.context_window || 50);
@@ -281,7 +359,24 @@ function registerIPC() {
         (result) => {
           activeAbortController = null;
           if (!result.aborted && result.fullResponse) {
-            appendMessage('assistant', result.fullResponse);
+            // Output Governance: Evaluate output against quality matrix & policy
+            let finalResponse = result.fullResponse;
+            try {
+              const evalRes = evaluateOutput({ candidateOutput: result.fullResponse, userPrompt: message });
+              if (!evalRes.passed) {
+                finalResponse = repairOutput(result.fullResponse);
+              }
+            } catch (govErr) {
+              console.warn('[Governance] Evaluation error:', govErr.message);
+            }
+
+            appendMessage('assistant', finalResponse);
+
+            // Telemetry: Continuous persona and drift evaluation
+            try {
+              recordAndEvaluateDrift({ responseText: finalResponse });
+              updateTrayGlanceable();
+            } catch (_) {}
           }
           mainWindow?.webContents.send('ollama:done', result);
           resolve(result);
@@ -676,6 +771,58 @@ function registerIPC() {
   });
   ipcMain.handle('execution:getAuditLog', async (_event, limit) => {
     return getExecutionAuditLog(limit || 50);
+  });
+
+  // --- Time Defense & Dynamic Proactivity Engine ---
+  ipcMain.handle('timeDefense:getSchedule', async (_event, date) => {
+    return getSchedule(date);
+  });
+  ipcMain.handle('timeDefense:autoScheduleBacklog', async (_event, { tasks, targetDate } = {}) => {
+    const result = autoScheduleBacklog(tasks, targetDate);
+    updateTrayGlanceable();
+    return result;
+  });
+  ipcMain.handle('timeDefense:shiftUnfinishedTasks', async (_event, { tasks, asOfTime } = {}) => {
+    const result = shiftUnfinishedTasks(tasks, asOfTime);
+    updateTrayGlanceable();
+    return result;
+  });
+  ipcMain.handle('timeDefense:checkInterruptionThreats', async (_event, event) => {
+    return checkInterruptionThreats(event);
+  });
+  ipcMain.handle('timeDefense:getStatus', async () => {
+    return getActiveDefenseStatus();
+  });
+
+  // --- Layered Memory Architecture & Drift Detection ---
+  ipcMain.handle('layeredMemory:getContext', async () => {
+    return getTieredPromptContext();
+  });
+  ipcMain.handle('layeredMemory:addSprint', async (_event, item) => {
+    return addSprintItem(item);
+  });
+  ipcMain.handle('layeredMemory:addWorking', async (_event, content) => {
+    return addWorkingMemoryItem(content);
+  });
+  ipcMain.handle('layeredMemory:clearWorking', async () => {
+    return clearWorkingMemory();
+  });
+  ipcMain.handle('layeredMemory:getDrift', async () => {
+    return getDriftSummary();
+  });
+
+  // --- Output Governance & Zero Data Retention ---
+  ipcMain.handle('governance:evaluate', async (_event, data) => {
+    return evaluateOutput(data);
+  });
+  ipcMain.handle('governance:sanitize', async (_event, { payload, options } = {}) => {
+    return sanitizePayloadForExternalAPI(payload, options);
+  });
+  ipcMain.handle('governance:encrypt', async (_event, data) => {
+    return encryptZDRLocal(data);
+  });
+  ipcMain.handle('governance:decrypt', async (_event, data) => {
+    return decryptZDRLocal(data);
   });
 }
 

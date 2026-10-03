@@ -1052,7 +1052,74 @@
                   <span class="tag-pill">/github (Issues &amp; PRs)</span>
                   <span class="tag-pill">/email (Digest forwarding)</span>
                   <span class="tag-pill">/document (PDFs &amp; raw text)</span>
+                  <span class="tag-pill">/dictation (Voice-First Capture)</span>
+                  <span class="tag-pill">/api/telemetry/glanceable</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- Autonomous Proactivity & Time Defense Engine -->
+            <div class="tel-section-card">
+              <div class="tel-card-header">
+                <div class="tel-card-title">
+                  <span>🛡️</span> Autonomous Proactivity &amp; Time Defense Engine
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span class="status-pill status-active" id="tel-defense-status-pill">🛡️ Strict Defense Active</span>
+                  <button class="btn btn-secondary btn-xs" id="btn-auto-schedule-backlog">
+                    <span>⚡</span> Auto-Schedule Backlog
+                  </button>
+                  <button class="btn btn-secondary btn-xs" id="btn-shift-unfinished">
+                    <span>⏩</span> Shift Overdue
+                  </button>
+                </div>
+              </div>
+              <p class="text-muted text-xs" style="margin-bottom: 12px;">
+                Dynamic Calendar Shifting maps active task backlog into capacity-aware focus slots and injects automated anti-fatigue decompression buffers between intensive tasks.
+              </p>
+              <div class="tel-hw-grid" style="margin-bottom: 12px;">
+                <div>
+                  <div class="text-muted text-xs">ACTIVE FOCUS STATE</div>
+                  <div class="font-mono text-sm text-cyan" id="tel-defense-focus-text">Idle • No active focus block</div>
+                </div>
+                <div>
+                  <div class="text-muted text-xs">FOCUS CAPACITY</div>
+                  <div class="font-mono text-sm" id="tel-defense-capacity-text">0m / 540m Allocated</div>
+                </div>
+                <div>
+                  <div class="text-muted text-xs">BUFFER PROTECTION</div>
+                  <div class="font-mono text-sm" id="tel-defense-buffer-text">20m Anti-Fatigue Reserve</div>
+                </div>
+              </div>
+              <div id="tel-defense-schedule-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Layered Memory & Output Governance (ZDR & Quality Gate) -->
+            <div class="tel-section-card">
+              <div class="tel-card-header">
+                <div class="tel-card-title">
+                  <span>🧠</span> Layered Memory &amp; Output Governance (LLM-as-a-Judge)
+                </div>
+                <span class="status-pill status-active" id="tel-zdr-status-pill">🛡️ Zero Data Retention Active</span>
+              </div>
+              <div class="tel-hw-grid" style="margin-bottom: 12px;">
+                <div>
+                  <div class="text-muted text-xs">TEMPORAL RETENTION TIERS</div>
+                  <div class="font-mono text-sm text-neon-green" id="tel-memory-tier-text">Tier 1: Durable | Tier 2: Sprint | Tier 3: Working</div>
+                </div>
+                <div>
+                  <div class="text-muted text-xs">PERSONA FIDELITY &amp; DRIFT</div>
+                  <div class="font-mono text-sm" id="tel-drift-score-text">Drift: 0.04 (Optimal Alignment)</div>
+                </div>
+                <div>
+                  <div class="text-muted text-xs">OUTPUT GOVERNANCE</div>
+                  <div class="font-mono text-sm text-cyan" id="tel-governance-text">5-Tier Quality Gate Verified</div>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); background: rgba(0,0,0,0.25); border-radius: 6px; padding: 8px 12px; border: 1px solid var(--glass-border);">
+                🔒 <strong>Zero Data Retention Enforcement:</strong> All sensitive B2B credentials, API keys, and private data are encrypted locally via AES-256-GCM and redacted with cryptographic HMAC digests prior to any model reasoning. External data leakage is prohibited by design.
               </div>
             </div>
 

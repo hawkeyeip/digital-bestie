@@ -204,6 +204,32 @@ contextBridge.exposeInMainWorld('bestie', {
       return () => ipcRenderer.removeListener('hitl:newPending', handler);
     }
   },
+
+  // --- Time Defense & Dynamic Proactivity Engine ---
+  timeDefense: {
+    getSchedule: (date) => ipcRenderer.invoke('timeDefense:getSchedule', date),
+    autoScheduleBacklog: (tasks, targetDate) => ipcRenderer.invoke('timeDefense:autoScheduleBacklog', { tasks, targetDate }),
+    shiftUnfinishedTasks: (tasks, asOfTime) => ipcRenderer.invoke('timeDefense:shiftUnfinishedTasks', { tasks, asOfTime }),
+    checkInterruptionThreats: (event) => ipcRenderer.invoke('timeDefense:checkInterruptionThreats', event),
+    getStatus: () => ipcRenderer.invoke('timeDefense:getStatus'),
+  },
+
+  // --- Layered Memory Architecture & Drift Detection ---
+  layeredMemory: {
+    getContext: () => ipcRenderer.invoke('layeredMemory:getContext'),
+    addSprint: (item) => ipcRenderer.invoke('layeredMemory:addSprint', item),
+    addWorking: (content) => ipcRenderer.invoke('layeredMemory:addWorking', content),
+    clearWorking: () => ipcRenderer.invoke('layeredMemory:clearWorking'),
+    getDrift: () => ipcRenderer.invoke('layeredMemory:getDrift'),
+  },
+
+  // --- Output Governance & Zero Data Retention ---
+  governance: {
+    evaluate: (data) => ipcRenderer.invoke('governance:evaluate', data),
+    sanitize: (payload, options) => ipcRenderer.invoke('governance:sanitize', { payload, options }),
+    encrypt: (data) => ipcRenderer.invoke('governance:encrypt', data),
+    decrypt: (data) => ipcRenderer.invoke('governance:decrypt', data),
+  },
 });
 
 
