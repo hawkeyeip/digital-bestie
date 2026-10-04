@@ -316,6 +316,10 @@ const els = {
   // Settings & System Health
   settingOllamaUrl: $('#setting-ollama-url'),
   settingModelName: $('#setting-model-name'),
+  settingBicameralRouting: $('#setting-bicameral-routing'),
+  settingSpecialistModel: $('#setting-specialist-model'),
+  bicameralStatusBadge: $('#bicameral-status-badge'),
+  bicameralStatusText: $('#bicameral-status-text'),
   settingNumCtx: $('#setting-num-ctx'),
   settingContextWindow: $('#setting-context-window'),
   settingGithubToken: $('#setting-github-token'),
@@ -639,6 +643,8 @@ async function init() {
   if (state.settings) {
     els.settingOllamaUrl.value = state.settings.ollama_url || 'http://localhost:11434';
     if (els.settingModelName) els.settingModelName.value = state.settings.model_name || 'bestie-abliterated';
+    if (els.settingBicameralRouting) els.settingBicameralRouting.checked = state.settings.bicameral_routing_enabled !== false;
+    if (els.settingSpecialistModel) els.settingSpecialistModel.value = state.settings.specialist_model_name || 'auto';
     els.settingNumCtx.value = state.settings.num_ctx || 16384;
     els.settingContextWindow.value = state.settings.context_window || 50;
     if (els.settingGithubToken) els.settingGithubToken.value = state.settings.github_token || '';
@@ -795,6 +801,46 @@ function updateModelDropdowns(models, activeModel) {
     }).join('');
     els.infuseBaseModelSelect.innerHTML = infuseOptions;
   }
+
+  // Populate Specialist Model Dropdown for Bicameral Scaffolding
+  if (els.settingSpecialistModel) {
+    const nonEmbedModels = sorted.filter(m => !m.name.toLowerCase().includes('embed'));
+    const currentSpecialist = state.settings?.specialist_model_name || 'auto';
+    let specialistOptions = `<option value="auto" ${currentSpecialist === 'auto' ? 'selected' : ''}>Auto-Detect Best Specialist (Recommended: Qwen 2.5 Coder / Hermes 3)</option>`;
+    specialistOptions += nonEmbedModels.map(m => {
+      const sizeGb = (m.size / (1024 * 1024 * 1024)).toFixed(1);
+      const isSel = currentSpecialist === m.name;
+      return `<option value="${m.name}" ${isSel ? 'selected' : ''}>${m.name} (${sizeGb} GB)</option>`;
+    }).join('');
+    els.settingSpecialistModel.innerHTML = specialistOptions;
+    els.settingSpecialistModel.value = currentSpecialist;
+  }
+}
+
+async function refreshBicameralStatus() {
+  if (!window.bestie?.ollama?.resolveSpecialist || !els.bicameralStatusText) return;
+  try {
+    const res = await window.bestie.ollama.resolveSpecialist();
+    if (res) {
+      if (els.settingBicameralRouting && !els.settingBicameralRouting.checked) {
+        els.bicameralStatusText.textContent = `Monolithic: ${res.modelName}`;
+        if (els.bicameralStatusBadge) {
+          els.bicameralStatusBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+          els.bicameralStatusBadge.style.background = 'rgba(239, 68, 68, 0.12)';
+          els.bicameralStatusBadge.style.color = '#f87171';
+        }
+      } else {
+        els.bicameralStatusText.textContent = `Specialist: ${res.modelName}`;
+        if (els.bicameralStatusBadge) {
+          els.bicameralStatusBadge.style.borderColor = 'rgba(6, 182, 212, 0.4)';
+          els.bicameralStatusBadge.style.background = 'rgba(6, 182, 212, 0.15)';
+          els.bicameralStatusBadge.style.color = '#38bdf8';
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Bicameral] Failed to resolve status:', err);
+  }
 }
 
 async function checkConnection() {
@@ -813,6 +859,7 @@ async function checkConnection() {
 
     // Update Ollama & Model System Health UI in Settings
     updateHealthStatusUI(status);
+    refreshBicameralStatus();
 
     // Self-healing notification & banner
     if (status.isFallback && status.fallbackReason && state.lastReportedFallback !== status.activeModel) {
@@ -1489,6 +1536,8 @@ function registerEventListeners() {
     const settings = {
       ollama_url: els.settingOllamaUrl.value,
       model_name: els.settingModelName.value,
+      specialist_model_name: els.settingSpecialistModel ? els.settingSpecialistModel.value : 'auto',
+      bicameral_routing_enabled: els.settingBicameralRouting ? els.settingBicameralRouting.checked : true,
       num_ctx: parseInt(els.settingNumCtx.value) || (powerSaver ? 4096 : 8192),
       context_window: parseInt(els.settingContextWindow.value) || 50,
       github_token: els.settingGithubToken ? els.settingGithubToken.value.trim() : '',
@@ -1509,6 +1558,14 @@ function registerEventListeners() {
     if (els.headerModelSelect) els.headerModelSelect.value = settings.model_name;
     showToast('Settings saved 🚀');
     checkConnection();
+  });
+
+  // Bicameral Scaffolding Live Listeners
+  els.settingBicameralRouting?.addEventListener('change', () => {
+    refreshBicameralStatus();
+  });
+  els.settingSpecialistModel?.addEventListener('change', () => {
+    refreshBicameralStatus();
   });
 
   // Ollama Health & Model Restoration Listeners

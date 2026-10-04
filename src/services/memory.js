@@ -79,6 +79,8 @@ const DEFAULT_PROFILE = {
 const DEFAULT_SETTINGS = {
   ollama_url: 'http://localhost:11434',
   model_name: 'bestie-abliterated',
+  specialist_model_name: 'auto',
+  bicameral_routing_enabled: true,
   context_window: 50,
   theme: 'neon-dark',
   num_ctx: 16384,

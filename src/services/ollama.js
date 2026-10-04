@@ -84,6 +84,84 @@ export function resolveBestAvailableModel(requestedModel, modelsList = []) {
 }
 
 /**
+ * Prioritized specialist models for function calling, structured JSON extraction,
+ * and multi-step reasoning in the Bicameral / Dual-Engine Scaffold.
+ */
+export const SPECIALIST_PRIORITIES = [
+  'qwen2.5-coder:32b-instruct-q6_K',
+  'qwen2.5-coder:32b',
+  'hermes3:70b',
+  'hermes3:8b',
+  'qwen2.5-coder:14b',
+  'qwen2.5-coder:7b',
+  'dolphin-llama3:8b',
+  'dolphin-llama3',
+  'bestie-light',
+  'qwen2.5:32b',
+  'qwen2.5:14b',
+  'qwen2.5:7b',
+  'llama3.1:8b',
+  'llama3:8b'
+];
+
+/**
+ * Resolves the designated specialist model for structured tool execution,
+ * JSON extraction, and deep multi-step logic.
+ *
+ * @param {string} [preferredSpecialist='auto'] - Explicit specialist choice or 'auto'
+ * @param {Array} [modelsList=[]] - Installed models from Ollama
+ * @param {string} [activeChatModel='bestie-abliterated'] - Fallback chat model
+ * @param {boolean} [routingEnabled=true] - Whether bicameral delegation is enabled
+ * @returns {{ modelName: string, isSpecialist: boolean, isAutoDetected: boolean, reason: string }}
+ */
+export function resolveSpecialistModel(preferredSpecialist = 'auto', modelsList = [], activeChatModel = MODEL_NAME, routingEnabled = true) {
+  if (!routingEnabled) {
+    return {
+      modelName: activeChatModel,
+      isSpecialist: false,
+      isAutoDetected: false,
+      reason: 'Bicameral routing disabled. Using active conversational model.'
+    };
+  }
+
+  // 1. Explicit user selection (not 'auto')
+  if (preferredSpecialist && preferredSpecialist !== 'auto') {
+    const directMatch = (modelsList || []).find(m => m.name === preferredSpecialist || m.name.startsWith(`${preferredSpecialist}:`));
+    if (directMatch) {
+      return {
+        modelName: directMatch.name,
+        isSpecialist: true,
+        isAutoDetected: false,
+        reason: `Explicitly chosen specialist "${directMatch.name}" active.`
+      };
+    }
+  }
+
+  // 2. Auto-detection cascade through SPECIALIST_PRIORITIES
+  const generativeModels = (modelsList || []).filter(m => !m.name.includes('embed'));
+
+  for (const candidateName of SPECIALIST_PRIORITIES) {
+    const matched = generativeModels.find(m => m.name === candidateName || m.name.startsWith(`${candidateName}:`));
+    if (matched) {
+      return {
+        modelName: matched.name,
+        isSpecialist: true,
+        isAutoDetected: true,
+        reason: `Auto-selected elite specialist "${matched.name}" for structured tool execution.`
+      };
+    }
+  }
+
+  // 3. Fallback to active chat model if no specialist matches
+  return {
+    modelName: activeChatModel,
+    isSpecialist: false,
+    isAutoDetected: false,
+    reason: `No dedicated specialist detected. Delegating to active chat model "${activeChatModel}".`
+  };
+}
+
+/**
  * Check if Ollama is running and get model status with self-healing fallback & system diagnostics
  * @param {string} [targetModel] - Model name to check
  */

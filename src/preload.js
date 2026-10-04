@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('bestie', {
     infuseModel: (payload) => ipcRenderer.invoke('ollama:infuseModel', payload),
     getCatalog: () => ipcRenderer.invoke('ollama:getCatalog'),
     upgradeModel: (targetTag) => ipcRenderer.invoke('ollama:upgradeModel', targetTag),
+    resolveSpecialist: () => ipcRenderer.invoke('ollama:resolveSpecialist'),
     chat: (message, activeModule = null) => ipcRenderer.invoke('ollama:chat', { message, activeModule }),
     abort: () => ipcRenderer.send('ollama:abort'),
     onToken: (callback) => {

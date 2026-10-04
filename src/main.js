@@ -19,7 +19,8 @@ import {
   restoreBestieModel,
   infuseBaseModel,
   getCuratedCatalogWithStatus,
-  upgradeAndInfuseModel
+  upgradeAndInfuseModel,
+  resolveSpecialistModel
 } from './services/ollama.js';
 import {
   loadProfile, saveProfile, updateProfileField, deleteProfileField, getProfileSummary,
@@ -411,13 +412,43 @@ function registerIPC() {
     }
   });
 
+  // --- Specialist Model Resolution (Bicameral Scaffold) ---
+  ipcMain.handle('ollama:resolveSpecialist', async () => {
+    const settings = loadSettings();
+    let modelsList = [];
+    try {
+      const status = await checkOllamaStatus(settings.model_name || 'bestie-abliterated');
+      modelsList = status.models || [];
+    } catch (_) {}
+    return resolveSpecialistModel(
+      settings.specialist_model_name || 'auto',
+      modelsList,
+      settings.model_name || 'bestie-abliterated',
+      settings.bicameral_routing_enabled !== false
+    );
+  });
+
   // --- Onboarding Extraction ---
   ipcMain.handle('ollama:extract', async (event, { phase, userResponse }) => {
     const extractionPrompt = getExtractionPrompt(phase, userResponse);
     const abortCtrl = new AbortController();
     const timeout = setTimeout(() => abortCtrl.abort(), 15000); // 15s max for extraction
     const settings = loadSettings();
-    const modelToUse = settings.model_name || 'bestie-light';
+
+    let modelsList = [];
+    try {
+      const status = await checkOllamaStatus(settings.model_name || 'bestie-abliterated');
+      modelsList = status.models || [];
+    } catch (_) {}
+
+    const specialistInfo = resolveSpecialistModel(
+      settings.specialist_model_name || 'auto',
+      modelsList,
+      settings.model_name || 'bestie-light',
+      settings.bicameral_routing_enabled !== false
+    );
+    const modelToUse = specialistInfo.modelName;
+    console.log(`[Bicameral Scaffold] Extraction routed to specialist: ${modelToUse} (${specialistInfo.reason})`);
     
     return new Promise((resolve) => {
       streamChat(
