@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.1] - 2026-10-10
+
+### Fixed
+- **System Capabilities Tour Lockup & Button Unlocking**:
+  - Eliminated asynchronous IPC/disk I/O deadlock blocking `Next Capability →` button activation upon checking acknowledgment box.
+  - Button state, neon glow, and stepper dots now update immediately and synchronously upon selection.
+  - Replaced `display: none` checkbox with accessible visually-hidden pattern and expanded clickable hit target to entire acknowledgment card.
+  - Resolved startup trap for existing calibrated users: users who already completed baseline intake are never blocked by mandatory onboarding loops on app boot.
+  - Enhanced Step 7 graduation: dynamic actions route existing users directly into chat without forcing re-intake.
+
+### Added
+- **Proactivity & Time Defense Engine (`src/services/time-defense.js`)**:
+  - Automated focus blocks, anti-fatigue decompression buffers, meeting collision detection, and dynamic rollover of overdue tasks.
+- **Output Governance & Zero Data Retention (ZDR) (`src/services/output-governance.js`)**:
+  - LLM-as-a-judge quality gates evaluating schema conformance, grounding, and action safety.
+  - Automated regex redaction of API keys, Bearer tokens, private keys, and passwords replaced with secured HMAC digests before external dispatch.
+  - Local AES-256-GCM cipher secrets vault with dedicated master key.
+- **Metaprompt Architect Module & Efficacy Scoring (`src/services/metaprompt.js`)**:
+  - Structured prompt compiler with XML boundaries and negative constraints.
+  - Multi-dimension prompt efficacy evaluation and one-click chat prompt enhancement.
+- **Bicameral Dual-Engine Model Scaffolding**:
+  - Dual-engine routing between primary orchestrator and specialist models.
+
+---
+
 ## [2.4.0] - 2026-10-03
 
 ### Added

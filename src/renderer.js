@@ -721,7 +721,11 @@ async function init() {
   setupMetaprompt();
 
   // Check if system tour or onboarding intake is needed
-  if (!state.profile?.onboarding_state?.system_tour_completed) {
+  if (state.profile?.onboarding_state?.completed && !state.profile?.onboarding_state?.system_tour_completed) {
+    // Existing users who have already calibrated their profile should not be trapped in a mandatory tour
+    state.profile.onboarding_state.system_tour_completed = true;
+    window.bestie.memory.saveProfile(state.profile).catch(() => {});
+  } else if (!state.profile?.onboarding_state?.system_tour_completed) {
     openSystemTourModal(false);
   } else if (!state.profile?.onboarding_state?.completed) {
     startOnboarding();
@@ -3835,6 +3839,16 @@ function setupSystemTour() {
   els.btnTourSkip?.addEventListener('click', handleTourSkip);
   els.tourAckCheckbox?.addEventListener('change', handleTourAckChange);
 
+  // Allow clicking anywhere in acknowledgment container to toggle checkbox
+  els.tourAcknowledgmentBox?.addEventListener('click', (e) => {
+    if (e.target !== els.tourAckCheckbox && !e.target.closest('label')) {
+      if (els.tourAckCheckbox) {
+        els.tourAckCheckbox.checked = !els.tourAckCheckbox.checked;
+        handleTourAckChange({ target: els.tourAckCheckbox });
+      }
+    }
+  });
+
   // Stepper dots click handler
   els.tourStepDots.forEach(dot => {
     dot.addEventListener('click', () => {
@@ -3868,10 +3882,16 @@ function closeSystemTourModal(markCompleted = false) {
   if (els.systemTourModal) {
     els.systemTourModal.classList.add('hidden');
   }
-  if (markCompleted && state.profile) {
+  if (state.profile) {
     state.profile.onboarding_state = state.profile.onboarding_state || {};
-    state.profile.onboarding_state.system_tour_completed = true;
-    window.bestie.memory.saveProfile(state.profile);
+    if (markCompleted || state.profile.onboarding_state.completed) {
+      state.profile.onboarding_state.system_tour_completed = true;
+      try {
+        window.bestie.memory.saveProfile(state.profile);
+      } catch (err) {
+        console.warn('[Tour] Error persisting profile on modal close:', err);
+      }
+    }
   }
 }
 
@@ -3966,19 +3986,29 @@ function renderTourStep(stepNum) {
         </div>
       `;
     } else {
+      const alreadyCompleted = !!state.profile?.onboarding_state?.completed;
       html += `
         <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-lg); padding: 18px; margin-top: 14px;">
           <div style="margin-bottom: 12px;">
             <strong style="color: #fff; display: block; font-size: 14px;">Ready to initiate your sovereign Bestie? 🚀</strong>
-            <span style="font-size: 12px; color: var(--text-muted);">Choose how you want to proceed. You can take the 5-phase personal interview to dial in your baseline right now, or jump straight into chatting.</span>
+            <span style="font-size: 12px; color: var(--text-muted);">${alreadyCompleted ? 'Your personal baseline is already calibrated. You are ready to start chatting!' : 'Choose how you want to proceed. You can take the 5-phase personal interview to dial in your baseline right now, or jump straight into chatting.'}</span>
           </div>
           <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            ${alreadyCompleted ? `
+            <button type="button" id="btn-tour-skip-to-chat" class="btn-neon" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
+              💬 Start Chatting
+            </button>
+            <button type="button" id="btn-tour-start-intake" class="btn-glass" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
+              🎯 Re-calibrate Personal Intake
+            </button>
+            ` : `
             <button type="button" id="btn-tour-start-intake" class="btn-neon" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
               🚀 Continue to Personal Baseline Intake
             </button>
             <button type="button" id="btn-tour-skip-to-chat" class="btn-glass" style="flex: 1; padding: 10px 16px;" ${!tourAcknowledgedSteps[7] ? 'disabled' : ''}>
               💬 Skip Intake &amp; Start Chatting
             </button>
+            `}
           </div>
         </div>
       `;
@@ -4073,15 +4103,10 @@ function handleTourAction(action) {
   }
 }
 
-async function handleTourAckChange(e) {
-  const isChecked = e.target.checked;
+function handleTourAckChange(e) {
+  const isChecked = !!e?.target?.checked;
   if (isChecked) {
     tourAcknowledgedSteps[currentTourStep] = true;
-    if (state.profile) {
-      state.profile.onboarding_state = state.profile.onboarding_state || {};
-      state.profile.onboarding_state.tour_acknowledgments = tourAcknowledgedSteps;
-      await window.bestie.memory.saveProfile(state.profile);
-    }
     els.tourAcknowledgmentBox?.classList.add('checked');
     if (els.btnTourNext) {
       els.btnTourNext.disabled = false;
@@ -4094,16 +4119,18 @@ async function handleTourAckChange(e) {
     // If step 7, unlock action buttons
     if (currentTourStep === 7) {
       const btnIntake = $('#btn-tour-start-intake');
-      if (btnIntake) btnIntake.disabled = false;
+      if (btnIntake) {
+        btnIntake.disabled = false;
+        btnIntake.style.opacity = '1';
+      }
       const btnChat = $('#btn-tour-skip-to-chat');
-      if (btnChat) btnChat.disabled = false;
+      if (btnChat) {
+        btnChat.disabled = false;
+        btnChat.style.opacity = '1';
+      }
     }
   } else {
     delete tourAcknowledgedSteps[currentTourStep];
-    if (state.profile?.onboarding_state?.tour_acknowledgments) {
-      delete state.profile.onboarding_state.tour_acknowledgments[currentTourStep];
-      await window.bestie.memory.saveProfile(state.profile);
-    }
     els.tourAcknowledgmentBox?.classList.remove('checked');
     if (els.btnTourNext) {
       els.btnTourNext.disabled = true;
@@ -4114,9 +4141,26 @@ async function handleTourAckChange(e) {
 
     if (currentTourStep === 7) {
       const btnIntake = $('#btn-tour-start-intake');
-      if (btnIntake) btnIntake.disabled = true;
+      if (btnIntake) {
+        btnIntake.disabled = true;
+        btnIntake.style.opacity = '0.4';
+      }
       const btnChat = $('#btn-tour-skip-to-chat');
-      if (btnChat) btnChat.disabled = true;
+      if (btnChat) {
+        btnChat.disabled = true;
+        btnChat.style.opacity = '0.4';
+      }
+    }
+  }
+
+  // Persist tour acknowledgments asynchronously in background without blocking UI
+  if (state.profile) {
+    state.profile.onboarding_state = state.profile.onboarding_state || {};
+    state.profile.onboarding_state.tour_acknowledgments = { ...tourAcknowledgedSteps };
+    try {
+      window.bestie.memory.saveProfile(state.profile);
+    } catch (err) {
+      console.warn('[Tour] Could not persist tour acknowledgment:', err);
     }
   }
 }
@@ -4151,27 +4195,29 @@ function handleTourSkip() {
   if (isTourReplayMode) {
     closeSystemTourModal();
   } else {
-    if (confirm('Skip the system capabilities tour and proceed directly to personal intake?')) {
-      if (state.profile) {
-        state.profile.onboarding_state = state.profile.onboarding_state || {};
-        state.profile.onboarding_state.system_tour_completed = true;
-        window.bestie.memory.saveProfile(state.profile);
+    // If the user already finished profile onboarding in the past, directly close to chat!
+    if (state.profile?.onboarding_state?.completed) {
+      closeSystemTourModal(true);
+      switchView('chat');
+      showToast('Tour skipped. Welcome back to Digital Bestie! 🚀');
+    } else {
+      if (confirm('Skip the system capabilities tour and proceed directly to personal intake?')) {
+        closeSystemTourModal(true);
+        startOnboarding();
       }
-      closeSystemTourModal();
-      startOnboarding();
     }
   }
 }
 
 async function handleTourContinueToIntake() {
-  if (state.profile) {
-    state.profile.onboarding_state = state.profile.onboarding_state || {};
-    state.profile.onboarding_state.system_tour_completed = true;
-    await window.bestie.memory.saveProfile(state.profile);
+  closeSystemTourModal(true);
+  if (state.profile?.onboarding_state?.completed) {
+    switchView('chat');
+    showToast('Flight check verified! Ready to roll. 🚀');
+  } else {
+    startOnboarding();
+    showToast('Flight check verified! Let\'s dial in your personal baseline. 🎯');
   }
-  closeSystemTourModal();
-  startOnboarding();
-  showToast('Flight check verified! Let\'s dial in your personal baseline. 🎯');
 }
 
 async function handleTourSkipToChat() {
@@ -4179,9 +4225,13 @@ async function handleTourSkipToChat() {
     state.profile.onboarding_state = state.profile.onboarding_state || {};
     state.profile.onboarding_state.system_tour_completed = true;
     state.profile.onboarding_state.completed = true;
-    await window.bestie.memory.saveProfile(state.profile);
+    try {
+      await window.bestie.memory.saveProfile(state.profile);
+    } catch (err) {
+      console.warn('[Tour] Error persisting profile on skip to chat:', err);
+    }
   }
-  closeSystemTourModal();
+  closeSystemTourModal(true);
   switchView('chat');
   addMessage('assistant', 'Hey! System flight check verified. 🚀 I\'ve got all 20 personas, 8 operational modules, and your sovereign memory engine ready to roll. What are we tackling first?');
   els.chatInput?.focus();
@@ -4868,7 +4918,7 @@ document.head.appendChild(toastStyle);
 function setupUpdater() {
   if (!window.bestie || !window.bestie.updater) return;
 
-  let currentAppVersion = '2.4.0';
+  let currentAppVersion = '2.4.1';
   let cachedUpdateInfo = null;
 
   // Retrieve and show current version

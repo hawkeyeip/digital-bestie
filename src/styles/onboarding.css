@@ -550,6 +550,12 @@
   border: 1px solid rgba(0, 240, 255, 0.15);
   border-radius: var(--radius-lg);
   transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.tour-acknowledgment-box:hover {
+  background: rgba(0, 240, 255, 0.06);
+  border-color: rgba(0, 240, 255, 0.3);
 }
 
 .tour-acknowledgment-box.checked {
@@ -579,10 +585,15 @@
   gap: 12px;
   cursor: pointer;
   user-select: none;
+  width: 100%;
 }
 
 .tour-ack-checkbox {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
 .tour-ack-indicator {
@@ -616,6 +627,7 @@
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.4;
+  flex: 1;
 }
 
 .system-tour-actions {
@@ -623,6 +635,28 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.system-tour-actions .btn-neon:disabled,
+#btn-tour-next:disabled,
+#btn-tour-start-intake:disabled,
+#btn-tour-skip-to-chat:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: grayscale(0.6) !important;
+  pointer-events: none !important;
+}
+
+.system-tour-actions .btn-neon:not(:disabled),
+#btn-tour-next:not(:disabled),
+#btn-tour-start-intake:not(:disabled),
+#btn-tour-skip-to-chat:not(:disabled) {
+  opacity: 1 !important;
+  cursor: pointer !important;
+  filter: none !important;
+  pointer-events: auto !important;
 }
 
 .tour-actions-right {
