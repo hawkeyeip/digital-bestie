@@ -323,6 +323,8 @@ const els = {
   settingNumCtx: $('#setting-num-ctx'),
   settingContextWindow: $('#setting-context-window'),
   settingGithubToken: $('#setting-github-token'),
+  settingAutoCheckUpdates: $('#setting-auto-check-updates'),
+  settingNotifyUpdates: $('#setting-notify-updates'),
   settingPowerSaver: $('#setting-power-saver'),
   settingKeepAlive: $('#setting-keep-alive'),
   btnRefreshMemory: $('#btn-refresh-memory'),
@@ -358,7 +360,7 @@ const els = {
   btnRefreshCatalog: $('#btn-refresh-catalog'),
   curatedModelsList: $('#curated-models-list'),
 
-  // Updater
+  // Updater & Release Opt-In
   appVersionBadge: $('#app-version-badge'),
   updaterStatusBadge: $('#updater-status-badge'),
   updaterStatusText: $('#updater-status-text'),
@@ -366,12 +368,25 @@ const els = {
   updaterReleaseTitle: $('#updater-release-title'),
   updaterReleaseSnippet: $('#updater-release-snippet'),
   btnCheckUpdates: $('#btn-check-updates'),
+  btnViewUpdateModal: $('#btn-view-update-modal'),
   btnDownloadUpdate: $('#btn-download-update'),
   updateNotificationBanner: $('#update-notification-banner'),
   updateBannerVersion: $('#update-banner-version'),
   updateBannerTitle: $('#update-banner-title'),
   btnUpdateBannerDownload: $('#btn-update-banner-download'),
   btnUpdateBannerDismiss: $('#btn-update-banner-dismiss'),
+  btnTopbarUpdate: $('#btn-topbar-update'),
+  topbarUpdateText: $('#topbar-update-text'),
+  updateOptInModal: $('#update-opt-in-modal'),
+  btnCloseUpdateModal: $('#btn-close-update-modal'),
+  updateModalTitle: $('#update-modal-title'),
+  updateModalVersionFrom: $('#update-modal-version-from'),
+  updateModalVersionTo: $('#update-modal-version-to'),
+  updateModalDate: $('#update-modal-date'),
+  updateModalChangelog: $('#update-modal-changelog'),
+  btnUpdateModalDownload: $('#btn-update-modal-download'),
+  btnUpdateModalGithub: $('#btn-update-modal-github'),
+  btnUpdateModalRemind: $('#btn-update-modal-remind'),
 
   // Onboarding
   onboardingOverlay: $('#onboarding-overlay'),
@@ -648,6 +663,8 @@ async function init() {
     els.settingNumCtx.value = state.settings.num_ctx || 16384;
     els.settingContextWindow.value = state.settings.context_window || 50;
     if (els.settingGithubToken) els.settingGithubToken.value = state.settings.github_token || '';
+    if (els.settingAutoCheckUpdates) els.settingAutoCheckUpdates.checked = state.settings.auto_check_updates !== false;
+    if (els.settingNotifyUpdates) els.settingNotifyUpdates.checked = state.settings.notify_updates !== false;
     if (els.headerModelSelect) els.headerModelSelect.value = state.settings.model_name || 'bestie-abliterated';
     if (els.settingPowerSaver) els.settingPowerSaver.checked = !!state.settings.power_saver;
     if (els.settingKeepAlive) els.settingKeepAlive.value = state.settings.ollama_keep_alive || '5m';
@@ -1120,6 +1137,19 @@ function registerEventListeners() {
     });
   });
 
+  // Delegated terminal command copy button listener (for tour & settings models section)
+  document.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('.btn-copy-terminal-cmd');
+    if (copyBtn && copyBtn.dataset.cmd) {
+      navigator.clipboard.writeText(copyBtn.dataset.cmd).then(() => {
+        showToast('Terminal command copied! Paste into Terminal to run 🚀');
+      }).catch(err => {
+        console.warn('Clipboard write error:', err);
+        showToast('Command copied to clipboard 📋');
+      });
+    }
+  });
+
   // Chat input
   els.chatInput.addEventListener('input', () => {
     autoResizeTextarea(els.chatInput);
@@ -1545,6 +1575,8 @@ function registerEventListeners() {
       num_ctx: parseInt(els.settingNumCtx.value) || (powerSaver ? 4096 : 8192),
       context_window: parseInt(els.settingContextWindow.value) || 50,
       github_token: els.settingGithubToken ? els.settingGithubToken.value.trim() : '',
+      auto_check_updates: els.settingAutoCheckUpdates ? els.settingAutoCheckUpdates.checked : true,
+      notify_updates: els.settingNotifyUpdates ? els.settingNotifyUpdates.checked : true,
       power_saver: powerSaver,
       ollama_keep_alive: keepAlive,
       theme: theme,
@@ -2039,6 +2071,13 @@ function registerEventListeners() {
 // ============================================================
 
 function switchView(viewName) {
+  // If telemetry is requested, route seamlessly into Settings -> panel-settings-telemetry
+  if (viewName === 'telemetry') {
+    switchView('settings');
+    activateSettingsPanel('panel-settings-telemetry');
+    return;
+  }
+
   state.currentView = viewName;
 
   els.navBtns.forEach(btn => {
@@ -2054,7 +2093,6 @@ function switchView(viewName) {
   if (viewName === 'feedback') refreshFeedbackView();
   if (viewName === 'superbrain') refreshSuperbrainView();
   if (viewName === 'taskflow') refreshTaskflowView();
-  if (viewName === 'telemetry') refreshTelemetryView();
   if (viewName === 'prompts') renderPromptsGrid();
   if (viewName === 'credentials') refreshCredentialsList();
   if (viewName === 'settings') {
@@ -3553,6 +3591,20 @@ const TOUR_STEPS = [
     title: 'Hey new bestie! 👋',
     subtitle: 'Welcome to your sovereign second-brain & operational OS.',
     desc: 'Digital Bestie is an autonomous, local-first intelligence architecture designed to give you extreme leverage, absolute privacy, and an uncompromising operational ally. Before we calibrate your personal baseline, let\'s run a 90-second flight check through your core capabilities.',
+    modelRecommendations: {
+      title: 'Recommended Starter Models & Refresher Pull Commands',
+      desc: 'To properly initialize your local intelligence before anything else happens, open Terminal on your Mac and run the recommended pull command for your hardware specs:',
+      flagship: {
+        label: '🚀 Mac Studio Tier (64GB+ Unified Memory • M2/M3/M4 Max & Ultra)',
+        models: 'Hermes 3 (70B) + Qwen Coder (32B) + Nomic Embed',
+        cmd: 'ollama pull hermes3:70b && ollama pull qwen2.5-coder:32b && ollama pull nomic-embed-text'
+      },
+      standard: {
+        label: '⚡ Standard / Balanced Tier (16GB – 36GB Unified Memory • MacBook / Mini)',
+        models: 'Hermes 3 (8B) + Nomic Embed',
+        cmd: 'ollama pull hermes3:8b && ollama pull nomic-embed-text'
+      }
+    },
     features: [
       {
         icon: '🔒',
@@ -3927,6 +3979,46 @@ function renderTourStep(stepNum) {
     </div>
     <div class="tour-step-desc">${step.desc}</div>
   `;
+
+  // Recommended Starter Models Pre-flight Callout (Step 1)
+  if (step.modelRecommendations) {
+    const mr = step.modelRecommendations;
+    html += `
+      <div class="tour-model-callout" style="background: linear-gradient(135deg, rgba(0, 240, 255, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%); border: 1px solid rgba(0, 240, 255, 0.35); border-radius: var(--radius-lg); padding: 14px 16px; margin: 12px 0 16px 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+          <strong style="color: #fff; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <span>⚡</span> ${mr.title}
+          </strong>
+          <span style="font-size: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan); border: 1px solid rgba(0, 240, 255, 0.3); font-weight: 700;">PRE-FLIGHT RECOMMENDATION</span>
+        </div>
+        <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 10px 0; line-height: 1.4;">
+          ${mr.desc}
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 6px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+              <span style="font-size: 11px; font-weight: 700; color: #c084fc;">${mr.flagship.label}</span>
+              <span style="font-size: 10px; color: var(--text-muted);">${mr.flagship.models}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <code style="flex: 1; font-family: var(--font-mono); font-size: 10px; color: #38bdf8; overflow-x: auto; white-space: nowrap; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 4px;">${mr.flagship.cmd}</code>
+              <button type="button" class="btn-neon btn-xs btn-copy-terminal-cmd" data-cmd="${mr.flagship.cmd}" style="white-space: nowrap;">📋 Copy Command</button>
+            </div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 6px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--neon-cyan);">${mr.standard.label}</span>
+              <span style="font-size: 10px; color: var(--text-muted);">${mr.standard.models}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <code style="flex: 1; font-family: var(--font-mono); font-size: 10px; color: #38bdf8; overflow-x: auto; white-space: nowrap; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 4px;">${mr.standard.cmd}</code>
+              <button type="button" class="btn-neon btn-xs btn-copy-terminal-cmd" data-cmd="${mr.standard.cmd}" style="white-space: nowrap;">📋 Copy Command</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   // Keybindings Cheat Sheet (Step 7)
   if (step.cheatSheet) {
@@ -4928,6 +5020,111 @@ function setupUpdater() {
       if (els.appVersionBadge) {
         els.appVersionBadge.textContent = `v${v}`;
       }
+      if (els.updateModalVersionFrom) {
+        els.updateModalVersionFrom.textContent = `v${v}`;
+      }
+    }
+  });
+
+  // Open Update Opt-In Modal
+  function openUpdateModal(info) {
+    if (!els.updateOptInModal) return;
+    const update = info || cachedUpdateInfo;
+    if (!update) return;
+
+    if (els.updateModalVersionFrom) {
+      els.updateModalVersionFrom.textContent = `v${currentAppVersion}`;
+    }
+    if (els.updateModalVersionTo) {
+      els.updateModalVersionTo.textContent = update.latestVersion || 'New Version';
+    }
+    if (els.updateModalTitle) {
+      els.updateModalTitle.textContent = update.name || update.latestVersion || 'New Release';
+    }
+    if (els.updateModalDate) {
+      if (update.publishedAt) {
+        try {
+          const d = new Date(update.publishedAt);
+          els.updateModalDate.textContent = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch {
+          els.updateModalDate.textContent = 'Published';
+        }
+      } else {
+        els.updateModalDate.textContent = 'Published';
+      }
+    }
+    if (els.updateModalChangelog) {
+      els.updateModalChangelog.textContent = update.releaseNotes || 'No release notes provided for this release.';
+    }
+
+    els.updateOptInModal.classList.remove('hidden');
+  }
+
+  function closeUpdateModal() {
+    if (els.updateOptInModal) {
+      els.updateOptInModal.classList.add('hidden');
+    }
+  }
+
+  // Close modal listeners
+  els.btnCloseUpdateModal?.addEventListener('click', closeUpdateModal);
+  els.btnUpdateModalRemind?.addEventListener('click', () => {
+    closeUpdateModal();
+    showToast('Update reminder postponed ⏳');
+  });
+
+  els.updateOptInModal?.addEventListener('click', (e) => {
+    if (e.target === els.updateOptInModal) {
+      closeUpdateModal();
+    }
+  });
+
+  // Topbar update notification pill
+  els.btnTopbarUpdate?.addEventListener('click', () => {
+    if (cachedUpdateInfo) {
+      openUpdateModal(cachedUpdateInfo);
+    } else {
+      els.btnCheckUpdates?.click();
+    }
+  });
+
+  // In-App Notification Banner Actions -> Opens Review Modal
+  els.btnUpdateBannerDownload?.addEventListener('click', () => {
+    if (cachedUpdateInfo) {
+      openUpdateModal(cachedUpdateInfo);
+      els.updateNotificationBanner?.classList.add('hidden');
+    }
+  });
+
+  els.btnUpdateBannerDismiss?.addEventListener('click', () => {
+    els.updateNotificationBanner?.classList.add('hidden');
+  });
+
+  // "Review Update" button in Settings
+  els.btnViewUpdateModal?.addEventListener('click', () => {
+    if (cachedUpdateInfo) {
+      openUpdateModal(cachedUpdateInfo);
+    }
+  });
+
+  // Direct download actions
+  const triggerUpdateDownload = () => {
+    if (cachedUpdateInfo) {
+      const targetUrl = cachedUpdateInfo.downloadUrl || cachedUpdateInfo.releaseUrl;
+      window.bestie.updater.openRelease(targetUrl);
+      closeUpdateModal();
+      els.updateNotificationBanner?.classList.add('hidden');
+      showToast('🚀 Fetching update installer... Check your Downloads folder!');
+    }
+  };
+
+  els.btnDownloadUpdate?.addEventListener('click', triggerUpdateDownload);
+  els.btnUpdateModalDownload?.addEventListener('click', triggerUpdateDownload);
+
+  // View on GitHub button in modal
+  els.btnUpdateModalGithub?.addEventListener('click', () => {
+    if (cachedUpdateInfo && cachedUpdateInfo.releaseUrl) {
+      window.bestie.updater.openRelease(cachedUpdateInfo.releaseUrl);
     }
   });
 
@@ -4951,32 +5148,10 @@ function setupUpdater() {
     }
   });
 
-  // Download Update Button in Settings
-  els.btnDownloadUpdate?.addEventListener('click', () => {
-    if (cachedUpdateInfo) {
-      const targetUrl = cachedUpdateInfo.downloadUrl || cachedUpdateInfo.releaseUrl;
-      window.bestie.updater.openRelease(targetUrl);
-    }
-  });
-
-  // In-App Notification Banner Actions
-  els.btnUpdateBannerDownload?.addEventListener('click', () => {
-    if (cachedUpdateInfo) {
-      const targetUrl = cachedUpdateInfo.downloadUrl || cachedUpdateInfo.releaseUrl;
-      window.bestie.updater.openRelease(targetUrl);
-      els.updateNotificationBanner?.classList.add('hidden');
-    }
-  });
-
-  els.btnUpdateBannerDismiss?.addEventListener('click', () => {
-    els.updateNotificationBanner?.classList.add('hidden');
-  });
-
   // Background check listener from main process
   window.bestie.updater.onUpdateAvailable((info) => {
     if (info && info.updateAvailable) {
       cachedUpdateInfo = info;
-      showUpdateBanner(info);
       handleUpdateResult(info);
     }
   });
@@ -5006,6 +5181,9 @@ function setupUpdater() {
         els.btnDownloadUpdate.classList.remove('hidden');
         els.btnDownloadUpdate.textContent = `Download ${res.latestVersion} 🚀`;
       }
+      if (els.btnViewUpdateModal) {
+        els.btnViewUpdateModal.classList.remove('hidden');
+      }
       if (els.updaterReleaseDetails) {
         els.updaterReleaseDetails.classList.remove('hidden');
         if (els.updaterReleaseTitle) els.updaterReleaseTitle.textContent = res.name || res.latestVersion;
@@ -5013,8 +5191,19 @@ function setupUpdater() {
           els.updaterReleaseSnippet.textContent = (res.releaseNotes || 'No release notes provided.').slice(0, 300) + '...';
         }
       }
-      showToast(`⚡ Update ${res.latestVersion} available!`);
-      showUpdateBanner(res);
+
+      // Check notification preferences before showing alerts
+      const shouldNotify = state.settings?.notify_updates !== false;
+      if (shouldNotify) {
+        if (els.btnTopbarUpdate) {
+          els.btnTopbarUpdate.classList.remove('hidden');
+          if (els.topbarUpdateText) {
+            els.topbarUpdateText.textContent = `Update ${res.latestVersion}`;
+          }
+        }
+        showUpdateBanner(res);
+        showToast(`⚡ Update ${res.latestVersion} available!`);
+      }
     } else {
       if (els.updaterStatusText) {
         els.updaterStatusText.textContent = `You are running the latest version (${currentAppVersion}).`;
@@ -5026,8 +5215,14 @@ function setupUpdater() {
       if (els.btnDownloadUpdate) {
         els.btnDownloadUpdate.classList.add('hidden');
       }
+      if (els.btnViewUpdateModal) {
+        els.btnViewUpdateModal.classList.add('hidden');
+      }
       if (els.updaterReleaseDetails) {
         els.updaterReleaseDetails.classList.add('hidden');
+      }
+      if (els.btnTopbarUpdate) {
+        els.btnTopbarUpdate.classList.add('hidden');
       }
       showToast('Digital Bestie is up to date ✨');
     }
@@ -5930,6 +6125,9 @@ function activateSettingsPanel(panelId) {
 
   if (panelId === 'panel-settings-dossier') {
     renderDossierSummaryInSettings();
+  }
+  if (panelId === 'panel-settings-telemetry') {
+    refreshTelemetryView();
   }
 }
 
@@ -7512,7 +7710,7 @@ function setupTelemetryListeners() {
   window.bestie.execution.onNewPending?.((newReq) => {
     refreshHitlBadge();
     showToast(`🛡️ Authorization Required: Outbound ${newReq.actionType}`);
-    if (state.currentView === 'telemetry') {
+    if (state.currentView === 'telemetry' || (state.currentView === 'settings' && state.activeSettingsPanel === 'panel-settings-telemetry')) {
       refreshTelemetryView();
     } else {
       openHitlModal(newReq);

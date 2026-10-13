@@ -888,9 +888,13 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // Background update check after app initialization
-  setTimeout(async () => {
+  // Background update check after app initialization and periodic check every 30m
+  const runBackgroundUpdateCheck = async () => {
     try {
+      const settings = loadSettings();
+      if (settings && settings.auto_check_updates === false) {
+        return; // User opted out of automated background checks
+      }
       const update = await checkForUpdates(app.getVersion());
       if (update && update.updateAvailable && mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('updater:available', update);
@@ -898,7 +902,10 @@ app.whenReady().then(() => {
     } catch {
       // Silent catch for background update check
     }
-  }, 5000);
+  };
+
+  setTimeout(runBackgroundUpdateCheck, 3000);
+  setInterval(runBackgroundUpdateCheck, 30 * 60 * 1000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
