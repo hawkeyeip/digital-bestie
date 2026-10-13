@@ -727,10 +727,12 @@ async function init() {
   // Initialize TaskFlow Kanban Module
   await setupTaskflow();
 
-  // Apply theme if set
-  if (state.settings?.theme) {
-    document.body.dataset.theme = state.settings.theme;
-  }
+  // Initialize Theme Customizer & Apply saved styling
+  applyTheme(state.settings?.theme, state.settings?.accent_custom, state.settings?.glow_intensity);
+  setupThemeCustomizer();
+
+  // Initialize Vault Backup & Disaster Recovery Hub
+  await setupBackupHub();
 
   // Initialize System Capabilities Tour
   setupSystemTour();
@@ -1566,7 +1568,9 @@ function registerEventListeners() {
   els.btnSaveSettings?.addEventListener('click', async () => {
     const powerSaver = !!(els.settingPowerSaver && els.settingPowerSaver.checked);
     const keepAlive = (els.settingKeepAlive && els.settingKeepAlive.value) || '5m';
-    const theme = (els.settingThemeSelect && els.settingThemeSelect.value) || 'neon-dark';
+    const theme = state.settings?.theme || (els.settingThemeSelect && els.settingThemeSelect.value) || 'neon-dark';
+    const accentCustom = state.settings?.accent_custom || null;
+    const glowIntensity = state.settings?.glow_intensity || 'balanced';
     const settings = {
       ollama_url: els.settingOllamaUrl.value,
       model_name: els.settingModelName.value,
@@ -1580,12 +1584,14 @@ function registerEventListeners() {
       power_saver: powerSaver,
       ollama_keep_alive: keepAlive,
       theme: theme,
+      accent_custom: accentCustom,
+      glow_intensity: glowIntensity,
       inject_dossier: els.settingInjectDossier ? els.settingInjectDossier.checked : true,
       auto_commit: els.settingAutoCommit ? els.settingAutoCommit.checked : true
     };
     await window.bestie.settings.save(settings);
     state.settings = settings;
-    document.body.dataset.theme = theme;
+    applyTheme(theme, accentCustom, glowIntensity);
     if (powerSaver) {
       document.body.classList.add('power-saver');
     } else {
@@ -6129,6 +6135,9 @@ function activateSettingsPanel(panelId) {
   if (panelId === 'panel-settings-telemetry') {
     refreshTelemetryView();
   }
+  if (panelId === 'panel-settings-backup') {
+    refreshBackupView();
+  }
 }
 
 function renderDossierSummaryInSettings() {
@@ -7716,6 +7725,578 @@ function setupTelemetryListeners() {
       openHitlModal(newReq);
     }
   });
+}
+
+// ============================================================
+// WORKSTREAM B: THEME CUSTOMIZER STUDIO
+// ============================================================
+
+function hexToRgb(hex) {
+  const clean = hex.replace('#', '');
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16);
+    const g = parseInt(clean[1] + clean[1], 16);
+    const b = parseInt(clean[2] + clean[2], 16);
+    return [r, g, b];
+  }
+  const num = parseInt(clean, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+const PRESET_PRIMARY_COLORS = {
+  'neon-dark': '#00f0ff',
+  'cyberpunk': '#fcee0a',
+  'obsidian': '#9aa4b2',
+  'aurora': '#34d399',
+  'ember': '#ff7a45',
+  'sakura': '#f9a8d4'
+};
+
+const PRESET_SECONDARY_COLORS = {
+  'neon-dark': '#b347ff',
+  'cyberpunk': '#ff2d9b',
+  'obsidian': '#6b7280',
+  'aurora': '#60a5fa',
+  'ember': '#ff3d68',
+  'sakura': '#c4b5fd'
+};
+
+function applyTheme(themeId = 'neon-dark', customAccent = null, glowLevel = 'balanced') {
+  const theme = themeId || 'neon-dark';
+  document.body.dataset.theme = theme;
+  document.body.dataset.glow = glowLevel || 'balanced';
+
+  const previewSec = document.getElementById('preview-accent-secondary');
+  const accentPicker = document.getElementById('setting-custom-accent');
+
+  if (customAccent) {
+    const [r1, g1, b1] = hexToRgb(customAccent);
+    const [h, s, l] = rgbToHsl(r1, g1, b1);
+    const [r2, g2, b2] = hslToRgb((h + 60) % 360, s, l);
+
+    document.body.style.setProperty('--accent-1-rgb', `${r1}, ${g1}, ${b1}`);
+    document.body.style.setProperty('--accent-2-rgb', `${r2}, ${g2}, ${b2}`);
+
+    if (previewSec) previewSec.style.background = `rgb(${r2}, ${g2}, ${b2})`;
+    if (accentPicker) accentPicker.value = customAccent;
+  } else {
+    document.body.style.removeProperty('--accent-1-rgb');
+    document.body.style.removeProperty('--accent-2-rgb');
+    if (accentPicker) {
+      accentPicker.value = PRESET_PRIMARY_COLORS[theme] || '#00f0ff';
+    }
+    if (previewSec) {
+      previewSec.style.background = PRESET_SECONDARY_COLORS[theme] || '#b347ff';
+    }
+  }
+
+  document.querySelectorAll('.theme-preset-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.themeId === theme);
+  });
+  document.querySelectorAll('.glow-segment-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.glowVal === (glowLevel || 'balanced'));
+  });
+}
+
+function setupThemeCustomizer() {
+  // Preset chips
+  document.querySelectorAll('.theme-preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const themeId = chip.dataset.themeId;
+      state.settings = state.settings || {};
+      state.settings.theme = themeId;
+      state.settings.accent_custom = null; // preset takes precedence
+      applyTheme(themeId, null, state.settings.glow_intensity);
+      showToast(`Theme changed to ${chip.querySelector('span')?.textContent || themeId} ✨`);
+    });
+  });
+
+  // Custom accent color picker
+  const accentPicker = document.getElementById('setting-custom-accent');
+  accentPicker?.addEventListener('input', (e) => {
+    const val = e.target.value;
+    state.settings = state.settings || {};
+    state.settings.accent_custom = val;
+    applyTheme(state.settings.theme, val, state.settings.glow_intensity);
+  });
+
+  // Reset accent color button
+  document.getElementById('btn-reset-accent-color')?.addEventListener('click', () => {
+    state.settings = state.settings || {};
+    state.settings.accent_custom = null;
+    applyTheme(state.settings.theme, null, state.settings.glow_intensity);
+    showToast('Accent color reset to preset ✨');
+  });
+
+  // Glow intensity segmented control
+  document.querySelectorAll('.glow-segment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.glowVal || 'balanced';
+      state.settings = state.settings || {};
+      state.settings.glow_intensity = val;
+      applyTheme(state.settings.theme, state.settings.accent_custom, val);
+      showToast(`Glow set to ${val} 💡`);
+    });
+  });
+
+  // Reset all themes to default
+  document.getElementById('btn-reset-all-themes')?.addEventListener('click', () => {
+    state.settings = state.settings || {};
+    state.settings.theme = 'neon-dark';
+    state.settings.accent_custom = null;
+    state.settings.glow_intensity = 'balanced';
+    applyTheme('neon-dark', null, 'balanced');
+    showToast('Theme styling restored to Neon Midnight default ↺');
+  });
+}
+
+// ============================================================
+// WORKSTREAM A: VAULT BACKUP & DISASTER RECOVERY HUB
+// ============================================================
+
+let currentInspectedBackup = null;
+
+function formatRelativeTime(isoString) {
+  if (!isoString) return 'Never';
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+async function refreshBackupView() {
+  try {
+    const status = await window.bestie.backup.getStatus();
+    state.backupStatus = status;
+
+    // Hero metrics
+    const statExport = document.getElementById('backup-stat-last-export');
+    const statChanges = document.getElementById('backup-stat-changes-count');
+    const statSnapshot = document.getElementById('backup-stat-last-snapshot');
+    const statKeychain = document.getElementById('backup-stat-keychain');
+
+    if (statExport) {
+      statExport.textContent = formatRelativeTime(status.lastOffDeviceAt);
+      const daysOld = status.lastOffDeviceAt ? (Date.now() - new Date(status.lastOffDeviceAt).getTime()) / (24 * 3600 * 1000) : 999;
+      statExport.className = 'backup-stat-val ' + (daysOld > 7 ? 'danger' : (daysOld > 2 ? 'warning' : 'healthy'));
+    }
+    if (statChanges) {
+      statChanges.textContent = String(status.changesSinceExport || 0);
+      statChanges.className = 'backup-stat-val ' + (status.changesSinceExport >= 3 ? 'warning' : 'healthy');
+    }
+    if (statSnapshot) {
+      statSnapshot.textContent = formatRelativeTime(status.lastSnapshotAt);
+    }
+    if (statKeychain) {
+      statKeychain.textContent = status.keychainAvailable ? 'Keychain Active' : 'Fallback File';
+      statKeychain.className = 'backup-stat-val ' + (status.keychainAvailable ? 'healthy' : 'warning');
+    }
+
+    // Mirror folder view
+    const mirrorToggle = document.getElementById('backup-mirror-enable-toggle');
+    const mirrorFolderDisplay = document.getElementById('backup-mirror-folder-display');
+    const mirrorStatusIndicator = document.getElementById('backup-mirror-status-indicator');
+
+    if (mirrorToggle) mirrorToggle.checked = !!status.mirror?.enabled;
+    if (mirrorFolderDisplay) {
+      mirrorFolderDisplay.textContent = status.mirror?.folder || 'No destination folder selected';
+    }
+    if (mirrorStatusIndicator) {
+      if (status.mirror?.lastError) {
+        mirrorStatusIndicator.textContent = `⚠️ Error: ${status.mirror.lastError}`;
+        mirrorStatusIndicator.style.color = '#ff4444';
+      } else if (status.mirror?.enabled) {
+        mirrorStatusIndicator.textContent = `✓ Active • Synced ${formatRelativeTime(status.lastMirrorAt)}`;
+        mirrorStatusIndicator.style.color = 'var(--neon-green)';
+      } else {
+        mirrorStatusIndicator.textContent = '';
+      }
+    }
+
+    // Snapshots table
+    const tableBody = document.getElementById('backup-snapshot-table-body');
+    if (tableBody) {
+      const list = status.snapshots || [];
+      if (list.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">No local snapshots recorded yet.</td></tr>';
+      } else {
+        tableBody.innerHTML = list.map(snap => `
+          <tr>
+            <td style="font-family: var(--font-mono); font-weight: 600; color: #fff;">${escapeHtml(snap.name)}</td>
+            <td><span class="status-pill ${snap.kind === 'pre-restore' ? 'status-active' : ''}">${snap.kind === 'pre-restore' ? 'Pre-Restore Safety' : 'Daily Automatic'}</span></td>
+            <td>${new Date(snap.created_at).toLocaleString()}</td>
+            <td>${snap.files} files</td>
+            <td>${Math.round((snap.size_bytes || 0) / 1024)} KB</td>
+            <td style="text-align: right;">
+              <button type="button" class="btn-glass btn-xs btn-rollback-snapshot" data-snap-name="${escapeHtml(snap.name)}">
+                ↺ Roll Back
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        tableBody.querySelectorAll('.btn-rollback-snapshot').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const name = btn.dataset.snapName;
+            if (confirm(`Roll back local files to snapshot "${name}"?\n\nA new safety snapshot will be created automatically before rolling back.`)) {
+              const res = await window.bestie.backup.restoreSnapshot(name);
+              if (res.success) {
+                showToast(`Rolled back to ${name} ↺`);
+                state.profile = await window.bestie.memory.getProfile();
+                refreshBackupView();
+              } else {
+                showToast(`❌ Rollback error: ${res.error}`);
+              }
+            }
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Backup] Error refreshing backup view:', err);
+  }
+}
+
+async function setupBackupHub() {
+  // Hero quick export
+  document.getElementById('btn-quick-export-hero')?.addEventListener('click', () => {
+    document.getElementById('backup-export-passphrase')?.focus();
+    showToast('Enter a passphrase below to create an encrypted backup 📦');
+  });
+
+  // Passphrase strength & validation listener
+  const exportPass = document.getElementById('backup-export-passphrase');
+  const exportPassConfirm = document.getElementById('backup-export-passphrase-confirm');
+  const strengthLabel = document.getElementById('backup-export-strength-label');
+
+  const updateStrength = () => {
+    if (!strengthLabel) return;
+    const p = exportPass?.value || '';
+    if (p.length === 0) {
+      strengthLabel.textContent = 'Enter at least 8 characters';
+      strengthLabel.style.color = '#ffaa00';
+    } else if (p.length < 8) {
+      strengthLabel.textContent = `Too short (${p.length}/8 chars)`;
+      strengthLabel.style.color = '#ff4444';
+    } else if (p.length >= 14 && /[A-Z]/.test(p) && /[0-9]/.test(p)) {
+      strengthLabel.textContent = 'Strong Sovereign Cipher (AES-256-GCM)';
+      strengthLabel.style.color = 'var(--neon-green)';
+    } else {
+      strengthLabel.textContent = 'Good (AES-256-GCM)';
+      strengthLabel.style.color = 'var(--neon-cyan)';
+    }
+  };
+
+  exportPass?.addEventListener('input', updateStrength);
+  exportPassConfirm?.addEventListener('input', updateStrength);
+
+  // Export Encrypted Backup button
+  document.getElementById('btn-do-backup-export')?.addEventListener('click', async () => {
+    const p1 = exportPass?.value || '';
+    const p2 = exportPassConfirm?.value || '';
+    const includeChats = document.getElementById('backup-export-include-chats')?.checked !== false;
+
+    if (p1.length < 8) {
+      showToast('⚠️ Passphrase must be at least 8 characters.');
+      exportPass?.focus();
+      return;
+    }
+    if (p1 !== p2) {
+      showToast('⚠️ Passphrases do not match.');
+      exportPassConfirm?.focus();
+      return;
+    }
+
+    const btn = document.getElementById('btn-do-backup-export');
+    if (btn) { btn.disabled = true; btn.textContent = '🔒 Encrypting & Packaging...'; }
+
+    try {
+      const res = await window.bestie.backup.export({ passphrase: p1, includeChats });
+      if (res.success) {
+        showToast(`Backup exported successfully! 📦 (${res.counts?.credentials || 0} credentials, ${res.counts?.tasks || 0} tasks)`);
+        if (exportPass) exportPass.value = '';
+        if (exportPassConfirm) exportPassConfirm.value = '';
+        updateStrength();
+        hideBackupMilestoneToast();
+        await refreshBackupView();
+      } else if (!res.canceled) {
+        showToast(`❌ Export failed: ${res.error}`);
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🔒 Save Encrypted Backup File (.bestie-backup)'; }
+    }
+  });
+
+  // Export Unencrypted JSON Legacy button
+  document.getElementById('btn-export-unencrypted-legacy')?.addEventListener('click', async () => {
+    if (confirm('Warning: Unencrypted exports contain credentials and memories in plaintext JSON. Proceed?')) {
+      const res = await window.bestie.backup.export({ allowUnencrypted: true, includeChats: true });
+      if (res.success) {
+        showToast('Plaintext JSON backup exported.');
+        await refreshBackupView();
+      }
+    }
+  });
+
+  // Restore file picker
+  document.getElementById('btn-select-restore-file')?.addEventListener('click', async () => {
+    const pickRes = await window.bestie.backup.pickFile();
+    if (pickRes.canceled || !pickRes.filePath) return;
+
+    currentInspectedBackup = { filePath: pickRes.filePath };
+    const inspectWrap = document.getElementById('backup-restore-inspect-wrap');
+    const fileNameEl = document.getElementById('backup-inspect-file-name');
+    const fileMetaEl = document.getElementById('backup-inspect-file-meta');
+    const encBadge = document.getElementById('backup-inspect-enc-badge');
+    const countsRow = document.getElementById('backup-inspect-counts-row');
+    const passRow = document.getElementById('backup-restore-passphrase-row');
+    const restoreBtn = document.getElementById('btn-execute-restore');
+
+    if (inspectWrap) inspectWrap.classList.remove('hidden');
+    if (fileNameEl) fileNameEl.textContent = pickRes.filePath.split(/[\\/]/).pop();
+
+    // Inspect without passphrase first to determine if encrypted
+    const inspectRes = await window.bestie.backup.inspect({ filePath: pickRes.filePath, passphrase: '' });
+    if (inspectRes.success) {
+      const sum = inspectRes.summary;
+      currentInspectedBackup.summary = sum;
+      if (fileMetaEl) fileMetaEl.textContent = `App Version: ${sum.app_version || 'N/A'} • Created: ${sum.created_at ? new Date(sum.created_at).toLocaleString() : 'N/A'}`;
+      if (encBadge) {
+        encBadge.textContent = sum.encrypted ? 'Encrypted (AES-256-GCM)' : 'Unencrypted JSON';
+        encBadge.className = 'status-pill ' + (sum.encrypted ? 'status-active' : '');
+      }
+
+      if (sum.encrypted) {
+        if (passRow) passRow.classList.remove('hidden');
+        if (restoreBtn) restoreBtn.disabled = true;
+        if (countsRow) countsRow.innerHTML = '<span style="color: var(--text-muted);">Enter passphrase above to inspect vault contents.</span>';
+      } else {
+        if (passRow) passRow.classList.add('hidden');
+        if (restoreBtn) restoreBtn.disabled = false;
+        renderBackupCounts(countsRow, sum.counts);
+      }
+    } else {
+      showToast(`❌ Could not inspect file: ${inspectRes.error}`);
+    }
+  });
+
+  // Verify restore passphrase button
+  document.getElementById('btn-verify-restore-passphrase')?.addEventListener('click', async () => {
+    if (!currentInspectedBackup?.filePath) return;
+    const passInput = document.getElementById('backup-restore-passphrase-input');
+    const pass = passInput?.value || '';
+    if (!pass) { showToast('Enter passphrase.'); passInput?.focus(); return; }
+
+    const res = await window.bestie.backup.inspect({ filePath: currentInspectedBackup.filePath, passphrase: pass });
+    if (res.success) {
+      currentInspectedBackup.passphrase = pass;
+      showToast('Passphrase verified ✓');
+      const countsRow = document.getElementById('backup-inspect-counts-row');
+      renderBackupCounts(countsRow, res.summary.counts);
+      const restoreBtn = document.getElementById('btn-execute-restore');
+      if (restoreBtn) restoreBtn.disabled = false;
+    } else {
+      showToast(`❌ Passphrase incorrect: ${res.error}`);
+    }
+  });
+
+  // Execute restore button
+  document.getElementById('btn-execute-restore')?.addEventListener('click', async () => {
+    if (!currentInspectedBackup?.filePath) return;
+    if (!confirm('Are you sure you want to restore this backup?\n\nA safety snapshot will be created first so you can roll back anytime.')) return;
+
+    const btn = document.getElementById('btn-execute-restore');
+    if (btn) { btn.disabled = true; btn.textContent = 'Restoring Vault...'; }
+
+    try {
+      const res = await window.bestie.backup.restore({
+        filePath: currentInspectedBackup.filePath,
+        passphrase: currentInspectedBackup.passphrase || ''
+      });
+      if (res.success) {
+        showToast(`Vault successfully restored! 🚀 (Safety snapshot: ${res.safety_snapshot})`);
+        state.profile = await window.bestie.memory.getProfile();
+        refreshMemoryView();
+        refreshCredentialsList();
+        renderPromptsGrid();
+        refreshTaskflowView();
+        await refreshBackupView();
+      } else {
+        showToast(`❌ Restore failed: ${res.error}`);
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '⚠️ Restore Vault (Creates Safety Snapshot First)'; }
+    }
+  });
+
+  // Manual snapshot button
+  document.getElementById('btn-create-manual-snapshot')?.addEventListener('click', async () => {
+    const res = await window.bestie.backup.restoreSnapshot?.('manual'); // Or re-trigger status
+    await refreshBackupView();
+    showToast('Local snapshot captured 📸');
+  });
+
+  // Pick mirror folder
+  document.getElementById('btn-pick-mirror-folder')?.addEventListener('click', async () => {
+    const pickRes = await window.bestie.backup.pickFolder();
+    if (!pickRes.canceled && pickRes.folderPath) {
+      const display = document.getElementById('backup-mirror-folder-display');
+      if (display) display.textContent = pickRes.folderPath;
+      display.dataset.folderPath = pickRes.folderPath;
+    }
+  });
+
+  // Save mirror config
+  document.getElementById('btn-save-mirror-config')?.addEventListener('click', async () => {
+    const toggle = document.getElementById('backup-mirror-enable-toggle');
+    const folderDisplay = document.getElementById('backup-mirror-folder-display');
+    const passInput = document.getElementById('backup-mirror-passphrase-input');
+
+    const enabled = !!toggle?.checked;
+    const folder = folderDisplay?.dataset?.folderPath || (folderDisplay?.textContent !== 'No destination folder selected' ? folderDisplay?.textContent : '');
+    const passphrase = passInput?.value || '';
+
+    if (enabled && (!folder || folder === 'No destination folder selected')) {
+      showToast('⚠️ Please choose a destination folder for automatic mirroring.');
+      return;
+    }
+    if (enabled && passphrase.length < 8) {
+      showToast('⚠️ Please enter a passphrase (min 8 chars) to encrypt mirror copies.');
+      passInput?.focus();
+      return;
+    }
+
+    const res = await window.bestie.backup.configureMirror({ enabled, folder, passphrase });
+    if (res.success) {
+      showToast(enabled ? 'Mirroring activated & synced to folder ☁️' : 'Mirroring disabled.');
+      if (passInput) passInput.value = '';
+      await refreshBackupView();
+    } else {
+      showToast(`❌ Mirroring setup failed: ${res.error}`);
+    }
+  });
+
+  // Onboarding screen restore link
+  document.getElementById('link-onboarding-restore')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const pickRes = await window.bestie.backup.pickFile();
+    if (pickRes.canceled || !pickRes.filePath) return;
+
+    let passphrase = '';
+    const inspectRes = await window.bestie.backup.inspect({ filePath: pickRes.filePath, passphrase: '' });
+    if (inspectRes.success && inspectRes.summary.encrypted) {
+      passphrase = prompt('This backup is encrypted. Enter your backup passphrase:') || '';
+      if (!passphrase) return;
+    }
+
+    const restoreRes = await window.bestie.backup.restore({ filePath: pickRes.filePath, passphrase });
+    if (restoreRes.success) {
+      showToast('Backup restored successfully! Welcome back 👋');
+      state.profile = await window.bestie.memory.getProfile();
+      if (state.profile?.onboarding_state) {
+        state.profile.onboarding_state.completed = true;
+        state.profile.onboarding_state.system_tour_completed = true;
+      }
+      document.getElementById('onboarding-overlay')?.classList.add('hidden');
+      refreshMemoryView();
+    } else {
+      showToast(`❌ Restore failed: ${restoreRes.error}`);
+    }
+  });
+
+  // Milestone reminder toast card buttons
+  document.getElementById('btn-toast-backup-now')?.addEventListener('click', () => {
+    hideBackupMilestoneToast();
+    switchView('settings');
+    activateSettingsPanel('panel-settings-backup');
+    document.getElementById('backup-export-passphrase')?.focus();
+  });
+
+  document.getElementById('btn-toast-backup-snooze')?.addEventListener('click', async () => {
+    await window.bestie.backup.snoozeReminder(24);
+    hideBackupMilestoneToast();
+    showToast('Reminder snoozed for 24 hours ⏰');
+  });
+
+  document.getElementById('btn-toast-backup-settings')?.addEventListener('click', () => {
+    hideBackupMilestoneToast();
+    switchView('settings');
+    activateSettingsPanel('panel-settings-backup');
+  });
+
+  document.getElementById('btn-toast-backup-close')?.addEventListener('click', () => {
+    hideBackupMilestoneToast();
+  });
+
+  // Listen for real-time reminder events pushed from main process
+  window.bestie.backup.onReminder?.(() => {
+    showBackupMilestoneToast();
+  });
+}
+
+function renderBackupCounts(container, counts = {}) {
+  if (!container) return;
+  container.innerHTML = `
+    <span><strong>${counts.credentials || 0}</strong> Credentials</span>
+    <span><strong>${counts.tasks || 0}</strong> Tasks</span>
+    <span><strong>${counts.prompts || 0}</strong> Directives</span>
+    <span><strong>${counts.conversations || 0}</strong> Conversations</span>
+    <span>Profile: <strong>${counts.has_profile ? '✓' : '—'}</strong></span>
+  `;
+}
+
+function showBackupMilestoneToast() {
+  document.getElementById('backup-milestone-toast')?.classList.remove('hidden');
+}
+
+function hideBackupMilestoneToast() {
+  document.getElementById('backup-milestone-toast')?.classList.add('hidden');
 }
 
 // ============================================================

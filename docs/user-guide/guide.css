@@ -1,0 +1,306 @@
+/* ============================================================
+   DIGITAL BESTIE — OFFICIAL OPERATOR USER GUIDE STYLESHEET
+   Sovereign Glassmorphism & High-Fidelity Print Engine
+   ============================================================ */
+
+:root {
+  --bg-deep: #0a0a14;
+  --bg-surface: #101222;
+  --bg-card: rgba(18, 20, 36, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --accent-cyan: #00f0ff;
+  --accent-purple: #b347ff;
+  --accent-green: #00ff88;
+  --accent-amber: #ffaa00;
+  --text-main: #e8e8f2;
+  --text-muted: #8c8ea6;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  line-height: 1.6;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.guide-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+/* Header & Cover */
+.guide-cover {
+  text-align: center;
+  padding: 60px 24px;
+  background: radial-gradient(circle at 50% 20%, rgba(0, 240, 255, 0.15) 0%, rgba(10, 10, 20, 0) 70%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 999px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.cover-title {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.cover-subtitle {
+  font-size: 18px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 20px auto;
+  font-weight: 400;
+}
+
+.cover-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Table of Contents */
+.toc-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin-bottom: 40px;
+}
+
+.toc-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-cyan);
+  margin-bottom: 16px;
+}
+
+.toc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px 24px;
+}
+
+.toc-item {
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.toc-item:hover {
+  color: var(--accent-cyan);
+}
+
+/* Sections */
+.guide-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 36px;
+  margin-bottom: 32px;
+}
+
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-purple);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+p {
+  margin-bottom: 14px;
+  color: #d0d2e0;
+}
+
+/* Callout cards */
+.callout {
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 18px 0;
+  font-size: 13px;
+  border-left: 4px solid;
+}
+
+.callout-info {
+  background: rgba(0, 240, 255, 0.06);
+  border-left-color: var(--accent-cyan);
+  color: #e0faff;
+}
+
+.callout-tip {
+  background: rgba(0, 255, 136, 0.06);
+  border-left-color: var(--accent-green);
+  color: #e4fff2;
+}
+
+.callout-warning {
+  background: rgba(255, 170, 0, 0.08);
+  border-left-color: var(--accent-amber);
+  color: #fff4e0;
+}
+
+/* Code and Monospace */
+pre {
+  background: #06070d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #00f0ff;
+  overflow-x: auto;
+  margin: 14px 0;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #00f0ff;
+}
+
+/* Grid & Tables */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+
+.feature-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.feature-card h4 {
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feature-card p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #d8d9e6;
+}
+
+kbd {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+/* Print Rules */
+@media print {
+  @page {
+    margin: 16mm;
+    size: letter;
+  }
+
+  body {
+    background-color: #0d0f1a !important;
+    color: #e0e0e0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .guide-wrapper {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .guide-section {
+    page-break-inside: avoid;
+    border: 1px solid #222538 !important;
+    margin-bottom: 24px;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+}

@@ -85,6 +85,25 @@ contextBridge.exposeInMainWorld('bestie', {
     import: () => ipcRenderer.invoke('data:import'),
   },
 
+  // --- Vault Backup, Disaster Recovery & Portability ---
+  backup: {
+    getStatus: () => ipcRenderer.invoke('backup:getStatus'),
+    export: (options) => ipcRenderer.invoke('backup:export', options),
+    pickFile: () => ipcRenderer.invoke('backup:pickFile'),
+    inspect: (options) => ipcRenderer.invoke('backup:inspect', options),
+    restore: (options) => ipcRenderer.invoke('backup:restore', options),
+    listSnapshots: () => ipcRenderer.invoke('backup:listSnapshots'),
+    restoreSnapshot: (name) => ipcRenderer.invoke('backup:restoreSnapshot', name),
+    pickFolder: () => ipcRenderer.invoke('backup:pickFolder'),
+    configureMirror: (options) => ipcRenderer.invoke('backup:configureMirror', options),
+    snoozeReminder: (hours) => ipcRenderer.invoke('backup:snoozeReminder', hours),
+    onReminder: (callback) => {
+      const handler = () => callback();
+      ipcRenderer.on('backup:reminder', handler);
+      return () => ipcRenderer.removeListener('backup:reminder', handler);
+    }
+  },
+
   // --- Onboarding ---
   onboarding: {
     getPrompt: (phase) => ipcRenderer.invoke('onboarding:getPrompt', phase),

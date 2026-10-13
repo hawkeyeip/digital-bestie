@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Bestie — Official Operator User Guide</title>
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+  <div class="guide-wrapper">
+
+    <!-- Cover Page -->
+    <header class="guide-cover">
+      <div class="cover-badge">Official Documentation • Sovereign OS v2.5.0</div>
+      <h1 class="cover-title">Digital Bestie</h1>
+      <p class="cover-subtitle">Your personal confidante, operational strategist, and persistent second brain.</p>
+      <div class="cover-meta">
+        100% Local-First • Apple Silicon Accelerated • Zero Data Retention Enclave
+      </div>
+    </header>
+
+    <!-- Table of Contents -->
+    <nav class="toc-box">
+      <div class="toc-title">Table of Contents</div>
+      <div class="toc-grid">
+        <a class="toc-item" href="#sec-welcome"><span>01. Welcome &amp; Privacy Promise</span><span>03</span></a>
+        <a class="toc-item" href="#sec-install"><span>02. Installation &amp; Hardware Setup</span><span>04</span></a>
+        <a class="toc-item" href="#sec-chat"><span>03. Daily Conversational Workflow</span><span>06</span></a>
+        <a class="toc-item" href="#sec-dossier"><span>04. Living Dossier &amp; Calibration Lab</span><span>08</span></a>
+        <a class="toc-item" href="#sec-modules"><span>05. Specialist Operator Modules</span><span>10</span></a>
+        <a class="toc-item" href="#sec-prompts"><span>06. Prompts Vault &amp; Metaprompt</span><span>12</span></a>
+        <a class="toc-item" href="#sec-merits"><span>07. Merits &amp; Credentials Vault</span><span>14</span></a>
+        <a class="toc-item" href="#sec-taskflow"><span>08. Superbrain &amp; TaskFlow</span><span>16</span></a>
+        <a class="toc-item" href="#sec-themes"><span>09. Personal Theme Styling</span><span>18</span></a>
+        <a class="toc-item" href="#sec-backup"><span>10. Vault Backup &amp; Disaster Recovery</span><span>20</span></a>
+        <a class="toc-item" href="#sec-updates"><span>11. Self-Healing Models &amp; Updates</span><span>22</span></a>
+        <a class="toc-item" href="#sec-shortcuts"><span>12. Keyboard Shortcuts Cheat Sheet</span><span>24</span></a>
+      </div>
+    </nav>
+
+    <!-- Section 1 -->
+    <section id="sec-welcome" class="guide-section">
+      <div class="section-num">Chapter 01</div>
+      <h2 class="section-title"><span>🛡️</span> Welcome &amp; The Sovereign Privacy Promise</h2>
+      <p>
+        Digital Bestie is designed with a fundamental architectural principle: <strong>your thoughts, financials, passwords, and emotional reflections belong solely to you</strong>.
+      </p>
+      <p>
+        Unlike cloud-hosted AI assistants (ChatGPT, Claude, Gemini) where your prompts and files are transmitted to corporate data centers and stored on remote servers, Digital Bestie runs entirely on your Mac's Apple Silicon Unified Memory using Ollama. No remote servers ever read your chats, living dossier, or memory logs.
+      </p>
+      <div class="callout callout-info">
+        <strong>The 100% Local-First Promise:</strong>
+        All user data lives inside <code>~/.digital-bestie/</code> on your computer. When encrypted via the macOS Keychain (Electron <code>safeStorage</code>), the files are inaccessible to unauthorized processes.
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4><span>💬</span> Candid Confidante</h4>
+          <p>Uncensored real talk, boundary defense, and strategic clarity without robotic cheerleading.</p>
+        </div>
+        <div class="feature-card">
+          <h4><span>🧠</span> Persistent Dossier</h4>
+          <p>Remembers your 90-day targets, weekly burn rate, hard cash floor, and avoidance habits.</p>
+        </div>
+        <div class="feature-card">
+          <h4><span>⚡</span> Bicameral Speed</h4>
+          <p>Dual-engine routing balances ultra-fast conversational models with heavyweight reasoning engines.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section id="sec-install" class="guide-section page-break">
+      <div class="section-num">Chapter 02</div>
+      <h2 class="section-title"><span>💻</span> Installation &amp; Hardware Initialization</h2>
+      <p>
+        Digital Bestie is distributed as a signed macOS Universal DMG for Apple Silicon Macs (M1, M2, M3, M4).
+      </p>
+      <h3>Step 1: Install Application</h3>
+      <p>
+        Download <code>Digital Bestie-darwin-arm64-2.5.0.dmg</code> from GitHub Releases. Drag <strong>Digital Bestie.app</strong> into your <strong>/Applications</strong> folder.
+      </p>
+      <div class="callout callout-warning">
+        <strong>macOS Gatekeeper Verification:</strong>
+        If macOS displays an unidentified developer warning on first launch, open Terminal and execute:
+        <pre>xattr -cr "/Applications/Digital Bestie.app"</pre>
+      </div>
+
+      <h3>Step 2: Recommended Starter Models</h3>
+      <p>
+        Make sure <a href="https://ollama.ai" style="color: var(--accent-cyan);">Ollama</a> is installed and running on your machine. Open Terminal and pull the recommended weights according to your Mac's Unified Memory:
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🚀 Mac Studio Tier (64GB+ RAM)</h4>
+          <pre>ollama pull hermes3:70b
+ollama pull qwen2.5-coder:32b
+ollama pull nomic-embed-text</pre>
+          <p>Highest reasoning fidelity for executive strategy and full-stack software development.</p>
+        </div>
+        <div class="feature-card">
+          <h4>⚡ MacBook Pro / Air (16GB–36GB RAM)</h4>
+          <pre>ollama pull qwen2.5:14b
+ollama pull llama3.1:8b
+ollama pull nomic-embed-text</pre>
+          <p>Instant token throughput, ultra-low memory footprint, balanced performance.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section id="sec-chat" class="guide-section page-break">
+      <div class="section-num">Chapter 03</div>
+      <h2 class="section-title"><span>💬</span> Daily Conversational Workflow</h2>
+      <p>
+        The main Chat Studio is your operational command deck. It supports streaming responses, custom personas, folder organization, and instant copy/export.
+      </p>
+      <h3>Key Chat Capabilities</h3>
+      <ul>
+        <li><strong>Persona Switcher (<kbd>⌘P</kbd>):</strong> Toggle between <em>Digital Bestie</em> (candid, warm, strategic), <em>Executive Strategist</em> (ruthless capital allocation), <em>Full-Stack Architect</em> (clean code &amp; infrastructure), and <em>Crisis Negotiator</em> (tactical de-escalation).</li>
+        <li><strong>Chat Vault &amp; Folders (<kbd>⌘B</kbd>):</strong> Categorize conversations into Folders (e.g. <em>Finances &amp; Burn Rate</em>, <em>Ventures</em>, <em>Diary</em>).</li>
+        <li><strong>Prompt Directives (<kbd>⌘L</kbd>):</strong> Insert battle-tested execution frameworks into your active chat session.</li>
+      </ul>
+      <div class="callout callout-tip">
+        <strong>💡 Pro-Tip:</strong> Press <kbd>Esc</kbd> anytime to cancel generation if you want to revise your prompt immediately.
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section id="sec-dossier" class="guide-section page-break">
+      <div class="section-num">Chapter 04</div>
+      <h2 class="section-title"><span>📋</span> Living Dossier &amp; Memory Calibration Lab</h2>
+      <p>
+        Most AI assistants forget who you are every time you start a new conversation. Digital Bestie maintains a sovereign <strong>Living Dossier</strong> in <code>~/.digital-bestie/user_profile.json</code>.
+      </p>
+      <h3>What Bestie Tracks:</h3>
+      <ul>
+        <li><strong>90-Day North Star Target:</strong> What you are actively building right now.</li>
+        <li><strong>Hard Cash Floor &amp; Weekly Burn:</strong> The financial baseline below which you must never compromise.</li>
+        <li><strong>Anti-Goals &amp; Boundary Rules:</strong> Project types and toxic client behaviors you have explicitly agreed never to take on.</li>
+        <li><strong>Avoidance Triggers &amp; Escape Habits:</strong> Procrastination patterns Bestie will actively call you out on.</li>
+      </ul>
+
+      <div class="callout callout-info">
+        <strong>Multi-AI Memory Importer:</strong>
+        Migrating from Claude, ChatGPT, Venice, or Gemini? Open <strong>Settings &gt; Import from Other AIs</strong>, generate the tailor-made export prompt for your previous assistant, and paste the output. Bestie analyzes, stages, and lets you approve memories before committing.
+      </div>
+    </section>
+
+    <!-- Section 5 -->
+    <section id="sec-modules" class="guide-section page-break">
+      <div class="section-num">Chapter 05</div>
+      <h2 class="section-title"><span>🧩</span> Specialist Operator Modules</h2>
+      <p>
+        Click <strong>MODULES (<kbd>⌘2</kbd>)</strong> in the sidebar to access 16 specialized operational workstations:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>MODULE</th>
+            <th>PURPOSE</th>
+            <th>EXAMPLE USE CASE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Crisis Triage</strong></td>
+            <td>High-stakes de-escalation &amp; damage control</td>
+            <td>Client dispute, unexpected contract breach</td>
+          </tr>
+          <tr>
+            <td><strong>Burn Rate &amp; Runway</strong></td>
+            <td>Capital defense &amp; runway projection</td>
+            <td>Calculating exact months remaining at current burn</td>
+          </tr>
+          <tr>
+            <td><strong>Venture Incubator</strong></td>
+            <td>Zero-to-one product strategy</td>
+            <td>Scoping MVP architectures and go-to-market plans</td>
+          </tr>
+          <tr>
+            <td><strong>Contract Negotiation</strong></td>
+            <td>Redline audits &amp; rate defense</td>
+            <td>Holding firm on hourly floors and non-negotiables</td>
+          </tr>
+          <tr>
+            <td><strong>Psychological Unblocking</strong></td>
+            <td>Dismantling procrastination loops</td>
+            <td>Breaking 3-day avoidance on a critical proposal</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 6 -->
+    <section id="sec-prompts" class="guide-section page-break">
+      <div class="section-num">Chapter 06</div>
+      <h2 class="section-title"><span>⚡</span> Prompts Vault &amp; Metaprompt Architect</h2>
+      <p>
+        The <strong>Prompt Vault (<kbd>⌘L</kbd>)</strong> is your repository of high-leverage prompts. Click any prompt to copy, favorite, or immediately inject into Chat.
+      </p>
+      <h3>Metaprompt Architect</h3>
+      <p>
+        Have an unrefined idea for a prompt? Click <strong>Synthesize Metaprompt ✨</strong> inside Chat or the Prompt Vault. The synthesis engine automatically transforms loose text into an elite prompt structure equipped with:
+      </p>
+      <ul>
+        <li><code>&lt;system_role&gt;</code> &amp; explicit operational persona</li>
+        <li><code>&lt;negative_constraints&gt;</code> (anti-hallucination guardrails)</li>
+        <li>Chain-of-thought reasoning steps &amp; XML structured output envelopes</li>
+      </ul>
+      <div class="callout callout-tip">
+        <strong>Efficacy Scoring:</strong>
+        The built-in evaluator scores your prompts from 0 to 100 and highlights missing instructions, ambiguity, and output schema gaps.
+      </div>
+    </section>
+
+    <!-- Section 7 -->
+    <section id="sec-merits" class="guide-section page-break">
+      <div class="section-num">Chapter 07</div>
+      <h2 class="section-title"><span>🎖️</span> Merits, Credentials &amp; Certifications Vault</h2>
+      <p>
+        Keep an encrypted catalog of your degrees, professional licenses, security credentials, patents, and career milestones.
+      </p>
+      <ul>
+        <li><strong>Highlight Toggle:</strong> Star high-impact credentials to include them in the LLM system prompt context automatically.</li>
+        <li><strong>Resume &amp; Brief Generation:</strong> Export a markdown brief of all verified merits with one click.</li>
+        <li><strong>Continuous Scroll:</strong> Easily browse dozens of credentials with responsive modal forms and filtering.</li>
+      </ul>
+    </section>
+
+    <!-- Section 8 -->
+    <section id="sec-taskflow" class="guide-section page-break">
+      <div class="section-num">Chapter 08</div>
+      <h2 class="section-title"><span>🌌</span> Superbrain Hub &amp; TaskFlow Kanban</h2>
+      <p>
+        The <strong>Superbrain Hub</strong> and <strong>TaskFlow</strong> pair visual cognitive maps with an actionable execution pipeline.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4><span>📋</span> TaskFlow Checklist</h4>
+          <p>Kanban board with priorities (Critical, High, Medium, Low), tags, and drag-and-drop state progression.</p>
+        </div>
+        <div class="feature-card">
+          <h4><span>🛡️</span> Time Defense Engine</h4>
+          <p>Automatically calculates cognitive context-switching penalties and inserts anti-fatigue decompression buffers.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 9 -->
+    <section id="sec-themes" class="guide-section page-break">
+      <div class="section-num">Chapter 09</div>
+      <h2 class="section-title"><span>🎨</span> Personal Theme Styling Studio</h2>
+      <p>
+        Your Bestie should match your personal aesthetic without turning customization into a time-wasting rabbit hole. Open <strong>Settings &gt; General &amp; Appearance</strong> to access the 3-control styling studio:
+      </p>
+      <h3>1. Curated Palette Presets</h3>
+      <ul>
+        <li><strong>Neon Midnight (Default):</strong> Electric cyan (<code>#00f0ff</code>) &amp; neon purple (<code>#b347ff</code>).</li>
+        <li><strong>Cyberpunk:</strong> High-contrast neon yellow (<code>#fcee0a</code>) &amp; hot pink (<code>#ff2d9b</code>).</li>
+        <li><strong>Obsidian:</strong> Minimalist steel (<code>#9aa4b2</code>) &amp; slate dark (<code>#6b7280</code>).</li>
+        <li><strong>Aurora:</strong> Calm mint (<code>#34d399</code>) &amp; sky blue (<code>#60a5fa</code>).</li>
+        <li><strong>Ember:</strong> Warm orange (<code>#ff7a45</code>) &amp; rose (<code>#ff3d68</code>).</li>
+        <li><strong>Sakura:</strong> Soft blush (<code>#f9a8d4</code>) &amp; lavender (<code>#c4b5fd</code>).</li>
+      </ul>
+      <h3>2. Custom Accent Color</h3>
+      <p>
+        Use the color picker to pick your signature primary color. Digital Bestie automatically computes an aesthetically harmonious secondary accent via a +60° HSL hue shift.
+      </p>
+      <h3>3. Glow &amp; Aura Intensity</h3>
+      <p>
+        Toggle between <strong>Subtle</strong> (low distraction), <strong>Balanced</strong> (standard luminescence), and <strong>Vivid</strong> (high-energy cyberpunk glow). Click <strong>↺ Reset to Default</strong> anytime to return to Neon Midnight.
+      </p>
+    </section>
+
+    <!-- Section 10 -->
+    <section id="sec-backup" class="guide-section page-break">
+      <div class="section-num">Chapter 10</div>
+      <h2 class="section-title"><span>🛡️</span> Vault Backup, Disaster Recovery &amp; Migration</h2>
+      <p>
+        Because Digital Bestie is 100% local-first, protecting your data against a lost, stolen, or damaged Mac requires an off-device backup strategy.
+      </p>
+
+      <div class="callout callout-warning">
+        <strong>What Happens if You Uninstall Digital Bestie?</strong>
+        Dragging <code>Digital Bestie.app</code> to the Trash <strong>DOES NOT</strong> delete your data! macOS only deletes the app binary. All your profile data, Living Dossier, credentials, memories, chats, and configurations live in <code>~/.digital-bestie/</code> and remain safe on disk. Reinstalling reconnects immediately.
+      </div>
+
+      <h3>The Three Defense Layers:</h3>
+      <ol>
+        <li>
+          <strong>Daily Local Snapshots (7-Day Rolling):</strong>
+          Automatically created once per calendar day on app launch and stored in <code>~/.digital-bestie/snapshots/</code>. Protects against accidental deletions.
+        </li>
+        <li>
+          <strong>Encrypted Portable Exports (<code>.bestie-backup</code>):</strong>
+          Military-grade AES-256-GCM encrypted backup protected by PBKDF2-SHA256 (310,000 iterations). Machine-bound macOS Keychain tokens are decrypted before packaging and re-encrypted with the new Mac's Keychain upon restore.
+        </li>
+        <li>
+          <strong>Automatic Off-Device Mirroring (iCloud Drive / Dropbox / USB):</strong>
+          Enable in <strong>Settings &gt; Backup &amp; Recovery</strong>. Bestie will silently generate encrypted copies into your chosen sync folder whenever milestones are reached.
+        </li>
+      </ol>
+
+      <h3>Migrating to a Brand-New Mac:</h3>
+      <p>
+        1. Export a <code>.bestie-backup</code> file on your old Mac.<br>
+        2. On your new Mac, open Digital Bestie.<br>
+        3. On the welcome screen, click <strong>"Restore from backup 📦"</strong>.<br>
+        4. Enter your passphrase. Your entire profile, credentials, and chats are instantly restored!
+      </p>
+    </section>
+
+    <!-- Section 11 -->
+    <section id="sec-updates" class="guide-section page-break">
+      <div class="section-num">Chapter 11</div>
+      <h2 class="section-title"><span>🚀</span> Updates &amp; Self-Healing Model Health</h2>
+      <p>
+        Digital Bestie features an automated background updater and self-healing intelligence engine:
+      </p>
+      <ul>
+        <li><strong>Automatic Update Notifications:</strong> Polls GitHub Releases every 30 minutes. When a new version is published, a glowing topbar badge and banner alert appear. Click to review improvements and download the DMG.</li>
+        <li><strong>Self-Healing Dynamic Fallback:</strong> If your active model is deleted or Ollama runs out of memory, the engine seamlessly fails over (<code>bestie-abliterated</code> &rarr; <code>hermes3:70b</code> &rarr; <code>bestie-light</code> &rarr; <code>qwen2.5:14b</code> &rarr; any available model) rather than crashing.</li>
+        <li><strong>Diagnostics Hub:</strong> Test Ollama pings, memory consumption, and verify model integrity in <strong>Settings &gt; Ollama &amp; Core Models</strong>.</li>
+      </ul>
+    </section>
+
+    <!-- Section 12 -->
+    <section id="sec-shortcuts" class="guide-section page-break">
+      <div class="section-num">Chapter 12</div>
+      <h2 class="section-title"><span>⌨️</span> Keyboard Shortcuts Quick-Sheet</h2>
+      <p>Print this page or keep it handy for maximum operational velocity:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>SHORTCUT</th>
+            <th>ACTION</th>
+            <th>SCOPE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>⌘1</kbd></td>
+            <td>Switch to Chat Studio</td>
+            <td>Global</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘2</kbd></td>
+            <td>Open Specialist Modules Hub</td>
+            <td>Global</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘P</kbd></td>
+            <td>Open Persona Switcher Menu</td>
+            <td>Chat Studio</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘B</kbd></td>
+            <td>Toggle Chat History Vault &amp; Folders</td>
+            <td>Chat Studio</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘L</kbd></td>
+            <td>Open Prompts Vault &amp; Directives</td>
+            <td>Global</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘K</kbd></td>
+            <td>Clear Active Chat Messages</td>
+            <td>Chat Studio</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘Enter</kbd></td>
+            <td>Send Prompt / Save Calibration Answer</td>
+            <td>Inputs</td>
+          </tr>
+          <tr>
+            <td><kbd>Esc</kbd></td>
+            <td>Abort Ongoing LLM Stream / Close Modal</td>
+            <td>Global</td>
+          </tr>
+          <tr>
+            <td><kbd>⌘,</kbd></td>
+            <td>Open Settings Hub</td>
+            <td>Global</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="text-align: center; margin-top: 36px; color: var(--text-muted); font-size: 11px;">
+        Digital Bestie • Built with sovereign pride by hawkeyeip • MIT License
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

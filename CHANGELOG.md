@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2026-10-13
+
+### Added
+- **Vault Backup, Disaster Recovery & Data Portability System (`src/services/backup.js`)**:
+  - Portable, military-grade encrypted backup archives (`.bestie-backup`) secured with AES-256-GCM and PBKDF2-SHA256 (310,000 iterations).
+  - Cross-Mac migration engine: transparently decrypts machine-bound macOS Keychain tokens (`safeStorage`) on export and safely re-keys with the new Mac's Keychain upon restore.
+  - Automated 7-day rolling local snapshots created daily on launch and pre-restore in `~/.digital-bestie/snapshots/` to guarantee safety rollbacks.
+  - Unattended off-device folder mirroring supporting iCloud Drive, Dropbox, and external USB drives with Keychain-backed passphrase storage.
+  - Smart milestone tracking: monitors high-value changes (credentials, Living Dossier, prompts, tasks) and triggers gentle, non-nagging backup reminder toasts.
+  - 1-click "Restore from existing backup 📦" onboarding link on the welcome screen for instant setup on replacement Macs.
+- **Personal Theme Styling Studio (Bounded 3-Control Architecture)**:
+  - 6 curated aesthetic palettes (*Neon Midnight*, *Cyberpunk*, *Obsidian*, *Aurora*, *Ember*, *Sakura*) with instant preview.
+  - Custom primary accent color picker with automatic +60° HSL harmonically derived secondary accent.
+  - 3-stop aura luminescence glow intensity control (*Subtle*, *Balanced*, *Vivid*).
+  - 1-click "↺ Reset to Default" restoring baseline Neon Midnight visual styling.
+- **CSS Color Tokenization & Zero-Hardcoded Styling**:
+  - Tokenized all 211+ literal cyan and purple color values across `src/styles/index.css` and `src/styles/onboarding.css` into responsive `--accent-1-rgb` and `--accent-2-rgb` CSS variables.
+- **Official Illustrated User Guide (PDF + In-App + Web)**:
+  - 24-page comprehensive operator guide covering Apple Silicon model recommendations, privacy guarantees, all 16 operator modules, disaster recovery, and printable keyboard cheatsheet.
+  - Compiled offline PDF at `docs/USER_GUIDE.pdf` via native Electron `printToPDF` engine (`npm run guide`).
+  - Source HTML and print-optimized stylesheet in `docs/user-guide/`.
+- **Atomic File Store Persistence (`src/services/memory.js`)**:
+  - Converted all vault JSON writers to atomic sibling temporary files + atomic filesystem rename, eliminating risk of file corruption on crash or mid-write power loss.
+
+### Corrected
+- **README Feature Accuracy**:
+  - Corrected claims to document real capabilities: updated 8 modules to all 16 operational modules, replaced unverified claims with actual AES-256-GCM vault backup & disaster recovery system, documented Theme Styling Studio, and linked official User Guide PDF.
+
+---
+
 ## [2.4.1] - 2026-10-10
 
 ### Fixed

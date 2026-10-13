@@ -981,10 +981,15 @@
 
                 <!-- Group 4: Vaults & Updates -->
                 <div class="settings-nav-section-title">SYSTEM &amp; UPDATES</div>
+                <button class="settings-nav-btn" data-settings-panel="panel-settings-backup">
+                  <span class="nav-icon">🛡️</span>
+                  <span class="nav-label">Backup &amp; Recovery</span>
+                  <span id="settings-backup-pill" class="status-pill status-active">Protected</span>
+                </button>
                 <button class="settings-nav-btn" data-settings-panel="panel-settings-updates">
                   <span class="nav-icon">🚀</span>
                   <span class="nav-label">App Updates &amp; GitHub</span>
-                  <span class="version-tag-sm">v2.4.1</span>
+                  <span class="version-tag-sm">v2.5.0</span>
                 </button>
               </div>
             </aside>
@@ -1058,14 +1063,106 @@
                 </div>
 
                 <div class="setting-group">
-                  <label class="setting-item">
-                    <span>Theme Preset</span>
-                    <select id="setting-theme-select" class="setting-input">
-                      <option value="neon-dark">Neon Midnight (Electric Cyan &amp; Purple • Default)</option>
-                      <option value="cyberpunk">Cyberpunk Neon (High Contrast)</option>
-                      <option value="obsidian">Obsidian Minimal (Low Glow Dark)</option>
-                    </select>
-                  </label>
+                  <div class="panel-header-compact" style="margin-bottom: 8px;">
+                    <div class="panel-title-with-badge">
+                      <h4 style="color: #fff; font-size: 14px; margin: 0;">🎨 Personal Theme Styling</h4>
+                      <button type="button" id="btn-reset-all-themes" class="btn-glass btn-xs">↺ Reset to Default</button>
+                    </div>
+                    <p class="panel-desc" style="font-size: 12px; margin-top: 2px;">
+                      Customize your Bestie's visual vibe with 6 curated palettes, your custom primary accent, and glow depth.
+                    </p>
+                  </div>
+
+                  <div class="theme-customizer-card">
+                    <!-- Control 1: Presets -->
+                    <div>
+                      <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 6px;">
+                        1. Palette Preset
+                      </div>
+                      <div class="theme-presets-grid" id="theme-presets-grid">
+                        <div class="theme-preset-chip active" data-theme-id="neon-dark" title="Electric Cyan & Purple">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #00f0ff;"></div>
+                            <div class="theme-swatch-half" style="background: #b347ff;"></div>
+                          </div>
+                          <span>Neon Midnight</span>
+                        </div>
+                        <div class="theme-preset-chip" data-theme-id="cyberpunk" title="High Contrast Neon Yellow & Pink">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #fcee0a;"></div>
+                            <div class="theme-swatch-half" style="background: #ff2d9b;"></div>
+                          </div>
+                          <span>Cyberpunk</span>
+                        </div>
+                        <div class="theme-preset-chip" data-theme-id="obsidian" title="Subtle Steel & Slate Dark">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #9aa4b2;"></div>
+                            <div class="theme-swatch-half" style="background: #6b7280;"></div>
+                          </div>
+                          <span>Obsidian</span>
+                        </div>
+                        <div class="theme-preset-chip" data-theme-id="aurora" title="Calm Mint & Sky">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #34d399;"></div>
+                            <div class="theme-swatch-half" style="background: #60a5fa;"></div>
+                          </div>
+                          <span>Aurora</span>
+                        </div>
+                        <div class="theme-preset-chip" data-theme-id="ember" title="Warm Orange & Rose">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #ff7a45;"></div>
+                            <div class="theme-swatch-half" style="background: #ff3d68;"></div>
+                          </div>
+                          <span>Ember</span>
+                        </div>
+                        <div class="theme-preset-chip" data-theme-id="sakura" title="Soft Blush & Lavender">
+                          <div class="theme-swatch-duo">
+                            <div class="theme-swatch-half" style="background: #f9a8d4;"></div>
+                            <div class="theme-swatch-half" style="background: #c4b5fd;"></div>
+                          </div>
+                          <span>Sakura</span>
+                        </div>
+                      </div>
+                      <select id="setting-theme-select" class="hidden">
+                        <option value="neon-dark">neon-dark</option>
+                        <option value="cyberpunk">cyberpunk</option>
+                        <option value="obsidian">obsidian</option>
+                        <option value="aurora">aurora</option>
+                        <option value="ember">ember</option>
+                        <option value="sakura">sakura</option>
+                      </select>
+                    </div>
+
+                    <!-- Control 2: Custom Accent Override -->
+                    <div class="theme-accent-row">
+                      <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #fff;">2. Custom Accent Color</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                          Picks your primary accent; the secondary accent is harmonically hue-shifted (+60°).
+                        </div>
+                      </div>
+                      <div class="theme-color-input-wrap">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <input type="color" id="setting-custom-accent" class="theme-color-picker" value="#00f0ff" title="Primary Accent" />
+                          <div id="preview-accent-secondary" style="width: 20px; height: 20px; border-radius: 50%; background: #b347ff; border: 1px solid var(--glass-border);" title="Derived Harmonic Accent"></div>
+                        </div>
+                        <button type="button" id="btn-reset-accent-color" class="btn-glass btn-xs" title="Reset accent to match selected preset">Match Preset</button>
+                      </div>
+                    </div>
+
+                    <!-- Control 3: Glow Intensity -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
+                      <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #fff;">3. Glow &amp; Aura Intensity</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">Control luminescence on borders, buttons, and badges.</div>
+                      </div>
+                      <div class="glow-segmented-control" id="glow-segmented-control">
+                        <button type="button" class="glow-segment-btn" data-glow-val="subtle">Subtle</button>
+                        <button type="button" class="glow-segment-btn active" data-glow-val="balanced">Balanced</button>
+                        <button type="button" class="glow-segment-btn" data-glow-val="vivid">Vivid</button>
+                      </div>
+                    </div>
+                  </div>
 
                   <label class="setting-item">
                     <span>Message History Window (turns)</span>
@@ -1706,7 +1803,213 @@
                 </div>
               </div>
 
-              <!-- Panel 8: App Updates & GitHub -->
+              <!-- Panel 8: Vault Backup, Disaster Recovery & Data Portability -->
+              <div id="panel-settings-backup" class="settings-panel" data-search-terms="backup disaster recovery restore migration export import snapshots icloud dropbox vault safeStorage security">
+                <div class="panel-header-compact">
+                  <div class="panel-title-with-badge">
+                    <h3>🛡️ Vault Backup &amp; Disaster Recovery</h3>
+                    <span class="status-pill status-active" id="backup-badge-header">Sovereign Protection Active</span>
+                  </div>
+                  <p class="panel-desc">
+                    Protect your Living Dossier, credentials, memories, prompts, and tasks against lost or dead hardware. Exports are portable across different Macs via AES-256-GCM encryption.
+                  </p>
+                </div>
+
+                <!-- Status Hero Card -->
+                <div class="backup-status-hero">
+                  <div class="backup-hero-stats">
+                    <div class="backup-stat-box">
+                      <span class="backup-stat-label">Last Off-Device Backup</span>
+                      <span class="backup-stat-val" id="backup-stat-last-export">Never</span>
+                    </div>
+                    <div class="backup-stat-box">
+                      <span class="backup-stat-label">Milestones Unsaved</span>
+                      <span class="backup-stat-val healthy" id="backup-stat-changes-count">0</span>
+                    </div>
+                    <div class="backup-stat-box">
+                      <span class="backup-stat-label">Daily Snapshot</span>
+                      <span class="backup-stat-val healthy" id="backup-stat-last-snapshot">Today</span>
+                    </div>
+                    <div class="backup-stat-box">
+                      <span class="backup-stat-label">macOS Hardware Enclave</span>
+                      <span class="backup-stat-val healthy" id="backup-stat-keychain">Keychain Active</span>
+                    </div>
+                  </div>
+                  <button type="button" id="btn-quick-export-hero" class="btn-neon btn-sm">
+                    📦 Export Backup Now
+                  </button>
+                </div>
+
+                <!-- Section 1: Export Encrypted Backup -->
+                <div class="setting-group">
+                  <div class="panel-header-compact" style="margin-bottom: 10px;">
+                    <h4 style="color: #fff; font-size: 14px; margin: 0;">📦 Export Encrypted Vault Backup (.bestie-backup)</h4>
+                    <p class="panel-desc" style="font-size: 12px; margin-top: 2px;">
+                      Creates a portable, military-grade encrypted archive (AES-256-GCM, PBKDF2-SHA256 310k iterations). Decrypts Keychain tokens safely so you can restore onto any Mac.
+                    </p>
+                  </div>
+
+                  <div style="background: rgba(15, 15, 30, 0.5); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                      <label class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                        <span style="font-size: 12px; font-weight: 600;">Backup Passphrase (min 8 chars)</span>
+                        <input type="password" id="backup-export-passphrase" class="setting-input" placeholder="Choose a strong passphrase..." autocomplete="new-password" />
+                      </label>
+                      <label class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                        <span style="font-size: 12px; font-weight: 600;">Confirm Passphrase</span>
+                        <input type="password" id="backup-export-passphrase-confirm" class="setting-input" placeholder="Confirm your passphrase..." autocomplete="new-password" />
+                      </label>
+                    </div>
+
+                    <div id="backup-export-passphrase-hint" style="font-size: 11px; color: var(--text-muted);">
+                      Strength: <span id="backup-export-strength-label" style="font-weight: 600; color: #ffaa00;">Enter at least 8 characters</span>
+                    </div>
+
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                      <input type="checkbox" id="backup-export-include-chats" checked />
+                      <span style="font-size: 12px; color: var(--text-secondary);">Include conversation history &amp; chat sessions</span>
+                    </label>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 6px;">
+                      <button type="button" id="btn-do-backup-export" class="btn-neon">
+                        🔒 Save Encrypted Backup File (.bestie-backup)
+                      </button>
+                      <button type="button" id="btn-export-unencrypted-legacy" class="btn-glass btn-xs" style="color: var(--text-muted);">
+                        Export Unencrypted JSON (Legacy)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 2: Restore from Backup -->
+                <div class="setting-group">
+                  <div class="panel-header-compact" style="margin-bottom: 10px;">
+                    <h4 style="color: #fff; font-size: 14px; margin: 0;">↺ Restore from Backup or Migrate to New Mac</h4>
+                    <p class="panel-desc" style="font-size: 12px; margin-top: 2px;">
+                      Seamlessly load data from a previous backup or another computer. A safety snapshot of your current state is automatically created before any files are overwritten.
+                    </p>
+                  </div>
+
+                  <div style="background: rgba(15, 15, 30, 0.5); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+                    <div>
+                      <button type="button" id="btn-select-restore-file" class="btn-glass">
+                        📂 Choose Backup File (.bestie-backup or .json)
+                      </button>
+                    </div>
+
+                    <!-- Inspected File Details (shows when file selected) -->
+                    <div id="backup-restore-inspect-wrap" class="hidden" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 14px;">
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+                        <div>
+                          <div style="font-size: 12px; font-weight: 700; color: #fff;" id="backup-inspect-file-name">filename.bestie-backup</div>
+                          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" id="backup-inspect-file-meta">Created: -- • Version: --</div>
+                        </div>
+                        <span id="backup-inspect-enc-badge" class="status-pill status-active">Encrypted (AES-256-GCM)</span>
+                      </div>
+
+                      <div style="display: flex; gap: 18px; margin-top: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap;" id="backup-inspect-counts-row">
+                        <!-- Populated dynamically: credentials, tasks, prompts, etc. -->
+                      </div>
+
+                      <div id="backup-restore-passphrase-row" class="hidden" style="margin-top: 14px;">
+                        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+                          <span style="font-weight: 600;">Enter Passphrase to Decrypt:</span>
+                          <div style="display: flex; gap: 8px;">
+                            <input type="password" id="backup-restore-passphrase-input" class="setting-input" placeholder="Passphrase..." style="max-width: 320px;" />
+                            <button type="button" id="btn-verify-restore-passphrase" class="btn-glass btn-sm">Verify 🔑</button>
+                          </div>
+                        </label>
+                      </div>
+
+                      <div style="margin-top: 16px;">
+                        <button type="button" id="btn-execute-restore" class="btn-neon btn-sm" disabled>
+                          ⚠️ Restore Vault (Creates Safety Snapshot First)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 3: 7-Day Rolling Local Snapshots -->
+                <div class="setting-group">
+                  <div class="panel-header-compact" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <h4 style="color: #fff; font-size: 14px; margin: 0;">📸 Local Safety Snapshots (7-Day Rolling Rollbacks)</h4>
+                      <p class="panel-desc" style="font-size: 12px; margin-top: 2px;">
+                        Automatic local snapshots captured on daily launch and before any restore. If you ever make an accidental deletion, roll back here.
+                      </p>
+                    </div>
+                    <button type="button" id="btn-create-manual-snapshot" class="btn-glass btn-xs">
+                      📸 Snapshot Now
+                    </button>
+                  </div>
+
+                  <div style="background: rgba(15, 15, 30, 0.5); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 14px 18px; overflow-x: auto;">
+                    <table class="snapshot-list-table">
+                      <thead>
+                        <tr>
+                          <th>SNAPSHOT NAME</th>
+                          <th>TYPE</th>
+                          <th>DATE &amp; TIME</th>
+                          <th>FILES</th>
+                          <th>SIZE</th>
+                          <th style="text-align: right;">ACTION</th>
+                        </tr>
+                      </thead>
+                      <tbody id="backup-snapshot-table-body">
+                        <tr>
+                          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">Loading local snapshots...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Section 4: Automatic Off-Device Mirroring (iCloud Drive / Dropbox / USB) -->
+                <div class="setting-group">
+                  <div class="panel-header-compact" style="margin-bottom: 10px;">
+                    <h4 style="color: #fff; font-size: 14px; margin: 0;">☁️ Automatic Off-Device Mirroring (iCloud Drive / Dropbox / USB)</h4>
+                    <p class="panel-desc" style="font-size: 12px; margin-top: 2px;">
+                      Automatically saves an encrypted <code>.bestie-backup</code> copy into a synchronized folder whenever significant milestones are logged. Passphrase is saved securely in your macOS Keychain.
+                    </p>
+                  </div>
+
+                  <div style="background: rgba(15, 15, 30, 0.5); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+                    <label class="setting-item toggle-setting-row">
+                      <div class="setting-text-wrap">
+                        <span class="setting-title">Enable Automatic Folder Mirroring</span>
+                        <small class="setting-desc">Silently generates encrypted backups in the chosen folder so you are protected even if this machine is lost or stolen.</small>
+                      </div>
+                      <input type="checkbox" id="backup-mirror-enable-toggle" class="toggle-checkbox" />
+                    </label>
+
+                    <div id="backup-mirror-config-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" id="btn-pick-mirror-folder" class="btn-glass btn-sm">
+                          📁 Choose Destination Folder...
+                        </button>
+                        <span id="backup-mirror-folder-display" style="font-family: var(--font-mono); font-size: 12px; color: var(--neon-cyan); word-break: break-all;">
+                          No destination folder selected
+                        </span>
+                      </div>
+
+                      <label class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 6px; max-width: 440px;">
+                        <span style="font-size: 12px; font-weight: 600;">Mirror Backup Passphrase</span>
+                        <input type="password" id="backup-mirror-passphrase-input" class="setting-input" placeholder="Passphrase for auto-copies (saved in macOS Keychain)..." />
+                      </label>
+
+                      <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+                        <button type="button" id="btn-save-mirror-config" class="btn-neon btn-sm">
+                          💾 Save Mirror Settings &amp; Sync Now
+                        </button>
+                        <span id="backup-mirror-status-indicator" style="font-size: 11px; color: var(--text-muted);"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel 9: App Updates & GitHub -->
               <div id="panel-settings-updates" class="settings-panel" data-search-terms="updates release github version changelog token">
                 <div class="panel-header-compact">
                   <h3>🚀 Application &amp; Updates</h3>
@@ -1718,7 +2021,7 @@
                     <div class="updater-info">
                       <div class="updater-title-line">
                         <span class="updater-app-name">Digital Bestie</span>
-                        <span id="app-version-badge" class="version-tag">v2.4.1</span>
+                        <span id="app-version-badge" class="version-tag">v2.5.0</span>
                         <span id="updater-status-badge" class="status-pill status-active">Up to date</span>
                       </div>
                       <p id="updater-status-text" class="updater-status-text">Click below to check for the latest release.</p>
@@ -1807,7 +2110,7 @@
           <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 240, 255, 0.06); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: var(--radius-md); padding: 14px 18px;">
             <div>
               <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700;">Current Version</span>
-              <div id="update-modal-version-from" style="font-family: var(--font-mono); font-size: 15px; color: var(--text-secondary); margin-top: 2px;">v2.4.1</div>
+              <div id="update-modal-version-from" style="font-family: var(--font-mono); font-size: 15px; color: var(--text-secondary); margin-top: 2px;">v2.5.0</div>
             </div>
             <div style="font-size: 20px; color: var(--neon-cyan);">➔</div>
             <div>
@@ -1994,6 +2297,9 @@
         <div class="onboarding-header">
           <h2>Welcome to Digital Bestie</h2>
           <p>Let's set up your personal profile so I can be genuinely useful to you.</p>
+          <p style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">
+            Moving from another Mac? <a href="#" id="link-onboarding-restore" style="color: var(--neon-cyan); text-decoration: underline; font-weight: 600;">Restore from existing backup 📦</a>
+          </p>
         </div>
         <div class="onboarding-progress">
           <div class="progress-dot active" data-phase="1"></div>
@@ -2865,6 +3171,23 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- Floating Milestone Backup Reminder Toast Card -->
+  <div id="backup-milestone-toast" class="backup-milestone-toast hidden">
+    <div class="backup-toast-icon">🛡️</div>
+    <div class="backup-toast-content">
+      <div class="backup-toast-title">Protect Your Milestones</div>
+      <div class="backup-toast-desc">
+        You've added valuable info since your last off-device backup. Back up now to safeguard against hardware failure, damage, or theft.
+      </div>
+      <div class="backup-toast-actions">
+        <button type="button" id="btn-toast-backup-now" class="btn-neon btn-xs">Back Up Now 📦</button>
+        <button type="button" id="btn-toast-backup-snooze" class="btn-glass btn-xs">Remind Tomorrow</button>
+        <button type="button" id="btn-toast-backup-settings" class="btn-glass btn-xs" style="color: var(--neon-cyan);">Backup Settings</button>
+      </div>
+    </div>
+    <button type="button" id="btn-toast-backup-close" class="btn-icon-close" title="Dismiss">✕</button>
   </div>
 </body>
 </html>

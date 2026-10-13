@@ -10,6 +10,7 @@ import * as electron from 'electron';
 const safeStorage = electron.safeStorage || electron.default?.safeStorage || null;
 
 import { DEFAULT_OPERATOR_PROMPTS } from './prompts-data.js';
+import { recordMilestone } from './backup.js';
 
 const DATA_DIR = path.join(os.homedir(), '.digital-bestie');
 const PROFILE_PATH = path.join(DATA_DIR, 'user_profile.json');
@@ -28,6 +29,15 @@ const DEFAULT_FOLDERS = [
   { id: 'folder_ventures', name: 'Ventures & Strategy', icon: '🚀' },
   { id: 'folder_general', name: 'General Real Talk', icon: '💬' }
 ];
+
+/** Safe wrapper that doesn't blow up if called in scratch environments */
+function notifyMilestone(kind) {
+  try {
+    recordMilestone(kind);
+  } catch {
+    // Non-fatal
+  }
+}
 
 /** Default empty profile matching the Living Dossier schema */
 const DEFAULT_PROFILE = {
@@ -127,6 +137,24 @@ export function loadJSON(filePath, defaults) {
   return JSON.parse(JSON.stringify(defaults));
 }
 
+/**
+ * Atomic write: write to a sibling temp file, then rename over the target.
+ * rename() is atomic on the same filesystem, so a crash mid-write can never
+ * leave a half-written (corrupt) JSON file behind.
+ */
+export function writeFileAtomic(filePath, contents) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(tmpPath, contents, { encoding: 'utf-8', mode: 0o600 });
+    fs.renameSync(tmpPath, filePath);
+  } catch (err) {
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    throw err;
+  }
+}
+
 export function saveJSON(filePath, data) {
   ensureDataDir();
   const rawString = JSON.stringify(data, null, 2);
@@ -143,7 +171,7 @@ export function saveJSON(filePath, data) {
         },
         payload: encryptedBuffer.toString('base64')
       };
-      fs.writeFileSync(filePath, JSON.stringify(envelope, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      writeFileAtomic(filePath, JSON.stringify(envelope, null, 2));
       return;
     } catch (err) {
       console.warn(`[Security] safeStorage encryption failed for ${filePath}, falling back:`, err.message);
@@ -151,7 +179,7 @@ export function saveJSON(filePath, data) {
   }
 
   // Fallback if encryption unavailable (written with strict user-only permissions)
-  fs.writeFileSync(filePath, rawString, { encoding: 'utf-8', mode: 0o600 });
+  writeFileAtomic(filePath, rawString);
 }
 
 // --- Profile ---
@@ -163,6 +191,7 @@ export function loadProfile() {
 
 export function saveProfile(profile) {
   saveJSON(PROFILE_PATH, profile);
+  notifyMilestone('dossier');
 }
 
 /**
@@ -682,6 +711,7 @@ export function loadPromptsVault() {
 export function savePromptsVault(prompts) {
   if (Array.isArray(prompts)) {
     saveJSON(PROMPTS_PATH, prompts);
+    notifyMilestone('prompt');
   }
 }
 
@@ -762,6 +792,7 @@ export function loadCredentialsVault() {
 export function saveCredentialsVault(credentials) {
   if (Array.isArray(credentials)) {
     saveJSON(CREDENTIALS_PATH, credentials);
+    notifyMilestone('credential');
   }
 }
 

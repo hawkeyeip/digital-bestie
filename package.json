@@ -1,7 +1,7 @@
 {
   "name": "digital-bestie",
   "productName": "Digital Bestie",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Your personal confidante, operational strategist, and persistent second brain",
   "main": ".vite/build/main.js",
   "private": true,
@@ -10,9 +10,12 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "test": "node hawkeye-stack/tests/test_bestie_integration.js",
+    "guide": "electron scripts/build-guide.mjs",
+    "test": "node hawkeye-stack/tests/test_vault_backup_restore.js && node hawkeye-stack/tests/test_phase9_governance_proactivity.js",
+    "test:backup": "node hawkeye-stack/tests/test_vault_backup_restore.js",
     "test:phase9": "node hawkeye-stack/tests/test_phase9_governance_proactivity.js",
-    "test:all": "cd hawkeye-stack && uv run python tests/run_all_tests.py && cd .. && node hawkeye-stack/tests/test_bestie_integration.js && node hawkeye-stack/tests/test_phase9_governance_proactivity.js"
+    "test:integration": "node hawkeye-stack/tests/test_bestie_integration.js",
+    "test:all": "node hawkeye-stack/tests/test_vault_backup_restore.js && node hawkeye-stack/tests/test_phase9_governance_proactivity.js && node hawkeye-stack/tests/test_bestie_integration.js"
   },
   "keywords": [],
   "author": {

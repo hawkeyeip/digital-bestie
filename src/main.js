@@ -112,6 +112,21 @@ import {
   quickAddWearTask,
   getWearTileData
 } from './services/taskflow.js';
+import {
+  createBackup,
+  inspectBackup,
+  restoreBackup,
+  createDailySnapshotIfNeeded,
+  listSnapshots,
+  restoreSnapshot,
+  configureMirror,
+  mirrorIfConfigured,
+  snoozeReminder,
+  markExported,
+  getBackupStatus,
+  setMilestoneListener,
+  BACKUP_EXTENSION
+} from './services/backup.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -552,6 +567,114 @@ function registerIPC() {
     return { success: false };
   });
 
+  // --- Backup, Disaster Recovery & Portability ---
+  ipcMain.handle('backup:getStatus', async () => {
+    return getBackupStatus();
+  });
+
+  ipcMain.handle('backup:export', async (_event, { passphrase, includeChats, allowUnencrypted } = {}) => {
+    const today = new Date().toISOString().split('T')[0];
+    const defaultName = `digital-bestie-backup-${today}.${BACKUP_EXTENSION}`;
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Digital Bestie Vault Backup',
+      defaultPath: defaultName,
+      filters: [
+        { name: 'Digital Bestie Backup (*.bestie-backup)', extensions: [BACKUP_EXTENSION] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (!result.canceled && result.filePath) {
+      try {
+        const res = await createBackup({
+          destPath: result.filePath,
+          passphrase,
+          appVersion: app.getVersion(),
+          includeChats: includeChats !== false,
+          allowUnencrypted: !!allowUnencrypted
+        });
+        markExported();
+        return { success: true, path: result.filePath, counts: res.counts };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    }
+    return { success: false, canceled: true };
+  });
+
+  ipcMain.handle('backup:pickFile', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Digital Bestie Backup',
+      filters: [
+        { name: 'Backup Files (*.bestie-backup, *.json)', extensions: [BACKUP_EXTENSION, 'json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { canceled: false, filePath: result.filePaths[0] };
+    }
+    return { canceled: true };
+  });
+
+  ipcMain.handle('backup:inspect', async (_event, { filePath, passphrase }) => {
+    try {
+      const summary = await inspectBackup(filePath, passphrase);
+      return { success: true, summary };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:restore', async (_event, { filePath, passphrase }) => {
+    try {
+      const res = await restoreBackup(filePath, passphrase);
+      return { success: true, ...res };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:listSnapshots', async () => {
+    return listSnapshots();
+  });
+
+  ipcMain.handle('backup:restoreSnapshot', async (_event, snapshotName) => {
+    try {
+      const res = restoreSnapshot(snapshotName);
+      return { success: true, ...res };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:pickFolder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Mirror Backup Destination Folder (e.g. iCloud Drive / Dropbox / USB)',
+      properties: ['openDirectory', 'createDirectory']
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      return { canceled: false, folderPath: result.filePaths[0] };
+    }
+    return { canceled: true };
+  });
+
+  ipcMain.handle('backup:configureMirror', async (_event, { enabled, folder, passphrase }) => {
+    try {
+      const res = configureMirror({ enabled, folder, passphrase });
+      if (enabled) {
+        await mirrorIfConfigured({ appVersion: app.getVersion() });
+      }
+      return { success: true, ...res };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:snoozeReminder', async (_event, hours) => {
+    snoozeReminder(hours || 24);
+    return { success: true };
+  });
+
   // --- Onboarding Prompts ---
   ipcMain.handle('onboarding:getPrompt', (event, phase) => {
     return getOnboardingPrompt(phase);
@@ -886,7 +1009,27 @@ function registerIPC() {
 app.whenReady().then(() => {
   registerIPC();
   createWindow();
-  createTray();
+  // Backup & disaster recovery lifecycle hooks
+  setMilestoneListener(({ remind, mirror }) => {
+    if (remind && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('backup:reminder');
+    }
+    if (mirror) {
+      mirrorIfConfigured({ appVersion: app.getVersion() }).catch(err => {
+        console.warn('[Backup] Background mirror error:', err.message);
+      });
+    }
+  });
+
+  // Daily snapshot check & background mirror run on startup
+  setTimeout(() => {
+    try {
+      createDailySnapshotIfNeeded();
+      mirrorIfConfigured({ appVersion: app.getVersion() }).catch(() => {});
+    } catch (err) {
+      console.warn('[Backup] Startup snapshot check error:', err.message);
+    }
+  }, 2500);
 
   // Background update check after app initialization and periodic check every 30m
   const runBackgroundUpdateCheck = async () => {
